@@ -114,9 +114,8 @@ unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
     --I;
     if (I->isDebugInstr())
       continue;
-    if (I->getOpcode() != MSP430::JMP &&
-        I->getOpcode() != MSP430::JCC &&
-        I->getOpcode() != MSP430::Br &&
+    if (I->getOpcode() != MSP430::JMP && I->getOpcode() != MSP430::JCC &&
+        I->getOpcode() != MSP430::Bi && I->getOpcode() != MSP430::Br &&
         I->getOpcode() != MSP430::Bm)
       break;
     // Remove the branch.
@@ -183,12 +182,18 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!I->isBranch())
       return true;
 
-    // Cannot handle indirect branches.
-    if (I->getOpcode() == MSP430::Br ||
-        I->getOpcode() == MSP430::Bm)
+    // Handle unconditional branches to non-MBBs by removing any instructions
+    // after the branch instruction and returning true ("cannot understand").
+    if (I->getOpcode() == MSP430::Bi || I->getOpcode() == MSP430::Br ||
+        I->getOpcode() == MSP430::Bm) {
+      if (AllowModify) {
+        while (std::next(I) != MBB.end())
+          std::next(I)->eraseFromParent();
+      }
       return true;
+    }
 
-    // Handle unconditional branches.
+    // Handle unconditional branches to MBB
     if (I->getOpcode() == MSP430::JMP) {
       if (!AllowModify) {
         TBB = I->getOperand(0).getMBB();

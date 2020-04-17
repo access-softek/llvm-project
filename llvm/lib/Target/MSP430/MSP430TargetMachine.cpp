@@ -24,6 +24,9 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Target() {
   // Register the target.
   RegisterTargetMachine<MSP430TargetMachine> X(getTheMSP430Target());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeMSP430CommonEpilogueOptimizerPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -80,6 +83,7 @@ bool MSP430PassConfig::addInstSelector() {
 }
 
 void MSP430PassConfig::addPreEmitPass() {
+  addPass(createMSP430CommonEpilogueOptimizerPass());
   // Must run branch selection immediately preceding the asm printer.
   addPass(createMSP430BranchSelectionPass(), false);
 }

@@ -1,0 +1,46 @@
+# This file tests a (somewhat hypothetical for now) case of multiple terminators,
+# one of them being a RET instruction of a known epilogue sequence.
+
+# RUN: llc --x=mir \
+# RUN:     --start-before=msp430-epilogue-opt \
+# RUN:     --verify-machineinstrs < %s | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16"
+  target triple = "msp430"
+
+  define i16 @pops_1_reg() {
+    call void asm sideeffect "", "~{r10}"()
+    ret i16 42
+  }
+...
+---
+name:            pops_1_reg
+alignment:       2
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       2
+  maxAlignment:    2
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 2, alignment: 2, callee-saved-register: '$r10' }
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $r10
+
+    PUSH16r killed $r10, implicit-def $sp, implicit $sp
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $r10
+    $r12 = MOV16ri 42
+    $r10 = POP16r implicit-def $sp, implicit $sp
+    RET implicit $r12 /* manually added terminator (to be the last insn of a known epilogue sequence) */
+    RET implicit killed $r12
+...
+
+# CHECK-LABEL: @pops_1_reg
+# CHECK-NOT:   pop
+# CHECK:       br #__mspabi_func_epilog_1
+# CHECK-NOT:   pop
+
+# Other terminator instruction remains untouched
+# CHECK:       ret

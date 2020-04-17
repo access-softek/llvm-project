@@ -24,6 +24,7 @@ add_llvm_target(MSP430CodeGen
   MSP430TargetMachine.cpp
   MSP430AsmPrinter.cpp
   MSP430MCInstLower.cpp
+  MSP430CommonEpilogueOptimizer.cpp
   )
 
 add_subdirectory(MCTargetDesc)

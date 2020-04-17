@@ -13,6 +13,8 @@ entry:
 ; CHECK: -- End function
 }
 
+; Arbitrarily split r4, r5, ..., r9 into two disjoint sets
+
 define void @test_1() {
 entry:
 ; CHECK-LABEL: test_1:
@@ -42,15 +44,15 @@ entry:
 ; The r10 register is special because the sequence
 ;   pop r10
 ;   ret
-; can be replaced with
-;   jmp __mspabi_func_epilog_1
-; or other such function (depending on previous instructions).
-; Still, it is not replaced *yet*.
+; can be replaced with something like
+;   br __mspabi_func_epilog_1
 define void @test_r10() {
 entry:
 ; CHECK-LABEL: test_r10:
 ; CHECK: push r10
   call void asm sideeffect "", "~{r10}"()
-; CHECK: pop r10
+; CHECK-NEXT: ;APP
+; CHECK-NEXT: ;NO_APP
+; CHECK-NEXT: br #__mspabi_func_epilog_1
   ret void
 }

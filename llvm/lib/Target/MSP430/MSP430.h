@@ -42,6 +42,10 @@ namespace llvm {
 
   FunctionPass *createMSP430BranchSelectionPass();
 
+  FunctionPass *createMSP430CommonEpilogueOptimizerPass();
+
+  void initializeMSP430CommonEpilogueOptimizerPass(PassRegistry &);
+
 } // end namespace llvm;
 
 #endif
