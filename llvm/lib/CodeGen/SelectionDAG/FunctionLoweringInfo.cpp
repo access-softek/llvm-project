@@ -209,6 +209,15 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
               std::pair<unsigned, const TargetRegisterClass *> PhysReg =
                   TLI->getRegForInlineAsmConstraint(TRI, Op.ConstraintCode,
                                                     Op.ConstraintVT);
+              bool CanParseMachineRegisterOrMemory =
+                  PhysReg.first != 0 ||
+                  StringRef(Op.ConstraintCode).equals_lower("{memory}");
+              if (!CanParseMachineRegisterOrMemory) {
+                errs() << format("Invalid clobber constraint '%s' "
+                                 "was specified for inline asm\n",
+                                 Op.ConstraintCode.c_str());
+                llvm_unreachable("Cannot parse clobber constraint");
+              }
               if (PhysReg.first == SP)
                 MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
             }
