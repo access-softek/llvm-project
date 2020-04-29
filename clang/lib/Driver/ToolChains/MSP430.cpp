@@ -128,7 +128,7 @@ MSP430ToolChain::MSP430ToolChain(const Driver &D, const llvm::Triple &Triple,
   }
 
   SmallString<128> SysRootDir(computeSysRoot());
-  llvm::sys::path::append(SysRootDir, "lib", MultilibSuf);
+  llvm::sys::path::append(SysRootDir, "msp430-elf", "lib", MultilibSuf);
   addPathIfExists(D, SysRootDir, getFilePaths());
 }
 
@@ -197,16 +197,22 @@ void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   if (!Args.hasArg(options::OPT_T)) {
-    if (const Arg *MCUArg = Args.getLastArg(options::OPT_mmcu_EQ))
-      CmdArgs.push_back(
-          Args.MakeArgString("-T" + StringRef(MCUArg->getValue()) + ".ld"));
+    if (const Arg *MCUArg = Args.getLastArg(options::OPT_mmcu_EQ)) {
+      SmallString<128> MCULinkerScriptPath(D.SysRoot);
+      llvm::sys::path::append(MCULinkerScriptPath, "include");
+      // -L because <mcu>.ld INCLUDEs <mcu>_symbols.ld
+      CmdArgs.push_back(Args.MakeArgString("-L" + MCULinkerScriptPath));
+      CmdArgs.push_back(Args.MakeArgString("-T" + StringRef(MCUArg->getValue()) + ".ld"));
+    }
   } else {
     Args.AddAllArgs(CmdArgs, options::OPT_T);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtbegin.o")));
+    const char *crtbegin = Args.hasArg(options::OPT_fexceptions) ?
+          "crtbegin.o" : "crtbegin_no_eh.o";
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
   }
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
@@ -222,8 +228,10 @@ void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--end-group");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
+    const char *crtend = Args.hasArg(options::OPT_fexceptions) ?
+          "crtend.o" : "crtend_no_eh.o";
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
+    CmdArgs.push_back("-lgcc");
   }
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
