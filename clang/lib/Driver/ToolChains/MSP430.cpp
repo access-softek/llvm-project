@@ -128,7 +128,7 @@ MSP430ToolChain::MSP430ToolChain(const Driver &D, const llvm::Triple &Triple,
   }
 
   SmallString<128> SysRootDir(computeSysRoot());
-  llvm::sys::path::append(SysRootDir, "msp430-elf", "lib", MultilibSuf);
+  llvm::sys::path::append(SysRootDir, "lib", MultilibSuf);
   addPathIfExists(D, SysRootDir, getFilePaths());
 }
 
