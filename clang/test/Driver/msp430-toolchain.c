@@ -8,44 +8,61 @@
 // RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
 // RUN:   | FileCheck -check-prefix=MSP430 %s
 
-// MSP430: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
-// MSP430: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430"
-// MSP430: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
-// MSP430: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430{{/|\\\\}}crt0.o"
-// MSP430: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430{{/|\\\\}}crtbegin.o"
+// MSP430: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
+// MSP430: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430"
+// MSP430: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
+// MSP430: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430{{/|\\\\}}crt0.o"
+// MSP430: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtbegin_no_eh.o"
 // MSP430: "--start-group" "-lmul_none" "-lgcc" "-lc" "-lcrt" "-lnosys" "--end-group"
-// MSP430: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430{{/|\\\\}}crtend.o"
-// MSP430: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430{{/|\\\\}}crtn.o"
+// MSP430: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtend_no_eh.o" "-lgcc"
+
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -fexceptions \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
+// RUN:   | FileCheck -check-prefix=MSP430-EXC %s
+
+// MSP430-EXC: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
+// MSP430-EXC: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430/exceptions"
+// MSP430-EXC: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430/exceptions"
+// MSP430-EXC: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430/exceptions{{/|\\\\}}crt0.o"
+// MSP430-EXC: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430/exceptions{{/|\\\\}}crtbegin.o"
+// MSP430-EXC: "--start-group" "-lmul_none" "-lgcc" "-lc" "-lcrt" "-lnosys" "--end-group"
+// MSP430-EXC: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430/exceptions{{/|\\\\}}crtend.o" "-lgcc"
+
+// Now, recheck previous command for not using plain 430 paths together with 430/exceptions
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -fexceptions \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
+// RUN:   | FileCheck -check-prefix=MSP430-EXC2 %s
+
+// MSP430-EXC2-NOT: "{{.*}}/430"
 
 // RUN: %clang %s -### -no-canonical-prefixes -target msp430 -nodefaultlibs \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
 // RUN:   | FileCheck -check-prefix=MSP430-NO-DFT-LIB %s
 
-// MSP430-NO-DFT-LIB: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
-// MSP430-NO-DFT-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430"
-// MSP430-NO-DFT-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
-// MSP430-NO-DFT-LIB: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430{{/|\\\\}}crt0.o"
-// MSP430-NO-DFT-LIB: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430{{/|\\\\}}crtbegin.o"
+// MSP430-NO-DFT-LIB: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
+// MSP430-NO-DFT-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430"
+// MSP430-NO-DFT-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
+// MSP430-NO-DFT-LIB: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430{{/|\\\\}}crt0.o"
+// MSP430-NO-DFT-LIB: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtbegin_no_eh.o"
 // MSP430-NO-DFT-LIB: "--start-group" "-lmul_none" "-lgcc" "--end-group"
-// MSP430-NO-DFT-LIB: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430{{/|\\\\}}crtend.o"
-// MSP430-NO-DFT-LIB: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430{{/|\\\\}}crtn.o"
+// MSP430-NO-DFT-LIB: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtend_no_eh.o" "-lgcc"
 
 // RUN: %clang %s -### -no-canonical-prefixes -target msp430 -nostartfiles \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
 // RUN:   | FileCheck -check-prefix=MSP430-NO-START %s
 
-// MSP430-NO-START: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
-// MSP430-NO-START: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430"
-// MSP430-NO-START: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
+// MSP430-NO-START: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
+// MSP430-NO-START: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430"
+// MSP430-NO-START: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
 // MSP430-NO-START: "--start-group" "-lmul_none" "-lgcc" "-lc" "-lcrt" "-lnosys" "--end-group"
 
 // RUN: %clang %s -### -no-canonical-prefixes -target msp430 -nostdlib \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
 // RUN:   | FileCheck -check-prefix=MSP430-NO-STD-LIB %s
 
-// MSP430-NO-STD-LIB: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
-// MSP430-NO-STD-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/430"
-// MSP430-NO-STD-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/7.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
+// MSP430-NO-STD-LIB: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
+// MSP430-NO-STD-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430"
+// MSP430-NO-STD-LIB: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
 // MSP430-NO-STD-LIB: "--start-group" "-lmul_none" "-lgcc" "--end-group"
 
 // RUN: %clang %s -### -no-canonical-prefixes -target msp430 -mmcu=msp430f147 --sysroot="" 2>&1 \
@@ -76,3 +93,12 @@
 // RUN:   | FileCheck -check-prefix=MSP430-HWMult-NONE %s
 
 // MSP430-HWMult-NONE: "--start-group" "-lmul_none"
+
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -mmcu=msp430g2553 \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree \
+// RUN:   --sysroot=%S/Inputs/basic_msp430_tree 2>&1 \
+// RUN:   | FileCheck -check-prefix=MSP430-LD-SCRIPT %s
+
+// MSP430-LD-SCRIPT: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
+// MSP430-LD-SCRIPT: "-L{{.*}}/Inputs/basic_msp430_tree/include"
+// MSP430-LD-SCRIPT: "-Tmsp430g2553.ld"
