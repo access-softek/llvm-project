@@ -43,6 +43,14 @@ if is_msvc:
 elif config.host_os  == 'Darwin':
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.osx.a ")
   config.substitutions.append( ("%librt ", base_lib + ' -lSystem ') )
+if config.target_arch.startswith("msp430"):
+  base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.builtins%s.a"
+                          % config.target_suffix)
+  config.substitutions.append( ("%librt ", "-nostdlib -mhwmult=none " +
+                                           "-l:crt0.o -l:crtbegin_no_eh.o " + base_lib +
+                                           " -Wl,--start-group -lmul_none -lc " + base_lib + " -lm -lcrt -lsim -Wl,--end-group " +
+                                           base_lib + " -l:crtend_no_eh.o " + base_lib +
+                                           " -Tmsp430-sim.ld -Wl,--undefined=__crt0_call_exit ") )
 else:
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.builtins%s.a"
                           % config.target_suffix)

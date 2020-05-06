@@ -175,7 +175,8 @@ file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main()
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
 # the correct commandline flags needed to attempt to target 32-bit and 64-bit.
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND
-    NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    NOT CMAKE_SIZEOF_VOID_P EQUAL 8 AND
+    NOT COMPILER_RT_DEFAULT_TARGET_TRIPLE MATCHES "msp430*")
   message(FATAL_ERROR "Please use architecture with 4 or 8 byte pointers.")
 endif()
 
@@ -261,6 +262,7 @@ set(X86 i386)
 set(X86_64 x86_64)
 set(MIPS32 mips mipsel)
 set(MIPS64 mips64 mips64el)
+set(MSP430 msp430)
 set(PPC64 powerpc64 powerpc64le)
 set(RISCV32 riscv32)
 set(RISCV64 riscv64)

@@ -551,6 +551,10 @@ set(mips64_SOURCES ${GENERIC_TF_SOURCES}
 set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
+set(msp430_SOURCES
+  ${GENERIC_SOURCES}
+)
+
 set(powerpc64_SOURCES
   ppc/divtc3.c
   ppc/fixtfti.c
