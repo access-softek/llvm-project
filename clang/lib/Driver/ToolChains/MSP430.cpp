@@ -219,7 +219,7 @@ void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("--start-group");
   CmdArgs.push_back(Args.MakeArgString(getHWMultLib(Args)));
-  CmdArgs.push_back("-lgcc");
+  AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lcrt");
@@ -231,7 +231,7 @@ void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     const char *crtend = Args.hasArg(options::OPT_fexceptions) ?
           "crtend.o" : "crtend_no_eh.o";
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
-    CmdArgs.push_back("-lgcc");
+    AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
   }
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());

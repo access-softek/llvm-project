@@ -40,6 +40,11 @@ public:
   bool isPIEDefault() const override { return false; }
   bool isPICDefaultForced() const override { return true; }
 
+  UnwindLibType
+  GetUnwindLibType(const llvm::opt::ArgList &Args) const override {
+    return UNW_None;
+  }
+
 protected:
   Tool *buildLinker() const override;
 

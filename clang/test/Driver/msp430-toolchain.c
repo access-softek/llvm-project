@@ -20,6 +20,18 @@
 // RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
 // RUN:   | FileCheck -check-prefix=MSP430-EXC %s
 
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 --rtlib=compiler-rt \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_msp430_tree --sysroot="" 2>&1 \
+// RUN:   | FileCheck -check-prefix=MSP430-CLANG-RT %s
+
+// MSP430-CLANG-RT: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
+// MSP430-CLANG-RT: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430"
+// MSP430-CLANG-RT: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
+// MSP430-CLANG-RT: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430{{/|\\\\}}crt0.o"
+// MSP430-CLANG-RT: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtbegin_no_eh.o"
+// MSP430-CLANG-RT: "--start-group" "-lmul_none" "{{.*}}libclang_rt.builtins-msp430.a" "-lc" "-lcrt" "-lnosys" "--end-group"
+// MSP430-CLANG-RT: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtend_no_eh.o" "{{.*}}libclang_rt.builtins-msp430.a"
+
 // MSP430-EXC: "{{.*}}Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
 // MSP430-EXC: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430/exceptions"
 // MSP430-EXC: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430/exceptions"
