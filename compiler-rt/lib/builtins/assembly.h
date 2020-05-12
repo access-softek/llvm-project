@@ -16,6 +16,8 @@
 
 #if defined(__POWERPC__) || defined(__powerpc__) || defined(__ppc__)
 #define SEPARATOR @
+#elif defined(__MSP430__)
+#define SEPARATOR {
 #else
 #define SEPARATOR ;
 #endif

@@ -242,7 +242,10 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     { RTLIB::SRL_I32,    "__mspabi_srll", ISD::SETCC_INVALID },
     { RTLIB::SRA_I32,    "__mspabi_sral", ISD::SETCC_INVALID },
     { RTLIB::SHL_I32,    "__mspabi_slll", ISD::SETCC_INVALID },
-    // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
+    { RTLIB::SRL_I64,    "__mspabi_srlll", ISD::SETCC_INVALID },
+    { RTLIB::SRA_I64,    "__mspabi_srall", ISD::SETCC_INVALID },
+    { RTLIB::SHL_I64,    "__mspabi_sllll", ISD::SETCC_INVALID },
+    // __mspabi_[rlli/rlll] are NOT implemented in libgcc
 
   };
 
@@ -316,6 +319,9 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   }
 
   // Several of the runtime library functions use a special calling conv
+  setLibcallCallingConv(RTLIB::SRL_I64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::SRA_I64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::SHL_I64, CallingConv::MSP430_BUILTIN);
   setLibcallCallingConv(RTLIB::UDIV_I64, CallingConv::MSP430_BUILTIN);
   setLibcallCallingConv(RTLIB::UREM_I64, CallingConv::MSP430_BUILTIN);
   setLibcallCallingConv(RTLIB::SDIV_I64, CallingConv::MSP430_BUILTIN);
@@ -330,7 +336,6 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   setLibcallCallingConv(RTLIB::OLT_F64, CallingConv::MSP430_BUILTIN);
   setLibcallCallingConv(RTLIB::OLE_F64, CallingConv::MSP430_BUILTIN);
   setLibcallCallingConv(RTLIB::OGT_F64, CallingConv::MSP430_BUILTIN);
-  // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));

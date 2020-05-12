@@ -557,6 +557,17 @@ set(msp430_SOURCES
   msp430/udivhi3.c
   msp430/modhi3.c
   msp430/umodhi3.c
+# MSP430-specific LibCalls
+  msp430/mspabi_func_epilog.S
+  msp430/mspabi_slli.S
+  msp430/mspabi_slll.S
+  msp430/mspabi_sllll.S
+  msp430/mspabi_srli.S
+  msp430/mspabi_srll.S
+  msp430/mspabi_srlll.S
+  msp430/mspabi_srai.S
+  msp430/mspabi_sral.S
+  msp430/mspabi_srall.S
 # Other standard LibCalls
   ${GENERIC_SOURCES}
 )
