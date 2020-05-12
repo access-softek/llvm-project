@@ -42,3 +42,6 @@ AEABI_RTABI di_int __aeabi_d2lz(fp_t a) { return __fixdfdi(a); }
 COMPILER_RT_ALIAS(__fixdfdi, __aeabi_d2lz)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__fixdfdi, __mspabi_fixdlli)
+#endif

@@ -24,3 +24,6 @@ AEABI_RTABI su_int __aeabi_f2uiz(fp_t a) { return __fixunssfsi(a); }
 COMPILER_RT_ALIAS(__fixunssfsi, __aeabi_f2uiz)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__fixunssfsi, __mspabi_fixful)
+#endif

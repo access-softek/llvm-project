@@ -19,3 +19,6 @@ AEABI_RTABI double __aeabi_f2d(float a) { return __extendsfdf2(a); }
 COMPILER_RT_ALIAS(__extendsfdf2, __aeabi_f2d)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__extendsfdf2, __mspabi_cvtfd)
+#endif

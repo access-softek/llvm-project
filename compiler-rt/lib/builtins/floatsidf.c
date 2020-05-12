@@ -55,3 +55,6 @@ AEABI_RTABI fp_t __aeabi_i2d(si_int a) { return __floatsidf(a); }
 COMPILER_RT_ALIAS(__floatsidf, __aeabi_i2d)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__floatsidf, __mspabi_fltlid)
+#endif

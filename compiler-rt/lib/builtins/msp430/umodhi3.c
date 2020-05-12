@@ -21,3 +21,6 @@ typedef hi_int fixint_t;
 COMPILER_RT_ABI hu_int __umodhi3(hu_int a, hu_int b) {
   return __umodXi3(a, b);
 }
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__umodhi3, __mspabi_remu)
+#endif

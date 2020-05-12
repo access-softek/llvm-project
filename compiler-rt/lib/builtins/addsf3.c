@@ -22,3 +22,6 @@ AEABI_RTABI float __aeabi_fadd(float a, float b) { return __addsf3(a, b); }
 COMPILER_RT_ALIAS(__addsf3, __aeabi_fadd)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__addsf3, __mspabi_addf)
+#endif

@@ -23,3 +23,6 @@ AEABI_RTABI fp_t __aeabi_dmul(fp_t a, fp_t b) { return __muldf3(a, b); }
 COMPILER_RT_ALIAS(__muldf3, __aeabi_dmul)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__muldf3, __mspabi_mpyd)
+#endif

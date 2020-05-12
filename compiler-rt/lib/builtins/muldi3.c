@@ -49,3 +49,6 @@ COMPILER_RT_ABI di_int __muldi3(di_int a, di_int b) {
 #if defined(__ARM_EABI__)
 COMPILER_RT_ALIAS(__muldi3, __aeabi_lmul)
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__muldi3, __mspabi_mpyll)
+#endif

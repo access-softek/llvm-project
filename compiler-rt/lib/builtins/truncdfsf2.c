@@ -19,3 +19,6 @@ AEABI_RTABI float __aeabi_d2f(double a) { return __truncdfsf2(a); }
 COMPILER_RT_ALIAS(__truncdfsf2, __aeabi_d2f)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__truncdfsf2, __mspabi_cvtdf)
+#endif

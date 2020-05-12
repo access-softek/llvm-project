@@ -29,3 +29,6 @@ COMPILER_RT_ABI hi_int __divhi3(hi_int a, hi_int b) {
   //
   return ((hu_int)a / (hu_int)b ^ s_a) - s_a; // negate if s_a == -1
 }
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__divhi3, __mspabi_divi)
+#endif

@@ -24,3 +24,6 @@ COMPILER_RT_ABI di_int __moddi3(di_int a, di_int b) {
   __udivmoddi4(a, b, &r);
   return ((di_int)r ^ s) - s; // negate if s == -1
 }
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__moddi3, __mspabi_remlli)
+#endif

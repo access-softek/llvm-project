@@ -33,3 +33,6 @@ COMPILER_RT_ABI si_int __divsi3(si_int a, si_int b) {
 #if defined(__ARM_EABI__)
 COMPILER_RT_ALIAS(__divsi3, __aeabi_idiv)
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__divsi3, __mspabi_divli)
+#endif

@@ -25,3 +25,6 @@ COMPILER_RT_ABI su_int __udivsi3(su_int a, su_int b) {
 #if defined(__ARM_EABI__)
 COMPILER_RT_ALIAS(__udivsi3, __aeabi_uidiv)
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__udivsi3, __mspabi_divul)
+#endif

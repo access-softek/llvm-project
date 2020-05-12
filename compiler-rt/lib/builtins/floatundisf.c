@@ -70,3 +70,6 @@ AEABI_RTABI float __aeabi_ul2f(du_int a) { return __floatundisf(a); }
 COMPILER_RT_ALIAS(__floatundisf, __aeabi_ul2f)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__floatundisf, __mspabi_fltullf)
+#endif

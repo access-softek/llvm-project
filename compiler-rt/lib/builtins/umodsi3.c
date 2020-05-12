@@ -21,3 +21,6 @@ typedef si_int fixint_t;
 COMPILER_RT_ABI su_int __umodsi3(su_int a, su_int b) {
   return __umodXi3(a, b);
 }
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__umodsi3, __mspabi_remul)
+#endif

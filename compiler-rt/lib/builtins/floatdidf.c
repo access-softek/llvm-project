@@ -101,3 +101,6 @@ AEABI_RTABI double __aeabi_l2d(di_int a) { return __floatdidf(a); }
 COMPILER_RT_ALIAS(__floatdidf, __aeabi_l2d)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__floatdidf, __mspabi_fltllid)
+#endif

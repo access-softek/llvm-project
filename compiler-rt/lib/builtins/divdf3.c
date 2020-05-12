@@ -208,3 +208,6 @@ AEABI_RTABI fp_t __aeabi_ddiv(fp_t a, fp_t b) { return __divdf3(a, b); }
 COMPILER_RT_ALIAS(__divdf3, __aeabi_ddiv)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__divdf3, __mspabi_divd)
+#endif

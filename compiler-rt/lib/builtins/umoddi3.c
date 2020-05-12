@@ -21,3 +21,6 @@ typedef di_int fixint_t;
 COMPILER_RT_ABI du_int __umoddi3(du_int a, du_int b) {
   return __umodXi3(a, b);
 }
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__umoddi3, __mspabi_remull)
+#endif

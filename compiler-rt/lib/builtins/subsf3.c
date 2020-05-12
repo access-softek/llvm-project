@@ -25,3 +25,6 @@ AEABI_RTABI fp_t __aeabi_fsub(fp_t a, fp_t b) { return __subsf3(a, b); }
 COMPILER_RT_ALIAS(__subsf3, __aeabi_fsub)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__subsf3, __mspabi_subf)
+#endif

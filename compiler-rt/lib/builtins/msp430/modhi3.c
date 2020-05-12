@@ -19,3 +19,6 @@ COMPILER_RT_ABI hi_int __divhi3(hi_int a, hi_int b);
 COMPILER_RT_ABI hi_int __modhi3(hi_int a, hi_int b) {
   return a - __divhi3(a, b) * b;
 }
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__modhi3, __mspabi_remi)
+#endif

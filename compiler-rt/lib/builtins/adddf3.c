@@ -22,3 +22,6 @@ AEABI_RTABI double __aeabi_dadd(double a, double b) { return __adddf3(a, b); }
 COMPILER_RT_ALIAS(__adddf3, __aeabi_dadd)
 #endif
 #endif
+#if defined(__MSP430__)
+COMPILER_RT_ALIAS(__adddf3, __mspabi_addd)
+#endif
