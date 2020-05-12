@@ -552,6 +552,12 @@ set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
 set(msp430_SOURCES
+# 16-bit integer div/mod
+  msp430/divhi3.c
+  msp430/udivhi3.c
+  msp430/modhi3.c
+  msp430/umodhi3.c
+# Other standard LibCalls
   ${GENERIC_SOURCES}
 )
 

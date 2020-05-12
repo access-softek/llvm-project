@@ -18,6 +18,9 @@
 
 #include "int_endianness.h"
 
+typedef int16_t hi_int;
+typedef uint16_t hu_int;
+
 // si_int is defined in Linux sysroot's asm-generic/siginfo.h
 #ifdef si_int
 #undef si_int
