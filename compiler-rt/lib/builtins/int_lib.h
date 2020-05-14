@@ -32,6 +32,7 @@
 
 #if defined(__MSP430__)
 #define MSP430_BUILTIN_CC __attribute__((msp430_builtin))
+#define __SOFT_FP__
 #else
 #define MSP430_BUILTIN_CC
 #endif
