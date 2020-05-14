@@ -203,6 +203,7 @@ patterns:
             \\bmodule\\b|\
             \\bmonotonic\\b|\
             \\bmsp430_intrcc\\b|\
+            \\bmsp430_builtin\\b|\
             \\bmusttail\\b|\
             \\bnaked\\b|\
             \\bnest\\b|\

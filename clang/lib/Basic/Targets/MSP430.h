@@ -74,6 +74,16 @@ public:
     return llvm::makeArrayRef(GCCRegAliases);
   }
 
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    default:
+      return CCCR_Warning;
+    case CC_C:
+    case CC_MSP430Builtin:
+      return CCCR_OK;
+    }
+  }
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override {
     // FIXME: implement

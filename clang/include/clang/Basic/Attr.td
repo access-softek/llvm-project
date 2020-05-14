@@ -1460,6 +1460,11 @@ def MSP430Interrupt : InheritableAttr, TargetSpecificAttr<TargetMSP430> {
   let Documentation = [Undocumented];
 }
 
+def MSP430Builtin : InheritableAttr, TargetSpecificAttr<TargetMSP430> {
+  let Spellings = [Clang<"msp430_builtin">];
+  let Documentation = [Undocumented];
+}
+
 def Mips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"mips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;

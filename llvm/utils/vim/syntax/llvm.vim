@@ -106,6 +106,7 @@ syn keyword llvmKeyword
       \ module
       \ monotonic
       \ msp430_intrcc
+      \ msp430_builtin
       \ musttail
       \ naked
       \ nest

@@ -1214,6 +1214,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_AAPCS:
   case CC_AArch64VectorCall:
     return llvm::dwarf::DW_CC_LLVM_AAPCS;
+  // TODO case CC_MSP430Builtin:
   case CC_AAPCS_VFP:
     return llvm::dwarf::DW_CC_LLVM_AAPCS_VFP;
   case CC_IntelOclBicc:

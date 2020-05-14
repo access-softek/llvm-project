@@ -28,9 +28,9 @@ def CC_MSP430_AssignStack : CallingConv<[
 
   // Promote i8 arguments to i16.
   CCIfType<[i8], CCPromoteToType<i16>>,
+  CCIfCC<"CallingConv::MSP430_BUILTIN", CCPromoteToType<i64>>,
 
   // Integer values get stored in stack slots that are 2 bytes in
   // size and 2-byte aligned.
   CCIfType<[i16], CCAssignToStack<2, 2>>
 ]>;
-

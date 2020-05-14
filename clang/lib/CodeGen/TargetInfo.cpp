@@ -7544,6 +7544,9 @@ void MSP430TargetCodeGenInfo::setTargetAttributes(
   if (GV->isDeclaration())
     return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+    if (FD->getAttr<MSP430BuiltinAttr>())
+      cast<llvm::Function>(GV)->setCallingConv(llvm::CallingConv::MSP430_BUILTIN);
+
     const auto *InterruptAttr = FD->getAttr<MSP430InterruptAttr>();
     if (!InterruptAttr)
       return;

@@ -520,11 +520,6 @@ static void AnalyzeArguments(CCState &State,
 
     unsigned Parts = ArgsParts[i];
 
-    if (Builtin) {
-      assert(Parts == 4 &&
-          "Builtin calling convention requires 64-bit arguments");
-    }
-
     if (!UsedStack && Parts == 2 && RegsLeft == 1) {
       // Special case for 32-bit register split, see EABI section 3.3.3
       unsigned Reg = State.AllocateReg(RegList);
