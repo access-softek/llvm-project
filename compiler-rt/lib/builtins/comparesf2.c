@@ -89,6 +89,13 @@ COMPILER_RT_ALIAS(__lesf2, __eqsf2)
 COMPILER_RT_ALIAS(__lesf2, __ltsf2)
 COMPILER_RT_ALIAS(__lesf2, __nesf2)
 
+#if defined(__MSP430__)
+// May be optimized further based on the fact that MSP430 EABI explicitly
+// defines passing NaN to __mspabi_cmpf as UB
+// TODO: is it suitable for LibCall?
+COMPILER_RT_ALIAS(__lesf2, __mspabi_cmpf)
+#endif
+
 enum GE_RESULT {
   GE_LESS = -1,
   GE_EQUAL = 0,

@@ -41,7 +41,7 @@
 
 enum LE_RESULT { LE_LESS = -1, LE_EQUAL = 0, LE_GREATER = 1, LE_UNORDERED = 1 };
 
-COMPILER_RT_ABI enum LE_RESULT __ledf2(fp_t a, fp_t b) {
+COMPILER_RT_ABI enum LE_RESULT MSP430_BUILTIN_CC __ledf2(fp_t a, fp_t b) {
 
   const srep_t aInt = toRep(a);
   const srep_t bInt = toRep(b);
@@ -88,6 +88,13 @@ COMPILER_RT_ALIAS(__ledf2, __cmpdf2)
 COMPILER_RT_ALIAS(__ledf2, __eqdf2)
 COMPILER_RT_ALIAS(__ledf2, __ltdf2)
 COMPILER_RT_ALIAS(__ledf2, __nedf2)
+
+#if defined(__MSP430__)
+// May be optimized further based on the fact that MSP430 EABI explicitly
+// defines passing NaN to __mspabi_cmpd as UB
+// TODO: is it suitable for LibCall?
+COMPILER_RT_ALIAS(__ledf2, __mspabi_cmpd)
+#endif
 
 enum GE_RESULT {
   GE_LESS = -1,
