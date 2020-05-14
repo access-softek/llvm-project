@@ -7,7 +7,7 @@
 #include "fp_test.h"
 
 // Returns: a / b
-COMPILER_RT_ABI double __divdf3(double a, double b);
+COMPILER_RT_ABI double MSP430_BUILTIN_CC __divdf3(double a, double b);
 
 int test__divdf3(double a, double b, uint64_t expected)
 {

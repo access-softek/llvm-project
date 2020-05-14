@@ -30,6 +30,12 @@
 #define COMPILER_RT_ABI
 #endif
 
+#if defined(__MSP430__)
+#define MSP430_BUILTIN_CC __attribute__((msp430_builtin))
+#else
+#define MSP430_BUILTIN_CC
+#endif
+
 #define AEABI_RTABI __attribute__((__pcs__("aapcs")))
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -95,7 +101,7 @@
 COMPILER_RT_ABI int __paritysi2(si_int a);
 COMPILER_RT_ABI int __paritydi2(di_int a);
 
-COMPILER_RT_ABI di_int __divdi3(di_int a, di_int b);
+COMPILER_RT_ABI di_int MSP430_BUILTIN_CC __divdi3(di_int a, di_int b);
 COMPILER_RT_ABI si_int __divsi3(si_int a, si_int b);
 COMPILER_RT_ABI su_int __udivsi3(su_int n, su_int d);
 

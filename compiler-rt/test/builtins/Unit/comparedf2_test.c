@@ -1,14 +1,15 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_comparedf2
 
+#include <int_lib.h>
 #include <stdio.h>
 
-int __eqdf2(double, double);
+int MSP430_BUILTIN_CC __eqdf2(double, double);
 int __gedf2(double, double);
 int __gtdf2(double, double);
-int __ledf2(double, double);
-int __ltdf2(double, double);
-int __nedf2(double, double);
+int MSP430_BUILTIN_CC __ledf2(double, double);
+int MSP430_BUILTIN_CC __ltdf2(double, double);
+int MSP430_BUILTIN_CC __nedf2(double, double);
 int __unorddf2(double, double);
 
 struct TestVector {

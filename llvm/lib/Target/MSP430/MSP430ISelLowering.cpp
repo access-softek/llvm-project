@@ -574,6 +574,7 @@ SDValue MSP430TargetLowering::LowerFormalArguments(
     report_fatal_error("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::MSP430_BUILTIN:
     return LowerCCCArguments(Chain, CallConv, isVarArg, Ins, dl, DAG, InVals);
   case CallingConv::MSP430_INTR:
     if (Ins.empty())
