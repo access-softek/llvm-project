@@ -7,21 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
+#include "msp430.S.inc"
 
 // (r15:r14:r13:r12) := (s64)(r11:r10:r9:r8) >> [...]:r12
 DEFINE_COMPILERRT_FUNCTION(__mspabi_srall)
+MSP430_I64_SHIFT_PROLOGUE
 LOCAL_LABEL(loop):
-  dec r12
+  dec r11
   jnc LOCAL_LABEL(exit)
-  rra r11
-  rrc r10
-  rrc r9
-  rrc r8
+  rra r15
+  rrc r14
+  rrc r13
+  rrc r12
   jmp LOCAL_LABEL(loop)
 LOCAL_LABEL(exit):
-  mov r8, r12
-  mov r9, r13
-  mov r10, r14
-  mov r11, r15
   ret
 END_COMPILERRT_FUNCTION(__mspabi_srall)
