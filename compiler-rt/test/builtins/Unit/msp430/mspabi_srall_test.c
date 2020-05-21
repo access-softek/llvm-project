@@ -19,7 +19,7 @@
 typedef int64_t inttest_t;
 typedef uint64_t uinttest_t;
 
-extern inttest_t __attribute__((msp430_builtin)) __mspabi_srall(inttest_t x, int16_t n);
+extern inttest_t __attribute__((msp430_builtin)) __mspabi_srall(inttest_t x, int64_t n);
 
 int test__mspabi_srall(uinttest_t x, int16_t n, uinttest_t expected) {
   uinttest_t actual = (uinttest_t) __mspabi_srall((inttest_t) x, n);

@@ -18,7 +18,7 @@
 
 typedef uint64_t uinttest_t;
 
-extern uinttest_t __attribute__((msp430_builtin)) __mspabi_sllll(uinttest_t x, int16_t n);
+extern uinttest_t __attribute__((msp430_builtin)) __mspabi_sllll(uinttest_t x, int64_t n);
 
 int test__mspabi_sllll(uinttest_t x, int16_t n, uinttest_t expected) {
   uinttest_t actual = __mspabi_sllll(x, n);

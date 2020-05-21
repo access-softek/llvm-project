@@ -6,7 +6,7 @@
 
 // Returns: a / b
 
-COMPILER_RT_ABI di_int MSP430_BUILTIN_CC __divdi3(di_int a, di_int b);
+COMPILER_RT_ABI di_int __divdi3(di_int a, di_int b);
 
 int test__divdi3(di_int a, di_int b, di_int expected)
 {

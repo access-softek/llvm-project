@@ -4,13 +4,13 @@
 #include <int_lib.h>
 #include <stdio.h>
 
-int MSP430_BUILTIN_CC __eqdf2(double, double);
-int __gedf2(double, double);
-int __gtdf2(double, double);
-int MSP430_BUILTIN_CC __ledf2(double, double);
-int MSP430_BUILTIN_CC __ltdf2(double, double);
-int MSP430_BUILTIN_CC __nedf2(double, double);
-int __unorddf2(double, double);
+COMPILER_RT_ABI int __eqdf2(double, double);
+COMPILER_RT_ABI int __gedf2(double, double);
+COMPILER_RT_ABI int __gtdf2(double, double);
+COMPILER_RT_ABI int __ledf2(double, double);
+COMPILER_RT_ABI int __ltdf2(double, double);
+COMPILER_RT_ABI int __nedf2(double, double);
+COMPILER_RT_ABI int __unorddf2(double, double);
 
 struct TestVector {
     double a;
@@ -25,7 +25,7 @@ struct TestVector {
 };
 
 int test__cmpdf2(const struct TestVector *vector) {
-    
+
     if (__eqdf2(vector->a, vector->b) != vector->eqReference) {
         printf("error in __eqdf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,

@@ -18,7 +18,7 @@ typedef di_int fixint_t;
 
 // Returns: a / b
 
-COMPILER_RT_ABI du_int MSP430_BUILTIN_CC __udivdi3(du_int a, du_int b) {
+COMPILER_RT_ABI du_int __udivdi3(du_int a, du_int b) {
   return __udivXi3(a, b);
 }
 #if defined(__MSP430__)

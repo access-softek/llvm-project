@@ -35,7 +35,7 @@ static di_int __muldsi3(su_int a, su_int b) {
 
 // Returns: a * b
 
-COMPILER_RT_ABI di_int MSP430_BUILTIN_CC __muldi3(di_int a, di_int b) {
+COMPILER_RT_ABI di_int __muldi3(di_int a, di_int b) {
   dwords x;
   x.all = a;
   dwords y;
