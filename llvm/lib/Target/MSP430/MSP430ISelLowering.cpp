@@ -315,27 +315,13 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     for (const auto &LC : LibraryCalls) {
       setLibcallName(LC.Op, LC.Name);
     }
-    setLibcallCallingConv(RTLIB::MUL_I64, CallingConv::MSP430_BUILTIN);
   }
 
-  // Several of the runtime library functions use a special calling conv
-  setLibcallCallingConv(RTLIB::SRL_I64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::SRA_I64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::SHL_I64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::UDIV_I64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::UREM_I64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::SDIV_I64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::SREM_I64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::ADD_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::SUB_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::MUL_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::DIV_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::OEQ_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::UNE_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::OGE_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::OLT_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::OLE_F64, CallingConv::MSP430_BUILTIN);
-  setLibcallCallingConv(RTLIB::OGT_F64, CallingConv::MSP430_BUILTIN);
+  // Mark LibCalls as having special calling convention on MSP430
+  // since they handle two 64-bit arguments in a special way.
+  // See part 6.3 of MSP430 EABI.
+  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
+    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::MSP430_BUILTIN);
 
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
@@ -453,6 +439,13 @@ static void AnalyzeVarArgs(CCState &State,
   State.AnalyzeFormalArguments(Ins, CC_MSP430_AssignStack);
 }
 
+static bool UseModifiedBuiltinCC(const CCState &State,
+                                 ArrayRef<unsigned> ArgsParts) {
+  return State.getCallingConv() == CallingConv::MSP430_BUILTIN &&
+          ArgsParts.size() == 2 &&
+          ArgsParts[0] == 4 && ArgsParts[1] == 4;
+}
+
 /// Analyze incoming and outgoing function arguments. We need custom C++ code
 /// to handle special constraints in the ABI like reversing the order of the
 /// pieces of splitted arguments. In addition, all pieces of a certain argument
@@ -465,23 +458,16 @@ static void AnalyzeArguments(CCState &State,
     MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
   };
   static const unsigned CNbRegs = array_lengthof(CRegList);
-  static const MCPhysReg BuiltinRegList[] = {
+  static const MCPhysReg ModifiedBuiltinRegList[] = {
     MSP430::R8, MSP430::R9, MSP430::R10, MSP430::R11,
     MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
   };
-  static const unsigned BuiltinNbRegs = array_lengthof(BuiltinRegList);
+  static const unsigned ModifiedBuiltinNbRegs =
+          array_lengthof(ModifiedBuiltinRegList);
 
   ArrayRef<MCPhysReg> RegList;
   unsigned NbRegs;
 
-  bool Builtin = (State.getCallingConv() == CallingConv::MSP430_BUILTIN);
-  if (Builtin) {
-    RegList = BuiltinRegList;
-    NbRegs = BuiltinNbRegs;
-  } else {
-    RegList = CRegList;
-    NbRegs = CNbRegs;
-  }
 
   if (State.isVarArg()) {
     AnalyzeVarArgs(State, Args);
@@ -491,9 +477,12 @@ static void AnalyzeArguments(CCState &State,
   SmallVector<unsigned, 4> ArgsParts;
   ParseFunctionArgs(Args, ArgsParts);
 
-  if (Builtin) {
-    assert(ArgsParts.size() == 2 &&
-        "Builtin calling convention requires two arguments");
+  if (UseModifiedBuiltinCC(State, ArgsParts)) {
+    RegList = ModifiedBuiltinRegList;
+    NbRegs = ModifiedBuiltinNbRegs;
+  } else {
+    RegList = CRegList;
+    NbRegs = CNbRegs;
   }
 
   unsigned RegsLeft = NbRegs;

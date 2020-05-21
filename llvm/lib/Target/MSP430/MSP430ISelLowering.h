@@ -75,8 +75,10 @@ namespace llvm {
     explicit MSP430TargetLowering(const TargetMachine &TM,
                                   const MSP430Subtarget &STI);
 
-    MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
-      return MVT::i8;
+    MVT getScalarShiftAmountTy(const DataLayout &, EVT VT) const override {
+      // Mark shift LibCalls as having two 64-bit arguments,
+      // see part 6.3 of MSP430 EABI.
+      return VT.getSizeInBits() == 64 ? MVT::i64 : MVT::i8;
     }
 
     MVT::SimpleValueType getCmpLibcallReturnType() const override {
