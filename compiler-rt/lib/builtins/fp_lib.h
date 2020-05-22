@@ -40,6 +40,7 @@
 
 #if defined SINGLE_PRECISION
 
+typedef uint16_t half_rep_t;
 typedef uint32_t rep_t;
 typedef int32_t srep_t;
 typedef float fp_t;
@@ -58,6 +59,7 @@ COMPILER_RT_ABI fp_t __addsf3(fp_t a, fp_t b);
 
 #elif defined DOUBLE_PRECISION
 
+typedef uint32_t half_rep_t;
 typedef uint64_t rep_t;
 typedef int64_t srep_t;
 typedef double fp_t;
@@ -102,6 +104,7 @@ COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
 #elif defined QUAD_PRECISION
 #if __LDBL_MANT_DIG__ == 113 && defined(__SIZEOF_INT128__)
 #define CRT_LDBL_128BIT
+typedef uint64_t half_rep_t;
 typedef __uint128_t rep_t;
 typedef __int128_t srep_t;
 typedef long double fp_t;
