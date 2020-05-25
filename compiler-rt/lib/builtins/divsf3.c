@@ -9,15 +9,12 @@
 // This file implements single-precision soft-float division
 // with the IEEE-754 default rounding (to nearest, ties to even).
 //
-// For simplicity, this implementation currently flushes denormals to zero.
-// It should be a fairly straightforward exercise to implement gradual
-// underflow with correct rounding.
-//
 //===----------------------------------------------------------------------===//
 
 #define SINGLE_PRECISION
+#include "fp_lib.h"
 
-#define INITIALIZATION_CONSTANT REP_C(0x7504F333)
+#define NUMBER_OF_HALF_ITERATIONS 0
 #define NUMBER_OF_ITERATIONS 3
 #include "fp_div_impl.inc"
 

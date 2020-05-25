@@ -9,49 +9,29 @@
 // This file implements soft-float division with the IEEE-754 default
 // rounding (to nearest, ties to even).
 //
-// For simplicity, this implementation currently flushes denormals to zero.
-// It should be a fairly straightforward exercise to implement gradual
-// underflow with correct rounding.
-//
 //===----------------------------------------------------------------------===//
 
-#if !defined(INITIALIZATION_CONSTANT)
-#error Define INITIALIZATION_CONSTANT / 2^typeWidth + 1 == 3/4 + 1/sqrt(2)
-#error Try using [bc <<< "width=32;obase=16;sqrt(2^(2*width-1)) - 2^(width-2)"]
-#endif
+#include <assert.h>
 
+#if !defined(NUMBER_OF_HALF_ITERATIONS)
+#error NUMBER_OF_HALF_ITERATIONS is not defined
+#endif
 #if !defined(NUMBER_OF_ITERATIONS)
 #error NUMBER_OF_ITERATIONS is not defined
 #endif
 
-#include "fp_lib.h"
-
 // Force unrolling the code specified to be repeated N times.
-// There are only three possible values of N so far, so just implement by hand.
+#define REPEAT_0_TIMES(code_to_repeat) /* do nothing */
+#define REPEAT_1_TIMES(code_to_repeat) code_to_repeat
 #define REPEAT_3_TIMES(code_to_repeat) \
   code_to_repeat \
   code_to_repeat \
   code_to_repeat
-#define REPEAT_4_TIMES(code_to_repeat) \
-  REPEAT_3_TIMES(code_to_repeat) \
-  code_to_repeat
-#define REPEAT_5_TIMES(code_to_repeat) \
-  REPEAT_4_TIMES(code_to_repeat) \
-  code_to_repeat
+
 #define REPEAT_N_TIMES_(N, code_to_repeat) REPEAT_##N##_TIMES(code_to_repeat)
 #define REPEAT_N_TIMES(N, code_to_repeat) REPEAT_N_TIMES_(N, code_to_repeat)
 
-static __inline void defaultWideRotateLeft(rep_t *hi, rep_t *lo) {
-  const rep_t highestBit = ~(REP_C(-1) >> 1);
-  *hi <<= 1;
-  *hi |= (*lo & highestBit) != 0;
-}
-
-#ifndef wideRotateLeft
-#define wideRotateLeft defaultWideRotateLeft
-#endif
-
-COMPILER_RT_ABI fp_t __divXf3(fp_t a, fp_t b) {
+static __inline fp_t __divXf3(fp_t a, fp_t b) {
 
   const unsigned int aExponent = toRep(a) >> significandBits & maxExponent;
   const unsigned int bExponent = toRep(b) >> significandBits & maxExponent;
@@ -120,8 +100,11 @@ COMPILER_RT_ABI fp_t __divXf3(fp_t a, fp_t b) {
   // [1, 2.0) and get a UQ0.n approximate reciprocal using a small minimax
   // polynomial approximation: reciprocal = 3/4 + 1/sqrt(2) - b/2.  This
   // is accurate to about 3.5(FIXME: check) binary digits.
-  rep_t q1b = bSignificand << (typeWidth - significandBits - 1);
-  rep_t reciprocal = INITIALIZATION_CONSTANT - q1b;
+  const rep_t q1b = bSignificand << (typeWidth - significandBits - 1);
+  const half_rep_t half_q1b = q1b >> (typeWidth / 2);
+  // C is approximately (1/sqrt(2) - 1/4) as UQ1.n
+  const half_rep_t C = HALF_REP_C(0x7504) << (typeWidth / 2 - 16);
+  half_rep_t half_reciprocal = C - half_q1b;
 
   // Now refine the reciprocal estimate using a Newton-Raphson iteration:
   //
@@ -129,6 +112,12 @@ COMPILER_RT_ABI fp_t __divXf3(fp_t a, fp_t b) {
   //
   // This doubles the number of correct binary digits in the approximation
   // with each iteration.
+  REPEAT_N_TIMES(NUMBER_OF_HALF_ITERATIONS, {
+    half_rep_t correction;
+    correction      = (rep_t)half_reciprocal * half_q1b >> (typeWidth / 2);
+    half_reciprocal = (rep_t)half_reciprocal * (-correction) >> (typeWidth / 2 - 1);
+  })
+  rep_t reciprocal = ((rep_t)half_reciprocal) << (typeWidth / 2);
   REPEAT_N_TIMES(NUMBER_OF_ITERATIONS, {
     rep_t correction;
     rep_t tmp;
@@ -136,7 +125,7 @@ COMPILER_RT_ABI fp_t __divXf3(fp_t a, fp_t b) {
     // reciprocal = (twice_rep_t)reciprocal * (-correction) >> (typeWidth - 1);
     wideMultiply(reciprocal, q1b, &correction, &tmp);
     wideMultiply(reciprocal, -correction, &reciprocal, &tmp);
-    wideRotateLeft(&reciprocal, &tmp);
+    wideLeftShift(&reciprocal, &tmp, 1);
   })
 
   // Adust the final rep_t-sized reciprocal estimate downward to ensure that
@@ -177,12 +166,14 @@ COMPILER_RT_ABI fp_t __divXf3(fp_t a, fp_t b) {
   rep_t residual;
   rep_t qb;
 
+  bool qShifted = false;
   if (quotient < (implicitBit << 1)) {
     wideMultiply(quotient, bSignificand, &dummy, &qb);
     residual = (aSignificand << (significandBits + 1)) - qb;
     quotientExponent--;
   } else {
     quotient >>= 1;
+    qShifted = true;
     wideMultiply(quotient, bSignificand, &dummy, &qb);
     residual = (aSignificand << significandBits) - qb;
   }
@@ -205,9 +196,26 @@ COMPILER_RT_ABI fp_t __divXf3(fp_t a, fp_t b) {
         return fromRep(absResult | quotientSign);
       }
     }
-    // Flush denormals to zero.  In the future, it would be nice to add
-    // code to round them correctly.
-    return fromRep(quotientSign);
+    // quotient is Q1.SB and is >= 1
+    assert(quotient >= implicitBit);
+    assert(quotient < (implicitBit << 1));
+
+    // Prevent UB
+    if (-writtenExponent + 1 >= (int)typeWidth)
+      return fromRep(quotientSign);
+
+    rep_t resSignificand = quotient >> (-writtenExponent + 1);
+    wideMultiply(resSignificand, bSignificand, &dummy, &qb);
+    const int shiftAmount = significandBits + writtenExponent - qShifted;
+
+    if (shiftAmount > 0)
+      residual = (aSignificand << shiftAmount) - qb;
+    else
+      residual = (aSignificand >> -shiftAmount) - qb;
+    const bool round = ((residual << 1) > bSignificand) ||
+        ((residual << 1) == bSignificand && (resSignificand & 1));
+    resSignificand += round;
+    return fromRep(resSignificand | quotientSign);
   } else {
     const bool round = (residual << 1) > bSignificand;
     // Clear the implicit bit.

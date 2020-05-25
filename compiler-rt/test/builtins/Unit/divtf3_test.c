@@ -89,6 +89,17 @@ int main()
     if (test__divtf3(-1.0, -0x0.0p+0, 0x7fff000000000000U, 0x0U))
       return 1;
 
+    // smallest normal result
+    if (test__divtf3(0x1.0p-16381, 2.0, 0x0001000000000000U, 0x0U))
+      return 1;
+
+    // smallest normal value divided by 2.0
+    if (test__divtf3(0x1.0p-16382, 2.0, 0x0000800000000000U, 0x0U))
+      return 1;
+    // smallest subnormal result
+    if (test__divtf3(0x1.0p-1022, 0x1p+52, 0x0U, 0x1U))
+      return 1;
+
     // any / any
     if (test__divtf3(0x1.a23b45362464523375893ab4cdefp+5L,
                      0x1.eedcbaba3a94546558237654321fp-1L,

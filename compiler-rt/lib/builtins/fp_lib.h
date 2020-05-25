@@ -44,6 +44,7 @@ typedef uint16_t half_rep_t;
 typedef uint32_t rep_t;
 typedef int32_t srep_t;
 typedef float fp_t;
+#define HALF_REP_C UINT16_C
 #define REP_C UINT32_C
 #define significandBits 23
 
@@ -63,6 +64,7 @@ typedef uint32_t half_rep_t;
 typedef uint64_t rep_t;
 typedef int64_t srep_t;
 typedef double fp_t;
+#define HALF_REP_C UINT32_C
 #define REP_C UINT64_C
 #define significandBits 52
 
@@ -108,6 +110,7 @@ typedef uint64_t half_rep_t;
 typedef __uint128_t rep_t;
 typedef __int128_t srep_t;
 typedef long double fp_t;
+#define HALF_REP_C UINT64_C
 #define REP_C (__uint128_t)
 // Note: Since there is no explicit way to tell compiler the constant is a
 // 128-bit integer, we let the constant be casted to 128-bit integer

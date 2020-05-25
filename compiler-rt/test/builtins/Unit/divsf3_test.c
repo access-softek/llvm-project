@@ -79,7 +79,14 @@ int main()
     if (test__divsf3(1.f, 3.f, 0x3EAAAAABU))
       return 1;
     // smallest normal result
-    if (test__divsf3(2.3509887e-38, 2., 0x00800000U))
+    if (test__divsf3(0x1.0p-125, 2.0, 0x00800000U))
+      return 1;
+
+    // smallest normal value divided by 2.0
+    if (test__divsf3(0x1.0p-126, 2.0, 0x00400000U))
+      return 1;
+    // smallest subnormal result
+    if (test__divsf3(0x1.0p-126, 0x1p+23, 0x00000001U))
       return 1;
 
     return 0;

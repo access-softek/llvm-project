@@ -9,16 +9,13 @@
 // This file implements double-precision soft-float division
 // with the IEEE-754 default rounding (to nearest, ties to even).
 //
-// For simplicity, this implementation currently flushes denormals to zero.
-// It should be a fairly straightforward exercise to implement gradual
-// underflow with correct rounding.
-//
 //===----------------------------------------------------------------------===//
 
 #define DOUBLE_PRECISION
+#include "fp_lib.h"
 
-#define INITIALIZATION_CONSTANT REP_C(0x7504F333F9DE6484)
-#define NUMBER_OF_ITERATIONS 4
+#define NUMBER_OF_HALF_ITERATIONS 3
+#define NUMBER_OF_ITERATIONS 1
 #include "fp_div_impl.inc"
 
 COMPILER_RT_ABI fp_t __divdf3(fp_t a, fp_t b) { return __divXf3(a, b); }

@@ -79,7 +79,22 @@ int main()
     if (test__divdf3(1., 3., 0x3fd5555555555555U))
       return 1;
     // smallest normal result
-    if (test__divdf3(4.450147717014403e-308, 2., 0x10000000000000U))
+    if (test__divdf3(0x1.0p-1021, 2.0, 0x0010000000000000U))
+      return 1;
+
+    // smallest normal value divided by 2.0
+    if (test__divdf3(0x1.0p-1022, 2.0, 0x0008000000000000U))
+      return 1;
+    // smallest subnormal result
+    if (test__divdf3(0x1.0p-1022, 0x1p+52, 0x0000000000000001U))
+      return 1;
+
+    // some misc test cases obtained by fuzzing against h/w implementation
+    if (test__divdf3(0x1.0p-1022, 0x1.9p+5, 0x000051eb851eb852U))
+      return 1;
+    if (test__divdf3(0x1.0p-1022, 0x1.0028p+41, 0x00000000000007ffU))
+      return 1;
+    if (test__divdf3(0x1.0p-1022, 0x1.0028p+52, 0x1U))
       return 1;
 
     return 0;
