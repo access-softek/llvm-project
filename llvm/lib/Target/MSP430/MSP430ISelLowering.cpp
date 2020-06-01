@@ -322,6 +322,14 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   // See part 6.3 of MSP430 EABI.
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::MSP430_BUILTIN);
+  // Some LibCalls are actually implemented not by libgcc/compiler-rt
+  // while having two 64-bit arguments, so mark them with the default
+  // calling convention.
+  setLibcallCallingConv(RTLIB::REM_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::POW_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::COPYSIGN_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::FMIN_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::FMAX_F64, CallingConv::C);
 
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
