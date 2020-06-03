@@ -16,7 +16,7 @@
 //           if (a == b) returns 1
 //           if (a >  b) returns 2
 
-COMPILER_RT_ABI si_int __ucmpdi2(du_int a, du_int b) {
+COMPILER_RT_ABI int __ucmpdi2(du_int a, du_int b) {
   udwords x;
   x.all = a;
   udwords y;

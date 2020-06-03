@@ -16,7 +16,7 @@
 //           if (a == b) returns 1
 //           if (a >  b) returns 2
 
-COMPILER_RT_ABI si_int __cmpdi2(di_int a, di_int b) {
+COMPILER_RT_ABI int __cmpdi2(di_int a, di_int b) {
   dwords x;
   x.all = a;
   dwords y;
