@@ -568,6 +568,8 @@ set(msp430_SOURCES
   msp430/mspabi_srai.S
   msp430/mspabi_sral.S
   msp430/mspabi_srall.S
+# A weaker variant of __ledf2 with different calling convention
+  msp430/mspabi_cmpd.c
 # Other standard LibCalls
   ${GENERIC_SOURCES}
 )

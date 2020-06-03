@@ -90,9 +90,9 @@ COMPILER_RT_ALIAS(__lesf2, __ltsf2)
 COMPILER_RT_ALIAS(__lesf2, __nesf2)
 
 #if defined(__MSP430__)
-// May be optimized further based on the fact that MSP430 EABI explicitly
-// defines passing NaN to __mspabi_cmpf as UB
-// TODO: is it suitable for LibCall?
+// For now, just alias __lesf2 to __mspabi_cmpf.
+// Technically, the latter has weaker requirements (it is UB to pass it a NaN),
+// so it can probably be reimplemented in a more effient way.
 COMPILER_RT_ALIAS(__lesf2, __mspabi_cmpf)
 #endif
 

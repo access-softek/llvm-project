@@ -4,6 +4,11 @@
 #include <int_lib.h>
 #include <stdio.h>
 
+#if defined(__MSP430__)
+#undef COMPILER_RT_ABI
+#define COMPILER_RT_ABI
+#endif
+
 COMPILER_RT_ABI int __eqdf2(double, double);
 COMPILER_RT_ABI int __gedf2(double, double);
 COMPILER_RT_ABI int __gtdf2(double, double);
