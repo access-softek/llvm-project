@@ -26,14 +26,18 @@
 #else
 #define COMPILER_RT_ABI __attribute__((__pcs__("aapcs")))
 #endif
-#elif defined(__MSP430__)
-#define COMPILER_RT_ABI __attribute__((msp430_builtin))
-#define __SOFT_FP__
 #else
 #define COMPILER_RT_ABI
 #endif
 
 #define AEABI_RTABI __attribute__((__pcs__("aapcs")))
+
+#if defined(__MSP430__)
+#define MSP430_SPECIAL __attribute__((msp430_builtin))
+#define __SOFT_FP__
+#else
+#define MSP430_SPECIAL
+#endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define ALWAYS_INLINE __forceinline
@@ -98,7 +102,7 @@
 COMPILER_RT_ABI int __paritysi2(si_int a);
 COMPILER_RT_ABI int __paritydi2(di_int a);
 
-COMPILER_RT_ABI di_int __divdi3(di_int a, di_int b);
+COMPILER_RT_ABI MSP430_SPECIAL di_int __divdi3(di_int a, di_int b);
 COMPILER_RT_ABI si_int __divsi3(si_int a, si_int b);
 COMPILER_RT_ABI su_int __udivsi3(su_int n, su_int d);
 

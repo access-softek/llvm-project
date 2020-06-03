@@ -41,19 +41,6 @@
 
 enum LE_RESULT { LE_LESS = -1, LE_EQUAL = 0, LE_GREATER = 1, LE_UNORDERED = 1 };
 
-// On MSP430, __mspabi_cmpd is NOT an alias for __ledf2:
-// * it is explicitly defined as UB to pass NaN to it
-// * it even has different calling convention
-//   * __mspabi_cmpd has two 64-bit arguments and is a builtin using a special
-//     calling convention
-//   * __ledf2, on the other hand, is just a libgcc/compiler-rt traditional
-//     builtin with two 64-bit arguments behaving like a regular function
-//   * thus, this hackish redefine
-#if defined(__MSP430__)
-#undef COMPILER_RT_ABI
-#define COMPILER_RT_ABI
-#endif
-
 COMPILER_RT_ABI enum LE_RESULT __ledf2(fp_t a, fp_t b) {
 
   const srep_t aInt = toRep(a);

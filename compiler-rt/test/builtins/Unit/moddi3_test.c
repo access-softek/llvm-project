@@ -6,7 +6,7 @@
 
 // Returns: a % b
 
-COMPILER_RT_ABI di_int __moddi3(di_int a, di_int b);
+COMPILER_RT_ABI MSP430_SPECIAL di_int __moddi3(di_int a, di_int b);
 
 int test__moddi3(di_int a, di_int b, di_int expected)
 {

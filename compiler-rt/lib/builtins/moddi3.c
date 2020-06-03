@@ -14,7 +14,7 @@
 
 // Returns: a % b
 
-COMPILER_RT_ABI di_int __moddi3(di_int a, di_int b) {
+COMPILER_RT_ABI MSP430_SPECIAL di_int __moddi3(di_int a, di_int b) {
   const int bits_in_dword_m1 = (int)(sizeof(di_int) * CHAR_BIT) - 1;
   di_int s = b >> bits_in_dword_m1; // s = b < 0 ? -1 : 0
   b = (b ^ s) - s;                  // negate if s == -1
