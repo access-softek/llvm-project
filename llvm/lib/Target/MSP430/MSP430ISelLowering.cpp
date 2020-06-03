@@ -197,18 +197,8 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     { RTLIB::UINTTOFP_I64_F32,  "__mspabi_fltullf", ISD::SETCC_INVALID },
 
     // Floating point comparisons - EABI Table 7
-    { RTLIB::OEQ_F64, "__mspabi_cmpd", ISD::SETEQ },
-    { RTLIB::UNE_F64, "__mspabi_cmpd", ISD::SETNE },
-    { RTLIB::OGE_F64, "__mspabi_cmpd", ISD::SETGE },
-    { RTLIB::OLT_F64, "__mspabi_cmpd", ISD::SETLT },
-    { RTLIB::OLE_F64, "__mspabi_cmpd", ISD::SETLE },
-    { RTLIB::OGT_F64, "__mspabi_cmpd", ISD::SETGT },
-    { RTLIB::OEQ_F32, "__mspabi_cmpf", ISD::SETEQ },
-    { RTLIB::UNE_F32, "__mspabi_cmpf", ISD::SETNE },
-    { RTLIB::OGE_F32, "__mspabi_cmpf", ISD::SETGE },
-    { RTLIB::OLT_F32, "__mspabi_cmpf", ISD::SETLT },
-    { RTLIB::OLE_F32, "__mspabi_cmpf", ISD::SETLE },
-    { RTLIB::OGT_F32, "__mspabi_cmpf", ISD::SETGT },
+    // Do NOT use __mspabi_cmp[df] because they cannot accept NaNs.
+    // There are helpers with the traditional names in libgcc.
 
     // Floating point arithmetic - EABI Table 8
     { RTLIB::ADD_F64,  "__mspabi_addd", ISD::SETCC_INVALID },
@@ -330,6 +320,15 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   setLibcallCallingConv(RTLIB::COPYSIGN_F64, CallingConv::C);
   setLibcallCallingConv(RTLIB::FMIN_F64, CallingConv::C);
   setLibcallCallingConv(RTLIB::FMAX_F64, CallingConv::C);
+  // Those LibCalls have a regular calling convention
+  // unlike the __mspabi_cmpd for which it is UB to pass a NaN
+  setLibcallCallingConv(RTLIB::OEQ_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::UNE_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::OGE_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::OLT_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::OLE_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::OGT_F64, CallingConv::C);
+  setLibcallCallingConv(RTLIB::UO_F64, CallingConv::C);
 
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
