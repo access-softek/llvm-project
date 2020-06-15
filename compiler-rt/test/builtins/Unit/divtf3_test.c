@@ -55,12 +55,40 @@ int main()
                      UINT64_C(0x7fff800000000000),
                      UINT64_C(0x0)))
         return 1;
-    // inf / any = inf
-    if (test__divtf3(makeInf128(),
-                     0x1.23456789abcdefp+5L,
-                     UINT64_C(0x7fff000000000000),
-                     UINT64_C(0x0)))
-        return 1;
+
+    // +Inf / positive = +Inf
+    if (test__divtf3(makeInf128(), 3., 0x7fff000000000000U, 0x0U))
+      return 1;
+    // +Inf / negative = -Inf
+    if (test__divtf3(makeInf128(), -3., 0xffff000000000000U, 0x0U))
+      return 1;
+    // -Inf / positive = -Inf
+    if (test__divtf3(makeNegativeInf128(), 3., 0xffff000000000000U, 0x0U))
+      return 1;
+    // -Inf / negative = +Inf
+    if (test__divtf3(makeNegativeInf128(), -3., 0x7fff000000000000U, 0x0U))
+      return 1;
+
+    // Inf / Inf = NaN
+    if (test__divtf3(makeInf32(), makeInf32(), 0x7fff800000000000U, 0x0U))
+      return 1;
+    // 0.0 / 0.0 = NaN
+    if (test__divtf3(+0x0.0p+0, +0x0.0p+0, 0x7fff800000000000U, 0x0U))
+      return 1;
+
+    // positive / +0.0 = +Inf
+    if (test__divtf3(+1.0, +0x0.0p+0, 0x7fff000000000000U, 0x0U))
+      return 1;
+    // positive / -0.0 = -Inf
+    if (test__divtf3(+1.0, -0x0.0p+0, 0xffff000000000000U, 0x0U))
+      return 1;
+    // negative / +0.0 = -Inf
+    if (test__divtf3(-1.0, +0x0.0p+0, 0xffff000000000000U, 0x0U))
+      return 1;
+    // negative / -0.0 = +Inf
+    if (test__divtf3(-1.0, -0x0.0p+0, 0x7fff000000000000U, 0x0U))
+      return 1;
+
     // any / any
     if (test__divtf3(0x1.a23b45362464523375893ab4cdefp+5L,
                      0x1.eedcbaba3a94546558237654321fp-1L,
