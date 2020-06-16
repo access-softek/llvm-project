@@ -424,6 +424,14 @@ public:
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
 
+  /// Get the pointer size in bytes to use when emitting DWARF.
+  /// On some targets where CodePointerSize == 2 (such as AVR and MSP430)
+  /// gcc emits .debug_info with addr_size = 0x04.
+  /// llvm-dwarfdump expects that as well to parse .debug_info.
+  unsigned getCodePointerSizeForDwarf() const {
+    return std::max(CodePointerSize, 4U);
+  }
+
   /// Get the callee-saved register stack slot
   /// size in bytes.
   unsigned getCalleeSaveStackSlotSize() const {

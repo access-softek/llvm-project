@@ -56,7 +56,7 @@ MCSymbol *mcdwarf::emitListsTableHeaderStart(MCStreamer &S) {
   S.AddComment("Version");
   S.emitInt16(S.getContext().getDwarfVersion());
   S.AddComment("Address size");
-  S.emitInt8(S.getContext().getAsmInfo()->getCodePointerSize());
+  S.emitInt8(S.getContext().getAsmInfo()->getCodePointerSizeForDwarf());
   S.AddComment("Segment selector size");
   S.emitInt8(0);
   return End;
@@ -215,7 +215,7 @@ static inline void emitDwarfLineTable(
     // and the current Label.
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
     MCOS->emitDwarfAdvanceLineAddr(LineDelta, LastLabel, Label,
-                                   asmInfo->getCodePointerSize());
+                                   asmInfo->getCodePointerSizeForDwarf());
 
     Discriminator = 0;
     LastLine = LineEntry.getLine();
@@ -235,7 +235,7 @@ static inline void emitDwarfLineTable(
 
   const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
   MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
-                                 AsmInfo->getCodePointerSize());
+                                 AsmInfo->getCodePointerSizeForDwarf());
 }
 
 //
@@ -487,7 +487,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // In v5, we get address info next.
   if (LineTableVersion >= 5) {
-    MCOS->emitInt8(context.getAsmInfo()->getCodePointerSize());
+    MCOS->emitInt8(context.getAsmInfo()->getCodePointerSizeForDwarf());
     MCOS->emitInt8(0); // Segment selector; same as EmitGenDwarfAranges.
     PreHeaderLengthBytes += 2;
   }
@@ -769,7 +769,7 @@ bool MCDwarfLineAddr::FixedEncode(MCContext &Context,
   // is 65535. We set a conservative upper bound for it for relaxation.
   if (AddrDelta > 60000) {
     const MCAsmInfo *asmInfo = Context.getAsmInfo();
-    unsigned AddrSize = asmInfo->getCodePointerSize();
+    unsigned AddrSize = asmInfo->getCodePointerSizeForDwarf();
 
     OS << char(dwarf::DW_LNS_extended_op);
     encodeULEB128(1 + AddrSize, OS);
@@ -871,7 +871,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
   // Figure the padding after the header before the table of address and size
   // pairs who's values are PointerSize'ed.
   const MCAsmInfo *asmInfo = context.getAsmInfo();
-  int AddrSize = asmInfo->getCodePointerSize();
+  int AddrSize = asmInfo->getCodePointerSizeForDwarf();
   int Pad = 2 * AddrSize - (Length & (2 * AddrSize - 1));
   if (Pad == 2 * AddrSize)
     Pad = 0;
@@ -955,7 +955,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The DWARF v5 header has unit type, address size, abbrev offset.
   // Earlier versions have abbrev offset, address size.
   const MCAsmInfo &AsmInfo = *context.getAsmInfo();
-  int AddrSize = AsmInfo.getCodePointerSize();
+  int AddrSize = AsmInfo.getCodePointerSizeForDwarf();
   if (context.getDwarfVersion() >= 5) {
     MCOS->emitInt8(dwarf::DW_UT_compile);
     MCOS->emitInt8(AddrSize);
@@ -1096,7 +1096,7 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
   auto &Sections = context.getGenDwarfSectionSyms();
 
   const MCAsmInfo *AsmInfo = context.getAsmInfo();
-  int AddrSize = AsmInfo->getCodePointerSize();
+  int AddrSize = AsmInfo->getCodePointerSizeForDwarf();
   MCSymbol *RangesSymbol;
 
   if (MCOS->getContext().getDwarfVersion() >= 5) {
@@ -1270,7 +1270,7 @@ static unsigned getSizeForEncoding(MCStreamer &streamer,
   default: llvm_unreachable("Unknown Encoding");
   case dwarf::DW_EH_PE_absptr:
   case dwarf::DW_EH_PE_signed:
-    return context.getAsmInfo()->getCodePointerSize();
+    return context.getAsmInfo()->getCodePointerSizeForDwarf();
   case dwarf::DW_EH_PE_udata2:
   case dwarf::DW_EH_PE_sdata2:
     return 2;
@@ -1609,7 +1609,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
 
   if (CIEVersion >= 4) {
     // Address Size
-    Streamer.emitInt8(context.getAsmInfo()->getCodePointerSize());
+    Streamer.emitInt8(context.getAsmInfo()->getCodePointerSizeForDwarf());
 
     // Segment Descriptor Size
     Streamer.emitInt8(0);
@@ -1678,7 +1678,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
   InitialCFAOffset = CFAOffset;
 
   // Padding
-  Streamer.emitValueToAlignment(IsEH ? 4 : MAI->getCodePointerSize());
+  Streamer.emitValueToAlignment(IsEH ? 4 : MAI->getCodePointerSizeForDwarf());
 
   Streamer.emitLabel(sectionEnd);
   return *sectionStart;
@@ -1748,7 +1748,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   // The size of a .eh_frame section has to be a multiple of the alignment
   // since a null CIE is interpreted as the end. Old systems overaligned
   // .eh_frame, so we do too and account for it in the last FDE.
-  unsigned Align = LastInSection ? asmInfo->getCodePointerSize() : PCSize;
+  unsigned Align = LastInSection ? asmInfo->getCodePointerSizeForDwarf() : PCSize;
   Streamer.emitValueToAlignment(Align);
 
   Streamer.emitLabel(fdeEnd);
@@ -1848,7 +1848,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
       if (Frame.CompactUnwindEncoding == 0) continue;
       if (!SectionEmitted) {
         Streamer.SwitchSection(MOFI->getCompactUnwindSection());
-        Streamer.emitValueToAlignment(AsmInfo->getCodePointerSize());
+        Streamer.emitValueToAlignment(AsmInfo->getCodePointerSizeForDwarf());
         SectionEmitted = true;
       }
       NeedsEHFrameSection |=

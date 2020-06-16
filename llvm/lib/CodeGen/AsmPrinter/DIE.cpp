@@ -500,7 +500,7 @@ unsigned DIELabel::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_data4) return 4;
   if (Form == dwarf::DW_FORM_sec_offset) return 4;
   if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->MAI->getCodePointerSize();
+  return AP->MAI->getCodePointerSizeForDwarf();
 }
 
 LLVM_DUMP_METHOD
@@ -539,7 +539,7 @@ unsigned DIEDelta::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_data4) return 4;
   if (Form == dwarf::DW_FORM_sec_offset) return 4;
   if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->MAI->getCodePointerSize();
+  return AP->MAI->getCodePointerSizeForDwarf();
 }
 
 LLVM_DUMP_METHOD
@@ -674,7 +674,7 @@ unsigned DIEEntry::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
     return getULEB128Size(Entry->getOffset());
   case dwarf::DW_FORM_ref_addr:
     if (AP->getDwarfVersion() == 2)
-      return AP->MAI->getCodePointerSize();
+      return AP->MAI->getCodePointerSizeForDwarf();
     switch (AP->OutStreamer->getContext().getDwarfFormat()) {
     case dwarf::DWARF32:
       return 4;
@@ -808,7 +808,7 @@ unsigned DIELocList::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
     return 4;
   if (Form == dwarf::DW_FORM_sec_offset)
     return 4;
-  return AP->MAI->getCodePointerSize();
+  return AP->MAI->getCodePointerSizeForDwarf();
 }
 
 /// EmitValue - Emit label value.

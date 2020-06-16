@@ -90,7 +90,7 @@ bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
 
 DwarfUnit::DwarfUnit(dwarf::Tag UnitTag, const DICompileUnit *Node,
                      AsmPrinter *A, DwarfDebug *DW, DwarfFile *DWU)
-    : DIEUnit(A->getDwarfVersion(), A->MAI->getCodePointerSize(), UnitTag),
+    : DIEUnit(A->getDwarfVersion(), A->MAI->getCodePointerSizeForDwarf(), UnitTag),
       CUNode(Node), Asm(A), DD(DW), DU(DWU), IndexTyDie(nullptr) {
 }
 
@@ -809,10 +809,18 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   }
 
   // Add size if non-zero (derived types might be zero-sized.)
-  if (Size && Tag != dwarf::DW_TAG_pointer_type
-           && Tag != dwarf::DW_TAG_ptr_to_member_type
-           && Tag != dwarf::DW_TAG_reference_type
-           && Tag != dwarf::DW_TAG_rvalue_reference_type)
+  bool IsPointerTag = Tag == dwarf::DW_TAG_pointer_type
+           || Tag == dwarf::DW_TAG_ptr_to_member_type
+           || Tag == dwarf::DW_TAG_reference_type
+           || Tag == dwarf::DW_TAG_rvalue_reference_type;
+  if (!IsPointerTag && Size)
+    addUInt(Buffer, dwarf::DW_AT_byte_size, None, Size);
+
+  // AVR and MSP430 have CodePointerSize == 2 but use "addr_size = 0x04"
+  // for DWARF .debug_info, so use this hack to put the actual pointer
+  // size information to DWARF data
+  // FIXME: properly detect when addr_size from the DWARF header != Size.
+  if (IsPointerTag && Size < 4)
     addUInt(Buffer, dwarf::DW_AT_byte_size, None, Size);
 
   if (Tag == dwarf::DW_TAG_ptr_to_member_type)
@@ -1683,7 +1691,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     Asm->OutStreamer->AddComment("DWARF Unit Type");
     Asm->emitInt8(UT);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI->getCodePointerSizeForDwarf());
   }
 
   // We share one abbreviations table across all units so it's always at the
@@ -1699,7 +1707,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 
   if (Version <= 4) {
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI->getCodePointerSizeForDwarf());
   }
 }
 
