@@ -13,16 +13,11 @@
 
 #include <assert.h>
 
-#if !defined(NUMBER_OF_HALF_ITERATIONS)
-#error NUMBER_OF_HALF_ITERATIONS is not defined
-#endif
-#if !defined(NUMBER_OF_ITERATIONS)
-#error NUMBER_OF_ITERATIONS is not defined
-#endif
-
 // Force unrolling the code specified to be repeated N times.
-#define REPEAT_0_TIMES(code_to_repeat) /* do nothing */
 #define REPEAT_1_TIMES(code_to_repeat) code_to_repeat
+#define REPEAT_2_TIMES(code_to_repeat) \
+  code_to_repeat \
+  code_to_repeat
 #define REPEAT_3_TIMES(code_to_repeat) \
   code_to_repeat \
   code_to_repeat \
@@ -30,6 +25,8 @@
 
 #define REPEAT_N_TIMES_(N, code_to_repeat) REPEAT_##N##_TIMES(code_to_repeat)
 #define REPEAT_N_TIMES(N, code_to_repeat) REPEAT_N_TIMES_(N, code_to_repeat)
+
+#define HW (typeWidth / 2)
 
 static __inline fp_t __divXf3(fp_t a, fp_t b) {
 
@@ -98,41 +95,72 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
 
   // Align the significand of b as a UQ1.n fixed-point number in the range
   // [1, 2.0) and get a UQ0.n approximate reciprocal using a small minimax
-  // polynomial approximation: reciprocal = 3/4 + 1/sqrt(2) - b/2.  This
-  // is accurate to about 3.5(FIXME: check) binary digits.
-  const rep_t q1b = bSignificand << (typeWidth - significandBits - 1);
-  const half_rep_t half_q1b = q1b >> (typeWidth / 2);
-  // C is approximately (1/sqrt(2) - 1/4) as UQ1.n
-  const half_rep_t C = HALF_REP_C(0x7504) << (typeWidth / 2 - 16);
-  half_rep_t half_reciprocal = C - half_q1b;
+  // polynomial approximation: x0 = 3/4 + 1/sqrt(2) - b/2.
+  // In infinite precision, for b in [1, 2):
+  //   0 < x0(b) < 1
+  //   abs(x0(b) - 1/b) <= (3 - 2sqrt(2)) / 4
+  const rep_t b_UQ1 = bSignificand << (typeWidth - significandBits - 1);
+  assert(b_UQ1 & signBit);
+  const half_rep_t b_UQ1_hw = b_UQ1 >> HW;
+  // C is approximately (3/4 + 1/sqrt(2)) - 1 as UQ0.n
+  const half_rep_t C = HALF_REP_C(0x7504) << (HW - 16);
+  half_rep_t x_UQ0_hw = C - (b_UQ1_hw /* b/2 as UQ0.n */);
 
   // Now refine the reciprocal estimate using a Newton-Raphson iteration:
+  //     x_{n+1} = x_n * (2 - x_n * b)
   //
-  //     x1 = x0 * (2 - x0 * b)
+  // In infinite precision:
+  //     X_0 = x_0, abs(X_0 - 1/b) <= 1/20
+  //     R_{n+1} = 2 - X_n * b
+  //     X_{n+1} = X_n * R_n
   //
-  // This doubles the number of correct binary digits in the approximation
-  // with each iteration.
+  //     abs(X_n - 1/b) = abs(X_0 - 1/b) ^ (2^n)
+  //
+  // Let x_0 be initial approximation to X_0, x_n are calcucated in
+  // fixed precision, e_n := x_n - X_n.
+
+#if defined(SINGLE_PRECISION)
+#define NUMBER_OF_HALF_ITERATIONS 2
+#elif defined(DOUBLE_PRECISION)
+#define NUMBER_OF_HALF_ITERATIONS 3
+#elif defined(QUAD_PRECISION)
+#define NUMBER_OF_HALF_ITERATIONS 4
+#else
+#error Unsupported precision
+#endif
+  // Let Uhw := 1/2^(HW-1), suppose abs(e_n) <= Uhw*q^n
   REPEAT_N_TIMES(NUMBER_OF_HALF_ITERATIONS, {
-    half_rep_t correction;
-    correction      = (rep_t)half_reciprocal * half_q1b >> (typeWidth / 2);
-    half_reciprocal = (rep_t)half_reciprocal * (-correction) >> (typeWidth / 2 - 1);
+    half_rep_t corr_UQ1_hw;
+    corr_UQ1_hw = (0 /* 2 as UQ1.n */) - ((rep_t)x_UQ0_hw * b_UQ1_hw >> HW);
+    // corr_UQ1_hw = 2 - (X_n + e_n) * (b + eps1) + eps2 in infinite precision, where
+    //     abs(eps1), abs(eps2) <= Uhw
+    // Thus, abs(corr_UQ1_hw - R_{n+1}) <= Uhw*q^n * (2+Uhw) + 2*Uhw
+
+    x_UQ0_hw   = (rep_t)x_UQ0_hw * corr_UQ1_hw >> (HW - 1);
+    // x_UQ1_h = (X_n + e_n) * (R_{n+1} + eps1) + 2*eps2 in infinite precision, where
+    //     abs(eps1) <= Uhw*q^n*(2+Uhw) + 2*Uhw,
+    //     abs(eps2) <= Uhw,
+    // e_{n+1} <= Uhw*q^n * (2 + Uhw*q^n*(2+Uhw) + 2*Uhw) + 3*Uhw = Uhw*q^n * (2 + Uhw*q^n*(2+Uhw) + 2*Uhw + 3/(Uhw*q^n))
+
+    // q = 3 should be sufficient
   })
-  rep_t reciprocal = ((rep_t)half_reciprocal) << (typeWidth / 2);
-  REPEAT_N_TIMES(NUMBER_OF_ITERATIONS, {
-    rep_t correction;
-    rep_t tmp;
-    // correction = (twice_rep_t)reciprocal * q1b >> typeWidth;
-    // reciprocal = (twice_rep_t)reciprocal * (-correction) >> (typeWidth - 1);
-    wideMultiply(reciprocal, q1b, &correction, &tmp);
-    wideMultiply(reciprocal, -correction, &reciprocal, &tmp);
-    wideLeftShift(&reciprocal, &tmp, 1);
-  })
+  //        | abs(X_n - 1/b)  | e_n
+  // f32    | < 1/2^18        | < 1/2^12
+  // f64    | < 1/2^35        | < 1/2^27
+  // f128   | < 1/2^70        | < 1/2^57
+  rep_t x_UQ0 = ((rep_t)x_UQ0_hw) << HW;
+
+  // Now, one another iteration with full precision
+  rep_t corr_UQ1, tmp;
+  wideMultiply(x_UQ0, b_UQ1, &corr_UQ1, &tmp);
+  wideMultiply(x_UQ0, -corr_UQ1, &x_UQ0, &tmp);
+  wideLeftShift(&x_UQ0, &tmp, 1);
 
   // Adust the final rep_t-sized reciprocal estimate downward to ensure that
   // it is strictly smaller than the infinitely precise exact reciprocal.
   // Because the computation of the Newton-Raphson step is truncating at every
   // step, this adjustment is small; most of the work is already done.
-  reciprocal -= 2;
+  x_UQ0 -= 2;
 
   // FIXME: Generalize the description from float32 to other sizes.
   // The numerical reciprocal is accurate to within 2^-28, lies in the
@@ -148,7 +176,7 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   //       possible value of a.  As a consequence of this error bound,
   //       either q or nextafter(q) is the correctly rounded.
   rep_t quotient, dummy;
-  wideMultiply(reciprocal, aSignificand << 1, &quotient, &dummy);
+  wideMultiply(x_UQ0, aSignificand << 1, &quotient, &dummy);
 
   // Two cases: quotient is in [0.5, 1.0) or quotient is in [1.0, 2.0).
   // In either case, we are going to compute a residual of the form

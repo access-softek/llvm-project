@@ -13,9 +13,6 @@
 
 #define DOUBLE_PRECISION
 #include "fp_lib.h"
-
-#define NUMBER_OF_HALF_ITERATIONS 3
-#define NUMBER_OF_ITERATIONS 1
 #include "fp_div_impl.inc"
 
 COMPILER_RT_ABI fp_t __divdf3(fp_t a, fp_t b) { return __divXf3(a, b); }
