@@ -33,6 +33,8 @@ int test__divdf3(double a, double b, uint64_t expected)
     return ret;
 }
 
+#include <sys/random.h>
+
 int main()
 {
     // qNaN / any = qNaN
@@ -96,6 +98,19 @@ int main()
       return 1;
     if (test__divdf3(0x1.0p-1022, 0x1.0028p+52, 0x1U))
       return 1;
+
+    for (int k = 0; k < 10000; ++k) {
+      uint64_t rs[2];
+      getrandom(rs, sizeof(rs), 0);
+      for (unsigned i = 0; i < 100; ++i) {
+        for (unsigned j = 0; j < 100; ++j) {
+          double a = fromRep64(rs[0] + i);
+          double b = fromRep64(rs[1] + i);
+          double r = a / b;
+          if (test__divdf3(a, b, toRep64(r))) abort();
+        }
+      }
+    }
 
     return 0;
 }

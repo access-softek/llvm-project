@@ -19,8 +19,10 @@
   code_to_repeat \
   code_to_repeat
 #define REPEAT_3_TIMES(code_to_repeat) \
-  code_to_repeat \
-  code_to_repeat \
+  REPEAT_2_TIMES(code_to_repeat) \
+  code_to_repeat
+#define REPEAT_4_TIMES(code_to_repeat) \
+  REPEAT_3_TIMES(code_to_repeat) \
   code_to_repeat
 
 #define REPEAT_N_TIMES_(N, code_to_repeat) REPEAT_##N##_TIMES(code_to_repeat)
@@ -98,7 +100,7 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   // polynomial approximation: x0 = 3/4 + 1/sqrt(2) - b/2.
   // In infinite precision, for b in [1, 2):
   //   0 < x0(b) < 1
-  //   abs(x0(b) - 1/b) <= (3 - 2sqrt(2)) / 4
+  //   abs(x0(b) - 1/b) <= 3/4 - 1/sqrt(2)
   const rep_t b_UQ1 = bSignificand << (typeWidth - significandBits - 1);
   assert(b_UQ1 & signBit);
   const half_rep_t b_UQ1_hw = b_UQ1 >> HW;
@@ -110,14 +112,9 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   //     x_{n+1} = x_n * (2 - x_n * b)
   //
   // In infinite precision:
-  //     X_0 = x_0, abs(X_0 - 1/b) <= 1/20
+  //     X_0 = x_0, abs(X_0 - 1/b) <= 3/4 - 1/sqrt(2)
   //     R_{n+1} = 2 - X_n * b
   //     X_{n+1} = X_n * R_n
-  //
-  //     abs(X_n - 1/b) = abs(X_0 - 1/b) ^ (2^n)
-  //
-  // Let x_0 be initial approximation to X_0, x_n are calcucated in
-  // fixed precision, e_n := x_n - X_n.
 
 #if defined(SINGLE_PRECISION)
 #define NUMBER_OF_HALF_ITERATIONS 2
@@ -128,41 +125,36 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
 #else
 #error Unsupported precision
 #endif
-  // Let Uhw := 1/2^(HW-1), suppose abs(e_n) <= Uhw*q^n
+  // e_n := x_n - 1/b_hw
   REPEAT_N_TIMES(NUMBER_OF_HALF_ITERATIONS, {
     half_rep_t corr_UQ1_hw;
     corr_UQ1_hw = (0 /* 2 as UQ1.n */) - ((rep_t)x_UQ0_hw * b_UQ1_hw >> HW);
-    // corr_UQ1_hw = 2 - (X_n + e_n) * (b + eps1) + eps2 in infinite precision, where
-    //     abs(eps1), abs(eps2) <= Uhw
-    // Thus, abs(corr_UQ1_hw - R_{n+1}) <= Uhw*q^n * (2+Uhw) + 2*Uhw
-
     x_UQ0_hw   = (rep_t)x_UQ0_hw * corr_UQ1_hw >> (HW - 1);
-    // x_UQ1_h = (X_n + e_n) * (R_{n+1} + eps1) + 2*eps2 in infinite precision, where
-    //     abs(eps1) <= Uhw*q^n*(2+Uhw) + 2*Uhw,
-    //     abs(eps2) <= Uhw,
-    // e_{n+1} <= Uhw*q^n * (2 + Uhw*q^n*(2+Uhw) + 2*Uhw) + 3*Uhw = Uhw*q^n * (2 + Uhw*q^n*(2+Uhw) + 2*Uhw + 3/(Uhw*q^n))
-
-    // q = 3 should be sufficient
+    // In infinite precision, with abs(eps1), abs(eps2) <= U:
+    // corr_UQ1_hw = 2 - (1/b_hw + e_n) * b_hw + eps1
+    //             = 1 - e_n * b_hw + eps1
+    // x_UQ0_hw = (1/b_hw + e_n) * (1 - e_n*b_hw + eps1) + eps2
+    //          = 1/b_hw - e_n + eps1/b_hw + e_n - e_n^2*b_hw + e_n * eps1 + eps2
+    //          = 1/b_hw + eps1/b_hw - e_n^2*b_hw + e_n * eps1 + eps2
+    // abs(e_{n+1}) <= b_hw * abs(e_n)^2 + U * (1 + 1/b_hw + abs(e_n))
+    //              <= 2 * abs(e_n)^2 + 3 * U
   })
-  //        | abs(X_n - 1/b)  | e_n
-  // f32    | < 1/2^18        | < 1/2^12
-  // f64    | < 1/2^35        | < 1/2^27
-  // f128   | < 1/2^70        | < 1/2^57
   rep_t x_UQ0 = ((rep_t)x_UQ0_hw) << HW;
 
   // Now, one another iteration with full precision
+  // Error estimatiobs are calculated just as above, but with U := 1/2^(typeWidth-1)
   rep_t corr_UQ1, tmp;
   wideMultiply(x_UQ0, b_UQ1, &corr_UQ1, &tmp);
   wideMultiply(x_UQ0, -corr_UQ1, &x_UQ0, &tmp);
   wideLeftShift(&x_UQ0, &tmp, 1);
 
+  // FIXME
   // Adust the final rep_t-sized reciprocal estimate downward to ensure that
   // it is strictly smaller than the infinitely precise exact reciprocal.
   // Because the computation of the Newton-Raphson step is truncating at every
   // step, this adjustment is small; most of the work is already done.
   x_UQ0 -= 2;
 
-  // FIXME: Generalize the description from float32 to other sizes.
   // The numerical reciprocal is accurate to within 2^-28, lies in the
   // interval [0x1.000000eep-1, 0x1.fffffffcp-1], and is strictly smaller
   // than the true reciprocal of b.  Multiplying a by this reciprocal thus
