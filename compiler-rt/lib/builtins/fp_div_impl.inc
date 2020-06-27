@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <assert.h>
-
+#include <stdio.h>
 // Force unrolling the code specified to be repeated N times.
 #define REPEAT_1_TIMES(code_to_repeat) code_to_repeat
 #define REPEAT_2_TIMES(code_to_repeat) \
@@ -112,16 +112,19 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   //     x_{n+1} = x_n * (2 - x_n * b)
   //
   // In infinite precision:
-  //     X_0 = x_0, abs(X_0 - 1/b) <= 3/4 - 1/sqrt(2)
+  //     X_0 = x_0, abs(X_0 - 1/b) <= 3/4 - 1/sqrt(2) + 2^-16
   //     R_{n+1} = 2 - X_n * b
   //     X_{n+1} = X_n * R_n
 
 #if defined(SINGLE_PRECISION)
 #define NUMBER_OF_HALF_ITERATIONS 2
+#define RECIPROCAL_PRECISION 24
 #elif defined(DOUBLE_PRECISION)
 #define NUMBER_OF_HALF_ITERATIONS 3
+#define RECIPROCAL_PRECISION 55
 #elif defined(QUAD_PRECISION)
 #define NUMBER_OF_HALF_ITERATIONS 4
+#define RECIPROCAL_PRECISION 114
 #else
 #error Unsupported precision
 #endif
@@ -130,72 +133,56 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
     half_rep_t corr_UQ1_hw;
     corr_UQ1_hw = (0 /* 2 as UQ1.n */) - ((rep_t)x_UQ0_hw * b_UQ1_hw >> HW);
     x_UQ0_hw   = (rep_t)x_UQ0_hw * corr_UQ1_hw >> (HW - 1);
-    // In infinite precision, with abs(eps1), abs(eps2) <= U:
+    // In infinite precision, with abs(eps1), abs(eps2) <= Ulp:
     // corr_UQ1_hw = 2 - (1/b_hw + e_n) * b_hw + eps1
     //             = 1 - e_n * b_hw + eps1
     // x_UQ0_hw = (1/b_hw + e_n) * (1 - e_n*b_hw + eps1) + eps2
     //          = 1/b_hw - e_n + eps1/b_hw + e_n - e_n^2*b_hw + e_n * eps1 + eps2
     //          = 1/b_hw + eps1/b_hw - e_n^2*b_hw + e_n * eps1 + eps2
     // abs(e_{n+1}) <= b_hw * abs(e_n)^2 + U * (1 + 1/b_hw + abs(e_n))
-    //              <= 2 * abs(e_n)^2 + 3 * U
+    //              <= 2 * abs(e_n)^2 + 3 * Ulp
   })
+  // For initial N-1 half-width iterations, Ulp_h = 2^-(HW-1)
+  // Let abs(e_n) <= u_n * Ulp_h
+  //     abs(e_{n+1}) <= (2 * u_n^2 * Ulp_h + 3) * Ulp_h
+  // after all half-width iterations:
+  //    abs(e_{N-1}) <= u_{N-1} * 2^(HW-1)
+  // with Ulp = 2^-(W-1):
+  //    abs(e_N) <= 2 * u_{N-1}^2 * 2^(W-2) + 3 * 2^(W-1)
+  //              = (8 * u_{N-1}^2 + 6) * 2^-W
+
   rep_t x_UQ0 = ((rep_t)x_UQ0_hw) << HW;
 
   // Now, one another iteration with full precision
-  // Error estimatiobs are calculated just as above, but with U := 1/2^(typeWidth-1)
+  // Error estimatiobs are calculated just as above, but with Ulp := 1/2^(W-1)
   rep_t corr_UQ1, tmp;
   wideMultiply(x_UQ0, b_UQ1, &corr_UQ1, &tmp);
   wideMultiply(x_UQ0, -corr_UQ1, &x_UQ0, &tmp);
   wideLeftShift(&x_UQ0, &tmp, 1);
 
-  // FIXME
-  // Adust the final rep_t-sized reciprocal estimate downward to ensure that
-  // it is strictly smaller than the infinitely precise exact reciprocal.
-  // Because the computation of the Newton-Raphson step is truncating at every
-  // step, this adjustment is small; most of the work is already done.
-  x_UQ0 -= 2;
+  // u_n for different precisions:
+  //     u_{n+1} = u_n^2 / 2^(HW-2) + 3
+  //             | f32     | f64        | f128
+  // Iterations  |         |            |
+  // 0           | < 1410  | < 92405760 | < 396879717162024960
+  // 1           | < 125   | < 7952403  | < 34155297924710403
+  // 2           | < 4     | < 58901    | < 252962663040003.1
+  // 3           |         | < 6.3      | < 13875643018.8
+  // 4           |         |            | < 44.8
+  //     (8 * u_{N-1}^2 + 6) * 2^-W
+  // Final error | < 2^-24 | < 2^-55    | < 2^-114
 
-  // The numerical reciprocal is accurate to within 2^-28, lies in the
-  // interval [0x1.000000eep-1, 0x1.fffffffcp-1], and is strictly smaller
-  // than the true reciprocal of b.  Multiplying a by this reciprocal thus
-  // gives a numerical q = a/b in Q24 with the following properties:
-  //
-  //    1. q < a/b
-  //    2. q is in the interval [0x1.000000eep-1, 0x1.fffffffcp0)
-  //    3. The error in q is at most 2^-24 + 2^-27 -- the 2^24 term comes
-  //       from the fact that we truncate the product, and the 2^27 term
-  //       is the error in the reciprocal of b scaled by the maximum
-  //       possible value of a.  As a consequence of this error bound,
-  //       either q or nextafter(q) is the correctly rounded.
-  rep_t quotient, dummy;
-  wideMultiply(x_UQ0, aSignificand << 1, &quotient, &dummy);
+  const rep_t a_UQ1 = aSignificand << (typeWidth - significandBits - 1);
+  rep_t quotient_UQ1, dummy;
+  wideMultiply(x_UQ0, a_UQ1, &quotient_UQ1, &dummy);
 
-  // Two cases: quotient is in [0.5, 1.0) or quotient is in [1.0, 2.0).
-  // In either case, we are going to compute a residual of the form
-  //
-  //     r = a - q*b
-  //
-  // We know from the construction of q that r satisfies:
-  //
-  //     0 <= r < ulp(q)*b
-  //
-  // If r is greater than 1/2 ulp(q)*b, then q rounds up.  Otherwise, we
-  // already have the correct result.  The exact halfway case cannot occur.
-  // We also take this time to right shift quotient if it falls in the [1,2)
-  // range and adjust the exponent accordingly.
-  rep_t residual;
-  rep_t qb;
-
-  bool qShifted = false;
-  if (quotient < (implicitBit << 1)) {
-    wideMultiply(quotient, bSignificand, &dummy, &qb);
-    residual = (aSignificand << (significandBits + 1)) - qb;
+  // First, adjust quotient to be in [1.0, 2.0)
+  bool qWasNormalized = false;
+  if ((quotient_UQ1 & signBit) == 0) {
+    quotient_UQ1 <<= 1;
     quotientExponent--;
-  } else {
-    quotient >>= 1;
-    qShifted = true;
-    wideMultiply(quotient, bSignificand, &dummy, &qb);
-    residual = (aSignificand << significandBits) - qb;
+    qWasNormalized = true;
+    // Now absolute error is two times worse (2^-22 / 2^-53 / 2^-112)
   }
 
   const int writtenExponent = quotientExponent + exponentBias;
@@ -203,49 +190,38 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   if (writtenExponent >= maxExponent) {
     // If we have overflowed the exponent, return infinity.
     return fromRep(infRep | quotientSign);
-  } else if (writtenExponent < 1) {
-    if (writtenExponent == 0) {
-      // Check whether the rounded result is normal.
-      const bool round = (residual << 1) > bSignificand;
-      // Clear the implicit bit.
-      rep_t absResult = quotient & significandMask;
-      // Round.
-      absResult += round;
-      if (absResult & ~significandMask) {
-        // The rounded result is normal; return it.
-        return fromRep(absResult | quotientSign);
-      }
-    }
-    // quotient is Q1.SB and is >= 1
-    assert(quotient >= implicitBit);
-    assert(quotient < (implicitBit << 1));
-
-    // Prevent UB
-    if (-writtenExponent + 1 >= (int)typeWidth)
-      return fromRep(quotientSign);
-
-    rep_t resSignificand = quotient >> (-writtenExponent + 1);
-    wideMultiply(resSignificand, bSignificand, &dummy, &qb);
-    const int shiftAmount = significandBits + writtenExponent - qShifted;
-
-    if (shiftAmount > 0)
-      residual = (aSignificand << shiftAmount) - qb;
-    else
-      residual = (aSignificand >> -shiftAmount) - qb;
-    const bool round = ((residual << 1) > bSignificand) ||
-        ((residual << 1) == bSignificand && (resSignificand & 1));
-    resSignificand += round;
-    return fromRep(resSignificand | quotientSign);
-  } else {
-    const bool round = (residual << 1) > bSignificand;
-    // Clear the implicit bit.
-    rep_t absResult = quotient & significandMask;
-    // Insert the exponent.
-    absResult |= (rep_t)writtenExponent << significandBits;
-    // Round.
-    absResult += round;
-    // Insert the sign and return.
-    const fp_t result = fromRep(absResult | quotientSign);
-    return result;
   }
+
+  const int shiftAmount = typeWidth - significandBits - 1;
+  rep_t absResult = quotient_UQ1 >> shiftAmount;
+
+  if (writtenExponent >= 0) {
+    // including the case when the results becomes normal after rounding
+    rep_t midpoint_UQ1 = (2 * absResult + 1) << (shiftAmount - 1);
+    wideMultiply(midpoint_UQ1, b_UQ1, &dummy/* UQ2.n */, &tmp);
+    int round = dummy < (a_UQ1 >> (1 - qWasNormalized) /* exact */);
+    absResult &= significandMask;
+    absResult |= (rep_t)writtenExponent << significandBits;
+    absResult += round;
+    if (absResult & exponentMask)
+      return fromRep(absResult | quotientSign);
+  }
+
+  // subnormal result
+  const int extraShiftAmount = -writtenExponent + 1; // >= 1
+  // Prevent UB. The result is zero anyway.
+  if (extraShiftAmount >= (int)typeWidth)
+    return fromRep(quotientSign);
+
+  absResult >>= extraShiftAmount;
+  rep_t midpoint_UQ1 = (2 * absResult + 1) << (shiftAmount + extraShiftAmount - 1);
+  wideMultiply(midpoint_UQ1, b_UQ1, &dummy/* UQ2.n */, &tmp);
+  printf("q   = 0x%016lx\n", (long)quotient_UQ1);
+  printf("m_UQ1 = 0x%016lx\n", (long)(midpoint_UQ1));
+  printf("dummy = 0x%016lx\n", (long)(dummy << extraShiftAmount));
+  printf("a_UQ1 = 0x%016lx\n", (long)(a_UQ1 >> (1 - qWasNormalized)));
+  int round = (dummy << extraShiftAmount) < (a_UQ1 >> (1 - qWasNormalized) /* exact */);
+  printf("abs = 0x%016lx\n", (long)absResult);
+  absResult += round;
+  return fromRep(absResult | quotientSign);
 }
