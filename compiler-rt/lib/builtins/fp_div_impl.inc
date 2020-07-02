@@ -14,7 +14,8 @@
 #include <assert.h>
 #include <stdio.h>
 // Force unrolling the code specified to be repeated N times.
-#define REPEAT_1_TIMES(code_to_repeat) code_to_repeat
+#define REPEAT_1_TIMES(code_to_repeat) \
+  code_to_repeat
 #define REPEAT_2_TIMES(code_to_repeat) \
   code_to_repeat \
   code_to_repeat
@@ -29,6 +30,13 @@
 #define REPEAT_N_TIMES(N, code_to_repeat) REPEAT_N_TIMES_(N, code_to_repeat)
 
 #define HW (typeWidth / 2)
+#define loMask (REP_C(-1) >> HW)
+
+static __inline rep_t wideMultiplyHi(rep_t a, rep_t b) {
+  rep_t result, dummy;
+  wideMultiply(a, b, &result, &dummy);
+  return result;
+}
 
 static __inline fp_t __divXf3(fp_t a, fp_t b) {
 
@@ -101,9 +109,7 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   // In infinite precision, for b in [1, 2):
   //   0 < x0(b) < 1
   //   abs(x0(b) - 1/b) <= 3/4 - 1/sqrt(2)
-  const rep_t b_UQ1 = bSignificand << (typeWidth - significandBits - 1);
-  assert(b_UQ1 & signBit);
-  const half_rep_t b_UQ1_hw = b_UQ1 >> HW;
+  const half_rep_t b_UQ1_hw = bSignificand >> (significandBits + 1 - HW);
   // C is approximately (3/4 + 1/sqrt(2)) - 1 as UQ0.n
   const half_rep_t C = HALF_REP_C(0x7504) << (HW - 16);
   half_rep_t x_UQ0_hw = C - (b_UQ1_hw /* b/2 as UQ0.n */);
@@ -130,8 +136,7 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
 #endif
   // e_n := x_n - 1/b_hw
   REPEAT_N_TIMES(NUMBER_OF_HALF_ITERATIONS, {
-    half_rep_t corr_UQ1_hw;
-    corr_UQ1_hw = (0 /* 2 as UQ1.n */) - ((rep_t)x_UQ0_hw * b_UQ1_hw >> HW);
+    half_rep_t corr_UQ1_hw = (0 /* 2 as UQ1.n */) - ((rep_t)x_UQ0_hw * b_UQ1_hw >> HW);
     x_UQ0_hw   = (rep_t)x_UQ0_hw * corr_UQ1_hw >> (HW - 1);
     // In infinite precision, with abs(eps1), abs(eps2) <= Ulp:
     // corr_UQ1_hw = 2 - (1/b_hw + e_n) * b_hw + eps1
@@ -151,14 +156,22 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   //    abs(e_N) <= 2 * u_{N-1}^2 * 2^(W-2) + 3 * 2^(W-1)
   //              = (8 * u_{N-1}^2 + 6) * 2^-W
 
-  rep_t x_UQ0 = ((rep_t)x_UQ0_hw) << HW;
-
+  const rep_t b_UQ1 = bSignificand << (typeWidth - significandBits - 1);
   // Now, one another iteration with full precision
   // Error estimatiobs are calculated just as above, but with Ulp := 1/2^(W-1)
-  rep_t corr_UQ1, tmp;
-  wideMultiply(x_UQ0, b_UQ1, &corr_UQ1, &tmp);
-  wideMultiply(x_UQ0, -corr_UQ1, &x_UQ0, &tmp);
-  wideLeftShift(&x_UQ0, &tmp, 1);
+
+  // corr_UQ1 = x_UQ0 * b_UQ1 / 2^W
+  //          = (x_UQ0_hw * 2^HW) * (hi_hw(b_UQ1) * 2^HW + lo_hw(b_UQ1)) / 2^W
+  //          = x_UQ0_hw * (hi_hw(b_UQ1) * 2^HW + lo_hw(b_UQ1)) / 2^HW
+  //          = x_UQ0_hw * hi_hw(b_UQ1) + x_UQ0_hw * lo_hw(b_UQ1) / 2^HW + (0 or 1)
+  const rep_t corr_UQ1 = -(  (rep_t)x_UQ0_hw * b_UQ1_hw
+               + ((rep_t)x_UQ0_hw * (b_UQ1 & loMask) >> HW));
+  // x_UQ0 = x_UQ0 * corr_UQ1 / 2^(W-1)
+  //       = (x_UQ0_hw * 2^HW) * (hi_hw(corr_UQ1) * 2^HW + lo_hw(corr_UQ1)) / 2^(W-1)
+  //       = x_UQ0_hw * (hi_hw(corr_UQ1) * 2^HW + lo_hw(corr_UQ1)) / 2^(HW-1)
+  //       = 2 * x_UQ0_hw * hi_hw(corr_UQ1) + x_UQ0_hw * lo_hw(corr_UQ1) / 2^(HW-1)
+  rep_t x_UQ0 = ((rep_t)x_UQ0_hw * (corr_UQ1 >> HW)    << 1)
+        + ((rep_t)x_UQ0_hw * (corr_UQ1 & loMask) >> (HW - 1));
 
   // u_n for different precisions:
   //     u_{n+1} = u_n^2 / 2^(HW-2) + 3
@@ -172,17 +185,26 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   //     (8 * u_{N-1}^2 + 6) * 2^-W
   // Final error | < 2^-24 | < 2^-55    | < 2^-114
 
-  const rep_t a_UQ1 = aSignificand << (typeWidth - significandBits - 1);
-  rep_t quotient_UQ1, dummy;
-  wideMultiply(x_UQ0, a_UQ1, &quotient_UQ1, &dummy);
+  x_UQ0 -= REP_C(1) << (typeWidth - RECIPROCAL_PRECISION);
 
-  // First, adjust quotient to be in [1.0, 2.0)
-  bool qWasNormalized = false;
-  if ((quotient_UQ1 & signBit) == 0) {
-    quotient_UQ1 <<= 1;
+  // error is two times worse
+
+  const rep_t quotient_UQ2_SB = wideMultiplyHi(x_UQ0, aSignificand << 1);
+
+  // error is two times worse again (a_UQ1 <= 2) + ulp
+
+  // Adjust quotient to be in [1.0, 2.0)
+  bool qWasDoubled;
+  rep_t qSignificand;
+  if (quotient_UQ2_SB < (implicitBit << 1)) {
+    // in [0.5, 1.0)
+    qSignificand /* UQ1_SB */ = quotient_UQ2_SB;
     quotientExponent--;
-    qWasNormalized = true;
-    // Now absolute error is two times worse (2^-22 / 2^-53 / 2^-112)
+    qWasDoubled = 1;
+    // Now absolute error is two times worse (2^-21 / 2^-52 / 2^-111)
+  } else {
+    qSignificand = quotient_UQ2_SB >> 1;
+    qWasDoubled = 0;
   }
 
   const int writtenExponent = quotientExponent + exponentBias;
@@ -192,36 +214,52 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
     return fromRep(infRep | quotientSign);
   }
 
-  const int shiftAmount = typeWidth - significandBits - 1;
-  rep_t absResult = quotient_UQ1 >> shiftAmount;
+#define print(v) // printf("%20s = 0x %016lX\n", #v, (unsigned long)(v))
 
-  if (writtenExponent >= 0) {
-    // including the case when the results becomes normal after rounding
-    rep_t midpoint_UQ1 = (2 * absResult + 1) << (shiftAmount - 1);
-    wideMultiply(midpoint_UQ1, b_UQ1, &dummy/* UQ2.n */, &tmp);
-    int round = dummy < (a_UQ1 >> (1 - qWasNormalized) /* exact */);
+  if (writtenExponent > 0) {
+    rep_t absResult = qSignificand;
+    // lower half of UQ2.(2*SB):
+    rep_t qbLo = absResult * bSignificand;
+    rep_t aScaledLo = aSignificand << (significandBits + qWasDoubled);
+    rep_t residualLo = aScaledLo - qbLo; // >= 0 by construction
+    // Let's compare
+    //   r   = a - q*b
+    // and
+    //   eps = ulp(q) * b / 2
+    rep_t eps = bSignificand >> 1;
+
     absResult &= significandMask;
     absResult |= (rep_t)writtenExponent << significandBits;
-    absResult += round;
-    if (absResult & exponentMask)
-      return fromRep(absResult | quotientSign);
+
+    // Round up at most twice
+    absResult += residualLo > eps - (absResult & 1);
+    absResult += residualLo > bSignificand + eps;
+
+    return fromRep(absResult | quotientSign);
   }
 
   // subnormal result
-  const int extraShiftAmount = -writtenExponent + 1; // >= 1
+  // including the case when the results becomes normal after rounding
+
+  const int shiftAmount = -writtenExponent + 1; // >= 1
+
   // Prevent UB. The result is zero anyway.
-  if (extraShiftAmount >= (int)typeWidth)
+  if (shiftAmount > 1 + significandBits)
     return fromRep(quotientSign);
 
-  absResult >>= extraShiftAmount;
-  rep_t midpoint_UQ1 = (2 * absResult + 1) << (shiftAmount + extraShiftAmount - 1);
-  wideMultiply(midpoint_UQ1, b_UQ1, &dummy/* UQ2.n */, &tmp);
-  printf("q   = 0x%016lx\n", (long)quotient_UQ1);
-  printf("m_UQ1 = 0x%016lx\n", (long)(midpoint_UQ1));
-  printf("dummy = 0x%016lx\n", (long)(dummy << extraShiftAmount));
-  printf("a_UQ1 = 0x%016lx\n", (long)(a_UQ1 >> (1 - qWasNormalized)));
-  int round = (dummy << extraShiftAmount) < (a_UQ1 >> (1 - qWasNormalized) /* exact */);
-  printf("abs = 0x%016lx\n", (long)absResult);
-  absResult += round;
+  rep_t absResult = qSignificand >> shiftAmount;
+  rep_t qbLo = absResult * bSignificand;
+  int aScaleAmount = qWasDoubled + significandBits - shiftAmount;
+  assert(aScaleAmount >= -1);
+  rep_t aScaledLo = aSignificand << (aScaleAmount + (aScaleAmount < 0));
+  aScaledLo >>= aScaleAmount < 0;
+  rep_t residualLo = aScaledLo - qbLo;
+  // eps = ulp(q) * b / 2
+  rep_t eps = bSignificand >> 1;
+
+  // Round up at most once
+  absResult += residualLo > eps - (absResult & 1);
+
   return fromRep(absResult | quotientSign);
 }
+
