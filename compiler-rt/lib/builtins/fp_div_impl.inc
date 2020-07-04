@@ -193,72 +193,73 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
 
   // error is two times worse again (a_UQ1 <= 2) + ulp
 
-  // Adjust quotient to be in [1.0, 2.0)
-  bool qWasDoubled;
-  rep_t qSignificand;
-  if (quotient_UQ2_SB < (implicitBit << 1)) {
-    // in [0.5, 1.0)
-    qSignificand /* UQ1_SB */ = quotient_UQ2_SB;
-    quotientExponent--;
-    qWasDoubled = 1;
-    // Now absolute error is two times worse (2^-21 / 2^-52 / 2^-111)
-  } else {
-    qSignificand = quotient_UQ2_SB >> 1;
-    qWasDoubled = 0;
-  }
+#define print(v) //printf("%20s = 0x %016lX\n", #v, (unsigned long)(v))
 
-  const int writtenExponent = quotientExponent + exponentBias;
+  // Adjust quotient to be in [1.0, 2.0)
+  bool qWasDoubled = quotient_UQ2_SB < (implicitBit << 1);
+  const int writtenExponent = quotientExponent + exponentBias - qWasDoubled;
 
   if (writtenExponent >= maxExponent) {
     // If we have overflowed the exponent, return infinity.
     return fromRep(infRep | quotientSign);
   }
-
-#define print(v) // printf("%20s = 0x %016lX\n", #v, (unsigned long)(v))
-
-  if (writtenExponent > 0) {
-    rep_t absResult = qSignificand;
-    // lower half of UQ2.(2*SB):
-    rep_t qbLo = absResult * bSignificand;
-    rep_t aScaledLo = aSignificand << (significandBits + qWasDoubled);
-    rep_t residualLo = aScaledLo - qbLo; // >= 0 by construction
-    // Let's compare
-    //   r   = a - q*b
-    // and
-    //   eps = ulp(q) * b / 2
-    rep_t eps = bSignificand >> 1;
-
-    absResult &= significandMask;
-    absResult |= (rep_t)writtenExponent << significandBits;
-
-    // Round up at most twice
-    absResult += residualLo > eps - (absResult & 1);
-    absResult += residualLo > bSignificand + eps;
-
-    return fromRep(absResult | quotientSign);
-  }
-
-  // subnormal result
-  // including the case when the results becomes normal after rounding
-
-  const int shiftAmount = -writtenExponent + 1; // >= 1
-
   // Prevent UB. The result is zero anyway.
-  if (shiftAmount > 1 + significandBits)
+  if (significandBits + writtenExponent < 0)
     return fromRep(quotientSign);
 
-  rep_t absResult = qSignificand >> shiftAmount;
-  rep_t qbLo = absResult * bSignificand;
-  int aScaleAmount = qWasDoubled + significandBits - shiftAmount;
-  assert(aScaleAmount >= -1);
-  rep_t aScaledLo = aSignificand << (aScaleAmount + (aScaleAmount < 0));
-  aScaledLo >>= aScaleAmount < 0;
-  rep_t residualLo = aScaledLo - qbLo;
-  // eps = ulp(q) * b / 2
+  rep_t absResult, residualLo;
+#if 0
+  if (writtenExponent > 0) {
+    if (qWasDoubled) {
+      absResult /* UQ1_SB */ = quotient_UQ2_SB;
+      residualLo = (aSignificand << (significandBits + 1)) - absResult * bSignificand;
+    } else {
+      absResult = quotient_UQ2_SB >> 1;
+      residualLo = (aSignificand << (significandBits)) - absResult * bSignificand;
+    }
+    absResult &= significandMask;
+    absResult |= (rep_t)writtenExponent << significandBits;
+  } else {
+    if (qWasDoubled) {
+      absResult = quotient_UQ2_SB >> (-writtenExponent + 1);
+      residualLo = (aSignificand << (significandBits + writtenExponent)) - absResult * bSignificand;
+    } else {
+      absResult = quotient_UQ2_SB >> (-writtenExponent + 2);
+      residualLo = ((aSignificand << (significandBits + writtenExponent)) - 2 * absResult * bSignificand) >> 1;
+    }
+  }
+#else
+  if (qWasDoubled) {
+    // in [0.5, 1.0), so multiply by 2
+    // Now absolute error is two times worse (2^-21 / 2^-52 / 2^-111)
+    if (writtenExponent > 0) {
+      absResult /* UQ1_SB */ = quotient_UQ2_SB;
+      residualLo = (aSignificand << (significandBits + 1)) - absResult * bSignificand;
+      absResult &= significandMask;
+      absResult |= (rep_t)writtenExponent << significandBits;
+
+    } else {
+      absResult = quotient_UQ2_SB >> (-writtenExponent + 1);
+      residualLo = (aSignificand << (significandBits + writtenExponent)) - absResult * bSignificand;
+    }
+  } else {
+    if (writtenExponent > 0) {
+      absResult = quotient_UQ2_SB >> 1;
+      residualLo = (aSignificand << (significandBits)) - absResult * bSignificand;
+      absResult &= significandMask;
+      absResult |= (rep_t)writtenExponent << significandBits;
+    } else {
+      absResult = quotient_UQ2_SB >> (-writtenExponent + 2);
+      residualLo = ((aSignificand << (significandBits + writtenExponent)) - 2 * absResult * bSignificand) >> 1;
+    }
+  }
+#endif
+
   rep_t eps = bSignificand >> 1;
 
-  // Round up at most once
+  // Round up at most twice
   absResult += residualLo > eps - (absResult & 1);
+  absResult += residualLo > bSignificand + eps;
 
   return fromRep(absResult | quotientSign);
 }
