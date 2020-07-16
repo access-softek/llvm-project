@@ -15,8 +15,8 @@
 
 // Returns: the product of a + ib and c + id
 
-COMPILER_RT_ABI long double _Complex
-__mulxc3(long double __a, long double __b, long double __c, long double __d);
+DECLARE_LIBCALL(long double _Complex, __mulxc3,
+    long double __a, long double __b, long double __c, long double __d);
 
 enum {zero, non_zero, inf, NaN, non_zero_nan};
 

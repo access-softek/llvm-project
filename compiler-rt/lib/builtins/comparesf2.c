@@ -126,11 +126,10 @@ DECLARE_LIBCALL(enum GE_RESULT, __gesf2, fp_t a, fp_t b) {
 
 COMPILER_RT_ALIAS(__gesf2, __gtsf2)
 
-COMPILER_RT_ABI int
-__unordsf2(fp_t a, fp_t b) {
-    const rep_t aAbs = toRep(a) & absMask;
-    const rep_t bAbs = toRep(b) & absMask;
-    return aAbs > infRep || bAbs > infRep;
+DECLARE_LIBCALL(int, __unordsf2, fp_t a, fp_t b) {
+  const rep_t aAbs = toRep(a) & absMask;
+  const rep_t bAbs = toRep(b) & absMask;
+  return aAbs > infRep || bAbs > infRep;
 }
 
 #if defined(__ARM_EABI__)
