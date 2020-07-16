@@ -16,7 +16,7 @@
 //           if (a == b) returns 1
 //           if (a >  b) returns 2
 
-COMPILER_RT_ABI si_int __ucmpdi2(du_int a, du_int b) {
+DECLARE_LIBCALL(si_int, __ucmpdi2, du_int a, du_int b) {
   udwords x;
   x.all = a;
   udwords y;
@@ -36,7 +36,7 @@ COMPILER_RT_ABI si_int __ucmpdi2(du_int a, du_int b) {
 // Returns: if (a <  b) returns -1
 //           if (a == b) returns  0
 //           if (a >  b) returns  1
-COMPILER_RT_ABI si_int __aeabi_ulcmp(di_int a, di_int b) {
+DECLARE_LIBCALL(si_int, __aeabi_ulcmp, di_int a, di_int b) {
   return __ucmpdi2(a, b) - 1;
 }
 #endif

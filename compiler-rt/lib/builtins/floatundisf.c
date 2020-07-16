@@ -19,7 +19,7 @@
 
 #include "int_lib.h"
 
-COMPILER_RT_ABI float __floatundisf(du_int a) {
+DECLARE_LIBCALL(float, __floatundisf, du_int a) {
   if (a == 0)
     return 0.0F;
   const unsigned N = sizeof(du_int) * CHAR_BIT;

@@ -7,7 +7,7 @@
 
 // Returns: a ^ b
 
-COMPILER_RT_ABI double __powidf2(double a, int b);
+DECLARE_LIBCALL(double, __powidf2, double a, int b);
 
 int test__powidf2(double a, int b, double expected)
 {

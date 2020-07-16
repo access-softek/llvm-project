@@ -14,7 +14,7 @@
 
 // Returns: a ^ b
 
-COMPILER_RT_ABI float __powisf2(float a, int b) {
+DECLARE_LIBCALL(float, __powisf2, float a, int b) {
   const int recip = b < 0;
   float r = 1;
   while (1) {

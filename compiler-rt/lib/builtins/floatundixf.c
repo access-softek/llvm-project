@@ -22,7 +22,7 @@
 // gggg gggg gggg gggg gggg gggg gggg gggg | gggg gggg gggg gggg seee eeee eeee
 // eeee | 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
-COMPILER_RT_ABI long double __floatundixf(du_int a) {
+DECLARE_LIBCALL(long double, __floatundixf, du_int a) {
   if (a == 0)
     return 0.0;
   const unsigned N = sizeof(du_int) * CHAR_BIT;

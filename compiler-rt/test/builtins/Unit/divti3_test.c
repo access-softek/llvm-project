@@ -9,7 +9,7 @@
 
 // Returns: a / b
 
-COMPILER_RT_ABI ti_int __divti3(ti_int a, ti_int b);
+DECLARE_LIBCALL(ti_int, __divti3, ti_int a, ti_int b);
 
 int test__divti3(ti_int a, ti_int b, ti_int expected)
 {

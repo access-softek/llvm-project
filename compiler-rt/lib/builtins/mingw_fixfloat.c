@@ -8,27 +8,27 @@
 
 #include "int_lib.h"
 
-COMPILER_RT_ABI di_int __fixdfdi(double a);
-COMPILER_RT_ABI di_int __fixsfdi(float a);
-COMPILER_RT_ABI du_int __fixunsdfdi(double a);
-COMPILER_RT_ABI du_int __fixunssfdi(float a);
-COMPILER_RT_ABI double __floatdidf(di_int a);
-COMPILER_RT_ABI float __floatdisf(di_int a);
-COMPILER_RT_ABI double __floatundidf(du_int a);
-COMPILER_RT_ABI float __floatundisf(du_int a);
+DECLARE_LIBCALL(di_int, __fixdfdi, double a);
+DECLARE_LIBCALL(di_int, __fixsfdi, float a);
+DECLARE_LIBCALL(du_int, __fixunsdfdi, double a);
+DECLARE_LIBCALL(du_int, __fixunssfdi, float a);
+DECLARE_LIBCALL(double, __floatdidf, di_int a);
+DECLARE_LIBCALL(float, __floatdisf, di_int a);
+DECLARE_LIBCALL(double, __floatundidf, du_int a);
+DECLARE_LIBCALL(float, __floatundisf, du_int a);
 
-COMPILER_RT_ABI di_int __dtoi64(double a) { return __fixdfdi(a); }
+DECLARE_LIBCALL(di_int, __dtoi64, double a) { return __fixdfdi(a); }
 
-COMPILER_RT_ABI di_int __stoi64(float a) { return __fixsfdi(a); }
+DECLARE_LIBCALL(di_int, __stoi64, float a) { return __fixsfdi(a); }
 
-COMPILER_RT_ABI du_int __dtou64(double a) { return __fixunsdfdi(a); }
+DECLARE_LIBCALL(du_int, __dtou64, double a) { return __fixunsdfdi(a); }
 
-COMPILER_RT_ABI du_int __stou64(float a) { return __fixunssfdi(a); }
+DECLARE_LIBCALL(du_int, __stou64, float a) { return __fixunssfdi(a); }
 
-COMPILER_RT_ABI double __i64tod(di_int a) { return __floatdidf(a); }
+DECLARE_LIBCALL(double, __i64tod, di_int a) { return __floatdidf(a); }
 
-COMPILER_RT_ABI float __i64tos(di_int a) { return __floatdisf(a); }
+DECLARE_LIBCALL(float, __i64tos, di_int a) { return __floatdisf(a); }
 
-COMPILER_RT_ABI double __u64tod(du_int a) { return __floatundidf(a); }
+DECLARE_LIBCALL(double, __u64tod, du_int a) { return __floatundidf(a); }
 
-COMPILER_RT_ABI float __u64tos(du_int a) { return __floatundisf(a); }
+DECLARE_LIBCALL(float, __u64tos, du_int a) { return __floatundisf(a); }

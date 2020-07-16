@@ -19,7 +19,7 @@
  * mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm
  */
 
-COMPILER_RT_ABI fp_t __floattitf(ti_int a);
+DECLARE_LIBCALL(fp_t, __floattitf, ti_int a);
 
 int test__floattitf(ti_int a, fp_t expected) {
     fp_t x = __floattitf(a);

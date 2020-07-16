@@ -7,7 +7,7 @@
 
 // Returns: a ^ b
 
-COMPILER_RT_ABI float __powisf2(float a, int b);
+DECLARE_LIBCALL(float, __powisf2, float a, int b);
 
 int test__powisf2(float a, int b, float expected)
 {

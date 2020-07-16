@@ -7,7 +7,7 @@
 #include <math.h>
 
 
-extern COMPILER_RT_ABI double __floatunssidfvfp(unsigned int a);
+extern DECLARE_LIBCALL(double, __floatunssidfvfp, unsigned int a);
 
 #if __arm__ && __VFP_FP__
 int test__floatunssidfvfp(unsigned int a)

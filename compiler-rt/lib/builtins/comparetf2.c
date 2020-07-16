@@ -42,7 +42,7 @@
 #if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
 enum LE_RESULT { LE_LESS = -1, LE_EQUAL = 0, LE_GREATER = 1, LE_UNORDERED = 1 };
 
-COMPILER_RT_ABI enum LE_RESULT __letf2(fp_t a, fp_t b) {
+DECLARE_LIBCALL(enum LE_RESULT, __letf2, fp_t a, fp_t b) {
 
   const srep_t aInt = toRep(a);
   const srep_t bInt = toRep(b);
@@ -95,7 +95,7 @@ enum GE_RESULT {
   GE_UNORDERED = -1 // Note: different from LE_UNORDERED
 };
 
-COMPILER_RT_ABI enum GE_RESULT __getf2(fp_t a, fp_t b) {
+DECLARE_LIBCALL(enum GE_RESULT, __getf2, fp_t a, fp_t b) {
 
   const srep_t aInt = toRep(a);
   const srep_t bInt = toRep(b);
@@ -125,7 +125,7 @@ COMPILER_RT_ABI enum GE_RESULT __getf2(fp_t a, fp_t b) {
 
 COMPILER_RT_ALIAS(__getf2, __gttf2)
 
-COMPILER_RT_ABI int __unordtf2(fp_t a, fp_t b) {
+DECLARE_LIBCALL(int, __unordtf2, fp_t a, fp_t b) {
   const rep_t aAbs = toRep(a) & absMask;
   const rep_t bAbs = toRep(b) & absMask;
   return aAbs > infRep || bAbs > infRep;

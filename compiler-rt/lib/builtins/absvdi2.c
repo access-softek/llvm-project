@@ -16,7 +16,7 @@
 
 // Effects: aborts if abs(x) < 0
 
-COMPILER_RT_ABI di_int __absvdi2(di_int a) {
+DECLARE_LIBCALL(di_int, __absvdi2, di_int a) {
   const int N = (int)(sizeof(di_int) * CHAR_BIT);
   if (a == ((di_int)1 << (N - 1)))
     compilerrt_abort();

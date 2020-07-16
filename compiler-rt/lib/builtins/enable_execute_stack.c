@@ -38,7 +38,7 @@
 // and the next 48 bytes as executable.  Since the stack is normally rw-
 // that means changing the protection on those page(s) to rwx.
 
-COMPILER_RT_ABI void __enable_execute_stack(void *addr) {
+DECLARE_LIBCALL(void, __enable_execute_stack, void *addr) {
 
 #if _WIN32
   MEMORY_BASIC_INFORMATION mbi;

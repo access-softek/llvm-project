@@ -8,7 +8,7 @@
 
 // Effects: aborts if a * b overflows
 
-COMPILER_RT_ABI si_int __mulvsi3(si_int a, si_int b);
+DECLARE_LIBCALL(si_int, __mulvsi3, si_int a, si_int b);
 
 int test__mulvsi3(si_int a, si_int b, si_int expected)
 {

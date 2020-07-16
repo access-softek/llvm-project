@@ -13,5 +13,5 @@
 typedef du_int fixuint_t;
 #include "fp_fixuint_impl.inc"
 
-COMPILER_RT_ABI du_int __fixunstfdi(fp_t a) { return __fixuint(a); }
+DECLARE_LIBCALL(du_int, __fixunstfdi, fp_t a) { return __fixuint(a); }
 #endif

@@ -18,7 +18,7 @@
 
 // Effects: aborts if abs(x) < 0
 
-COMPILER_RT_ABI ti_int __absvti2(ti_int a) {
+DECLARE_LIBCALL(ti_int, __absvti2, ti_int a) {
   const int N = (int)(sizeof(ti_int) * CHAR_BIT);
   if (a == ((ti_int)1 << (N - 1)))
     compilerrt_abort();

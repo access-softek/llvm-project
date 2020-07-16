@@ -7,7 +7,7 @@
 #include <math.h>
 
 
-extern COMPILER_RT_ABI double __extendsfdf2vfp(float a);
+extern DECLARE_LIBCALL(double, __extendsfdf2vfp, float a);
 
 #if __arm__ && __VFP_FP__
 int test__extendsfdf2vfp(float a)

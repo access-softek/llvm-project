@@ -8,7 +8,7 @@
 
 #include "fp_test.h"
 
-COMPILER_RT_ABI float __trunctfsf2(long double a);
+DECLARE_LIBCALL(float, __trunctfsf2, long double a);
 
 int test__trunctfsf2(long double a, uint32_t expected)
 {

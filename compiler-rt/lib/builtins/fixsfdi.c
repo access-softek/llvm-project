@@ -13,9 +13,9 @@
 // Support for systems that have hardware floating-point; can set the invalid
 // flag as a side-effect of computation.
 
-COMPILER_RT_ABI du_int __fixunssfdi(float a);
+DECLARE_LIBCALL(du_int, __fixunssfdi, float a);
 
-COMPILER_RT_ABI di_int __fixsfdi(float a) {
+DECLARE_LIBCALL(di_int, __fixsfdi, float a) {
   if (a < 0.0f) {
     return -__fixunssfdi(-a);
   }
@@ -31,7 +31,7 @@ typedef di_int fixint_t;
 typedef du_int fixuint_t;
 #include "fp_fixint_impl.inc"
 
-COMPILER_RT_ABI di_int __fixsfdi(fp_t a) { return __fixint(a); }
+DECLARE_LIBCALL(di_int, __fixsfdi, fp_t a) { return __fixint(a); }
 
 #endif
 

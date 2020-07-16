@@ -17,7 +17,7 @@
 
 #ifdef CRT_HAS_128BIT
 
-COMPILER_RT_ABI tu_int __fixunsdfti(double a);
+DECLARE_LIBCALL(tu_int, __fixunsdfti, double a);
 
 int test__fixunsdfti(double a, tu_int expected)
 {

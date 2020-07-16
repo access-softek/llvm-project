@@ -31,7 +31,7 @@
 #pragma warning(disable : 4700)
 #endif
 
-COMPILER_RT_ABI di_int __fixxfdi(long double a) {
+DECLARE_LIBCALL(di_int, __fixxfdi, long double a) {
   const di_int di_max = (di_int)((~(du_int)0) / 2);
   const di_int di_min = -di_max - 1;
   long_double_bits fb;

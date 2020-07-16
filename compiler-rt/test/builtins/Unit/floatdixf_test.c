@@ -13,7 +13,7 @@
 // gggg gggg gggg gggg gggg gggg gggg gggg | gggg gggg gggg gggg seee eeee eeee eeee |
 // 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm
 
-long COMPILER_RT_ABI double __floatdixf(di_int a);
+long DECLARE_LIBCALL(double, __floatdixf, di_int a);
 
 int test__floatdixf(di_int a, long double expected)
 {

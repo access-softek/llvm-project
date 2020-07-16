@@ -12,7 +12,7 @@
 
 #include "int_lib.h"
 
-COMPILER_RT_ABI uint64_t __bswapdi2(uint64_t u) {
+DECLARE_LIBCALL(uint64_t, __bswapdi2, uint64_t u) {
   return (
       (((u)&0xff00000000000000ULL) >> 56) |
       (((u)&0x00ff000000000000ULL) >> 40) |

@@ -6,7 +6,7 @@
 
 // Returns: a / b
 
-extern COMPILER_RT_ABI su_int __udivmodsi4(su_int a, su_int b, su_int* rem);
+extern DECLARE_LIBCALL(su_int, __udivmodsi4, su_int a, su_int b, su_int* rem);
 
 int test__udivmodsi4(su_int a, su_int b, 
 						su_int expected_result, su_int expected_rem)

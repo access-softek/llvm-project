@@ -97,7 +97,7 @@ static inline du_int udiv128by64to64(du_int u1, du_int u0, du_int v,
 // Effects: if rem != 0, *rem = a % b
 // Returns: a / b
 
-COMPILER_RT_ABI tu_int __udivmodti4(tu_int a, tu_int b, tu_int *rem) {
+DECLARE_LIBCALL(tu_int, __udivmodti4, tu_int a, tu_int b, tu_int *rem) {
   const unsigned n_utword_bits = sizeof(tu_int) * CHAR_BIT;
   utwords dividend;
   dividend.all = a;

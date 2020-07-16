@@ -6,7 +6,7 @@
 #include <math.h>
 #include "int_lib.h"
 
-extern COMPILER_RT_ABI float __floatunssisfvfp(unsigned int a);
+extern DECLARE_LIBCALL(float, __floatunssisfvfp, unsigned int a);
 
 #if __arm__ && __VFP_FP__
 int test__floatunssisfvfp(unsigned int a)

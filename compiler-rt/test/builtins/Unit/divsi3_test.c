@@ -6,7 +6,7 @@
 
 // Returns: a / b
 
-COMPILER_RT_ABI si_int __divsi3(si_int a, si_int b);
+DECLARE_LIBCALL(si_int, __divsi3, si_int a, si_int b);
 
 int test__divsi3(si_int a, si_int b, si_int expected)
 {

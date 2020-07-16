@@ -37,7 +37,7 @@ static ti_int __mulddi3(du_int a, du_int b) {
 
 // Returns: a * b
 
-COMPILER_RT_ABI ti_int __multi3(ti_int a, ti_int b) {
+DECLARE_LIBCALL(ti_int, __multi3, ti_int a, ti_int b) {
   twords x;
   x.all = a;
   twords y;

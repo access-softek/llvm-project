@@ -16,7 +16,7 @@
 
 // Returns: a % b
 
-COMPILER_RT_ABI ti_int __modti3(ti_int a, ti_int b) {
+DECLARE_LIBCALL(ti_int, __modti3, ti_int a, ti_int b) {
   const int bits_in_tword_m1 = (int)(sizeof(ti_int) * CHAR_BIT) - 1;
   ti_int s = b >> bits_in_tword_m1; // s = b < 0 ? -1 : 0
   b = (b ^ s) - s;                  // negate if s == -1

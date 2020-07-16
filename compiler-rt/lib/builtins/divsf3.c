@@ -18,7 +18,7 @@
 #define SINGLE_PRECISION
 #include "fp_lib.h"
 
-COMPILER_RT_ABI fp_t __divsf3(fp_t a, fp_t b) {
+DECLARE_LIBCALL(fp_t, __divsf3, fp_t a, fp_t b) {
 
   const unsigned int aExponent = toRep(a) >> significandBits & maxExponent;
   const unsigned int bExponent = toRep(b) >> significandBits & maxExponent;

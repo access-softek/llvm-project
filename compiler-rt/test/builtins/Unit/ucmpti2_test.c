@@ -11,7 +11,7 @@
 //           if (a == b) returns 1
 //           if (a >  b) returns 2
 
-COMPILER_RT_ABI si_int __ucmpti2(tu_int a, tu_int b);
+DECLARE_LIBCALL(si_int, __ucmpti2, tu_int a, tu_int b);
 
 int test__ucmpti2(tu_int a, tu_int b, si_int expected)
 {

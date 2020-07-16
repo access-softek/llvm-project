@@ -12,7 +12,7 @@
 
 // Returns: long integer converted to long double
 
-COMPILER_RT_ABI long double __floatditf(long long a);
+DECLARE_LIBCALL(long double, __floatditf, long long a);
 
 int test__floatditf(long long a, uint64_t expectedHi, uint64_t expectedLo)
 {

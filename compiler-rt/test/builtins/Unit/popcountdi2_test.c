@@ -7,7 +7,7 @@
 
 // Returns: count of 1 bits
 
-COMPILER_RT_ABI int __popcountdi2(di_int a);
+DECLARE_LIBCALL(int, __popcountdi2, di_int a);
 
 int naive_popcount(di_int a)
 {

@@ -14,7 +14,7 @@
 #include "fp_lib.h"
 
 // Subtraction; flip the sign bit of b and add.
-COMPILER_RT_ABI fp_t __subsf3(fp_t a, fp_t b) {
+DECLARE_LIBCALL(fp_t, __subsf3, fp_t a, fp_t b) {
   return __addsf3(a, fromRep(toRep(b) ^ signBit));
 }
 

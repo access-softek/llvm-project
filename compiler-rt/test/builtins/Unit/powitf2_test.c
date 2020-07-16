@@ -10,7 +10,7 @@
 
 // Returns: a ^ b
 
-COMPILER_RT_ABI long double __powitf2(long double a, int b);
+DECLARE_LIBCALL(long double, __powitf2, long double a, int b);
 
 int test__powitf2(long double a, int b, long double expected)
 {

@@ -12,7 +12,7 @@
 
 // Returns: long integer converted to long double
 
-COMPILER_RT_ABI long double __floatunditf(unsigned long long a);
+DECLARE_LIBCALL(long double, __floatunditf, unsigned long long a);
 
 int test__floatunditf(unsigned long long a, uint64_t expectedHi, uint64_t expectedLo)
 {

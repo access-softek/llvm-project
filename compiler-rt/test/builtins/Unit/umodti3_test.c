@@ -9,7 +9,7 @@
 
 // Returns: a % b
 
-COMPILER_RT_ABI tu_int __umodti3(tu_int a, tu_int b);
+DECLARE_LIBCALL(tu_int, __umodti3, tu_int a, tu_int b);
 
 int test__umodti3(tu_int a, tu_int b, tu_int expected_r)
 {

@@ -8,7 +8,7 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI int __ctzdi2(di_int a);
+DECLARE_LIBCALL(int, __ctzdi2, di_int a);
 
 int test__ctzdi2(di_int a, int expected)
 {

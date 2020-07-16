@@ -11,7 +11,7 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI int __clzti2(ti_int a);
+DECLARE_LIBCALL(int, __clzti2, ti_int a);
 
 int test__clzti2(ti_int a, int expected)
 {

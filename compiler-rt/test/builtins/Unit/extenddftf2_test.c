@@ -8,7 +8,7 @@
 
 #include "fp_test.h"
 
-COMPILER_RT_ABI long double __extenddftf2(double a);
+DECLARE_LIBCALL(long double, __extenddftf2, double a);
 
 int test__extenddftf2(double a, uint64_t expectedHi, uint64_t expectedLo)
 {

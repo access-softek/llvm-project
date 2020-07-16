@@ -9,7 +9,7 @@
 
 // Returns: -a
 
-COMPILER_RT_ABI ti_int __negti2(ti_int a);
+DECLARE_LIBCALL(ti_int, __negti2, ti_int a);
 
 int test__negti2(ti_int a, ti_int expected)
 {

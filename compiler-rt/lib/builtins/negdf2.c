@@ -13,7 +13,7 @@
 #define DOUBLE_PRECISION
 #include "fp_lib.h"
 
-COMPILER_RT_ABI fp_t __negdf2(fp_t a) { return fromRep(toRep(a) ^ signBit); }
+DECLARE_LIBCALL(fp_t, __negdf2, fp_t a) { return fromRep(toRep(a) ^ signBit); }
 
 #if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)

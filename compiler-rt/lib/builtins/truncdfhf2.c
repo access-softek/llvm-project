@@ -10,7 +10,7 @@
 #define DST_HALF
 #include "fp_trunc_impl.inc"
 
-COMPILER_RT_ABI uint16_t __truncdfhf2(double a) { return __truncXfYf2__(a); }
+DECLARE_LIBCALL(uint16_t, __truncdfhf2, double a) { return __truncXfYf2__(a); }
 
 #if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)

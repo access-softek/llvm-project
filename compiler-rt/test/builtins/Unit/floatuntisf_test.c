@@ -14,7 +14,7 @@
 
 // seee eeee emmm mmmm mmmm mmmm mmmm mmmm
 
-COMPILER_RT_ABI float __floatuntisf(tu_int a);
+DECLARE_LIBCALL(float, __floatuntisf, tu_int a);
 
 int test__floatuntisf(tu_int a, float expected)
 {

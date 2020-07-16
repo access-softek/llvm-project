@@ -7,7 +7,7 @@
 #include "fp_test.h"
 
 // Returns: a / b
-COMPILER_RT_ABI float __divsf3(float a, float b);
+DECLARE_LIBCALL(float, __divsf3, float a, float b);
 
 int test__divsf3(float a, float b, uint32_t expected)
 {

@@ -15,7 +15,7 @@
 
 // Returns: the product of a + ib and c + id
 
-COMPILER_RT_ABI long double _Complex __multc3(long double a, long double b,
+DECLARE_LIBCALL(long double _Complex, __multc3, long double a, long double b,
                                               long double c, long double d) {
   long double ac = a * c;
   long double bd = b * d;

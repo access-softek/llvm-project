@@ -17,7 +17,7 @@
 
 // Returns: the quotient of (a + ib) / (c + id)
 
-COMPILER_RT_ABI Dcomplex __divdc3(double __a, double __b, double __c,
+DECLARE_LIBCALL(Dcomplex, __divdc3, double __a, double __b, double __c,
                                   double __d) {
   int __ilogbw = 0;
   double __logbw = __compiler_rt_logb(crt_fmax(crt_fabs(__c), crt_fabs(__d)));

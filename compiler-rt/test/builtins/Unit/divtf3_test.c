@@ -9,7 +9,7 @@
 #include "fp_test.h"
 
 // Returns: a / b
-COMPILER_RT_ABI long double __divtf3(long double a, long double b);
+DECLARE_LIBCALL(long double, __divtf3, long double a, long double b);
 
 int test__divtf3(long double a, long double b,
                  uint64_t expectedHi, uint64_t expectedLo)

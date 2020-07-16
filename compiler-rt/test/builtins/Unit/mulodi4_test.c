@@ -4,7 +4,7 @@
 #include "int_lib.h"
 #include <stdio.h>
 
-extern COMPILER_RT_ABI di_int __mulodi4(di_int a, di_int b, int* overflow);
+extern DECLARE_LIBCALL(di_int, __mulodi4, di_int a, di_int b, int* overflow);
 
 int test__mulodi4(di_int a, di_int b, di_int expected, int expected_overflow)
 {

@@ -14,7 +14,7 @@
 
 // seee eeee eeee mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm
 
-COMPILER_RT_ABI su_int __fixunsdfsi(double a);
+DECLARE_LIBCALL(su_int, __fixunsdfsi, double a);
 
 int test__fixunsdfsi(double a, su_int expected)
 {

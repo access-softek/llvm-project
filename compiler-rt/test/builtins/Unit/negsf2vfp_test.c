@@ -7,7 +7,7 @@
 #include <math.h>
 
 
-extern COMPILER_RT_ABI float __negsf2vfp(float a);
+extern DECLARE_LIBCALL(float, __negsf2vfp, float a);
 
 #if __arm__ && __VFP_FP__
 int test__negsf2vfp(float a)

@@ -11,7 +11,7 @@
 
 // Returns: a ^ b
 
-COMPILER_RT_ABI long double __powixf2(long double a, int b);
+DECLARE_LIBCALL(long double, __powixf2, long double a, int b);
 
 int test__powixf2(long double a, int b, long double expected)
 {

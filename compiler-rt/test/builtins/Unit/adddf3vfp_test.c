@@ -8,7 +8,7 @@
 
 
 #if __arm__ && __VFP_FP__
-extern COMPILER_RT_ABI double __adddf3vfp(double a, double b);
+extern DECLARE_LIBCALL(double, __adddf3vfp, double a, double b);
 
 int test__adddf3vfp(double a, double b)
 {

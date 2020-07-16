@@ -10,7 +10,7 @@
 #include "fp_test.h"
 
 // Returns: a + b
-COMPILER_RT_ABI long double __addtf3(long double a, long double b);
+DECLARE_LIBCALL(long double, __addtf3, long double a, long double b);
 
 int test__addtf3(long double a, long double b,
                  uint64_t expectedHi, uint64_t expectedLo)

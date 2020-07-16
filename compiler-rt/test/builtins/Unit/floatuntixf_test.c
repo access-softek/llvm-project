@@ -16,7 +16,7 @@
 // gggg gggg gggg gggg gggg gggg gggg gggg | gggg gggg gggg gggg seee eeee eeee eeee |
 // 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm
 
-COMPILER_RT_ABI long double __floatuntixf(tu_int a);
+DECLARE_LIBCALL(long double, __floatuntixf, tu_int a);
 
 int test__floatuntixf(tu_int a, long double expected)
 {

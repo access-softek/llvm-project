@@ -18,7 +18,7 @@
 
 // Effects: aborts if a + b overflows
 
-COMPILER_RT_ABI ti_int __addvti3(ti_int a, ti_int b) {
+DECLARE_LIBCALL(ti_int, __addvti3, ti_int a, ti_int b) {
   ti_int s = (tu_int)a + (tu_int)b;
   if (b >= 0) {
     if (s < a)

@@ -8,7 +8,7 @@
 
 #include "fp_test.h"
 
-long COMPILER_RT_ABI double __floatsitf(int a);
+long DECLARE_LIBCALL(double, __floatsitf, int a);
 
 int test__floatsitf(int a, uint64_t expectedHi, uint64_t expectedLo)
 {

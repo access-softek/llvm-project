@@ -6,7 +6,7 @@
 
 // Returns: -a
 
-COMPILER_RT_ABI di_int __negdi2(di_int a);
+DECLARE_LIBCALL(di_int, __negdi2, di_int a);
 
 int test__negdi2(di_int a, di_int expected)
 {

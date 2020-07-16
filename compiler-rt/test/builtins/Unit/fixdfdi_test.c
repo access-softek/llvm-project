@@ -12,7 +12,7 @@
 
 // seee eeee eeee mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm
 
-COMPILER_RT_ABI di_int __fixdfdi(double a);
+DECLARE_LIBCALL(di_int, __fixdfdi, double a);
 
 int test__fixdfdi(double a, di_int expected)
 {

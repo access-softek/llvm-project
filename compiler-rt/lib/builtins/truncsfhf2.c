@@ -12,11 +12,11 @@
 
 // Use a forwarding definition and noinline to implement a poor man's alias,
 // as there isn't a good cross-platform way of defining one.
-COMPILER_RT_ABI NOINLINE uint16_t __truncsfhf2(float a) {
+DECLARE_LIBCALL(NOINLINE uint16_t, __truncsfhf2, float a) {
   return __truncXfYf2__(a);
 }
 
-COMPILER_RT_ABI uint16_t __gnu_f2h_ieee(float a) { return __truncsfhf2(a); }
+DECLARE_LIBCALL(uint16_t, __gnu_f2h_ieee, float a) { return __truncsfhf2(a); }
 
 #if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)

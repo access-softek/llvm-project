@@ -15,7 +15,7 @@
 //             value in long double is representable in du_int or is negative 
 //                 (no range checking performed)
 
-COMPILER_RT_ABI du_int __fixunstfdi(long double a);
+DECLARE_LIBCALL(du_int, __fixunstfdi, long double a);
 
 int test__fixunstfdi(long double a, du_int expected)
 {

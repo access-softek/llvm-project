@@ -7,7 +7,7 @@
 #include <math.h>
 
 
-extern COMPILER_RT_ABI unsigned int __fixunsdfsivfp(double a);
+extern DECLARE_LIBCALL(unsigned int, __fixunsdfsivfp, double a);
 
 #if __arm__ && __VFP_FP__
 int test__fixunsdfsivfp(double a)

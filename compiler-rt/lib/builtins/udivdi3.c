@@ -18,6 +18,6 @@ typedef di_int fixint_t;
 
 // Returns: a / b
 
-COMPILER_RT_ABI du_int __udivdi3(du_int a, du_int b) {
+DECLARE_LIBCALL(du_int, __udivdi3, du_int a, du_int b) {
   return __udivXi3(a, b);
 }

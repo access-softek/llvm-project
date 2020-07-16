@@ -7,7 +7,7 @@
 // Effects: if rem != 0, *rem = a % b
 // Returns: a / b
 
-COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int* rem);
+DECLARE_LIBCALL(du_int, __udivmoddi4, du_int a, du_int b, du_int* rem);
 
 int test__udivmoddi4(du_int a, du_int b, du_int expected_q, du_int expected_r)
 {

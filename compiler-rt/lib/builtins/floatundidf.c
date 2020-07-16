@@ -24,7 +24,7 @@
 // Support for systems that have hardware floating-point; we'll set the inexact
 // flag as a side-effect of this computation.
 
-COMPILER_RT_ABI double __floatundidf(du_int a) {
+DECLARE_LIBCALL(double, __floatundidf, du_int a) {
   static const double twop52 = 4503599627370496.0;           // 0x1.0p52
   static const double twop84 = 19342813113834066795298816.0; // 0x1.0p84
   static const double twop84_plus_twop52 =
@@ -51,7 +51,7 @@ COMPILER_RT_ABI double __floatundidf(du_int a) {
 // flags to set, and we don't want to code-gen to an unknown soft-float
 // implementation.
 
-COMPILER_RT_ABI double __floatundidf(du_int a) {
+DECLARE_LIBCALL(double, __floatundidf, du_int a) {
   if (a == 0)
     return 0.0;
   const unsigned N = sizeof(du_int) * CHAR_BIT;

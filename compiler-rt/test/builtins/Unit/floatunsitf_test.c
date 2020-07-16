@@ -8,7 +8,7 @@
 
 #include "fp_test.h"
 
-COMPILER_RT_ABI long double __floatunsitf(unsigned int a);
+DECLARE_LIBCALL(long double, __floatunsitf, unsigned int a);
 
 int test__floatunsitf(unsigned int a, uint64_t expectedHi, uint64_t expectedLo)
 {

@@ -16,7 +16,7 @@
 
 // Effects: aborts if a * b overflows
 
-COMPILER_RT_ABI di_int __mulvdi3(di_int a, di_int b) {
+DECLARE_LIBCALL(di_int, __mulvdi3, di_int a, di_int b) {
   const int N = (int)(sizeof(di_int) * CHAR_BIT);
   const di_int MIN = (di_int)1 << (N - 1);
   const di_int MAX = ~MIN;

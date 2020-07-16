@@ -15,7 +15,7 @@
 
 // Returns: the product of a + ib and c + id
 
-COMPILER_RT_ABI Dcomplex __muldc3(double __a, double __b, double __c,
+DECLARE_LIBCALL(Dcomplex, __muldc3, double __a, double __b, double __c,
                                   double __d) {
   double __ac = __a * __c;
   double __bd = __b * __d;

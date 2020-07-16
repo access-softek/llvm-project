@@ -15,7 +15,7 @@
 
 // seee eeee emmm mmmm mmmm mmmm mmmm mmmm
 
-COMPILER_RT_ABI ti_int __fixsfti(float a);
+DECLARE_LIBCALL(ti_int, __fixsfti, float a);
 
 int test__fixsfti(float a, ti_int expected)
 {

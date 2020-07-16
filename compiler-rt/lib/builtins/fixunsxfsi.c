@@ -32,7 +32,7 @@
 #pragma warning(disable : 4700)
 #endif
 
-COMPILER_RT_ABI su_int __fixunsxfsi(long double a) {
+DECLARE_LIBCALL(su_int, __fixunsxfsi, long double a) {
   long_double_bits fb;
   fb.f = a;
   int e = (fb.u.high.s.low & 0x00007FFF) - 16383;

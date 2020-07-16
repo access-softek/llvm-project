@@ -8,7 +8,7 @@
 
 // Effects: aborts if a * b overflows
 
-COMPILER_RT_ABI di_int __mulvdi3(di_int a, di_int b);
+DECLARE_LIBCALL(di_int, __mulvdi3, di_int a, di_int b);
 
 int test__mulvdi3(di_int a, di_int b, di_int expected)
 {

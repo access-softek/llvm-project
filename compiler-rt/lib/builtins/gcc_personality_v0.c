@@ -160,16 +160,16 @@ continueUnwind(struct _Unwind_Exception *exceptionObject,
 #if __USING_SJLJ_EXCEPTIONS__
 // the setjump-longjump based exceptions personality routine has a
 // different name
-COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_sj0(
+DECLARE_LIBCALL(_Unwind_Reason_Code, __gcc_personality_sj0, 
     int version, _Unwind_Action actions, uint64_t exceptionClass,
     struct _Unwind_Exception *exceptionObject, struct _Unwind_Context *context)
 #elif USING_ARM_EHABI
 // The ARM EHABI personality routine has a different signature.
-COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
+DECLARE_LIBCALL(_Unwind_Reason_Code, __gcc_personality_v0, 
     _Unwind_State state, struct _Unwind_Exception *exceptionObject,
     struct _Unwind_Context *context)
 #else
-COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
+DECLARE_LIBCALL(_Unwind_Reason_Code, __gcc_personality_v0, 
     int version, _Unwind_Action actions, uint64_t exceptionClass,
     struct _Unwind_Exception *exceptionObject, struct _Unwind_Context *context)
 #endif

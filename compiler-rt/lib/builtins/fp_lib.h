@@ -54,7 +54,7 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
   *hi = product >> 32;
   *lo = product;
 }
-COMPILER_RT_ABI fp_t __addsf3(fp_t a, fp_t b);
+DECLARE_LIBCALL(fp_t, __addsf3, fp_t a, fp_t b);
 
 #elif defined DOUBLE_PRECISION
 
@@ -97,7 +97,7 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 #undef loWord
 #undef hiWord
 
-COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
+DECLARE_LIBCALL(fp_t, __adddf3, fp_t a, fp_t b);
 
 #elif defined QUAD_PRECISION
 #if __LDBL_MANT_DIG__ == 113 && defined(__SIZEOF_INT128__)

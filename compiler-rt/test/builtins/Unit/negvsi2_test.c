@@ -8,7 +8,7 @@
 
 // Effects: aborts if -a overflows
 
-COMPILER_RT_ABI si_int __negvsi2(si_int a);
+DECLARE_LIBCALL(si_int, __negvsi2, si_int a);
 
 int test__negvsi2(si_int a)
 {

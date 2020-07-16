@@ -26,7 +26,7 @@
 // mmmm mmmm mmmm
 
 #if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
-COMPILER_RT_ABI fp_t __floattitf(ti_int a) {
+DECLARE_LIBCALL(fp_t, __floattitf, ti_int a) {
   if (a == 0)
     return 0.0;
   const unsigned N = sizeof(ti_int) * CHAR_BIT;

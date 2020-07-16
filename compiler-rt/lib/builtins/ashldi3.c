@@ -16,7 +16,7 @@
 
 // Precondition:  0 <= b < bits_in_dword
 
-COMPILER_RT_ABI di_int __ashldi3(di_int a, int b) {
+DECLARE_LIBCALL(di_int, __ashldi3, di_int a, int b) {
   const int bits_in_word = (int)(sizeof(si_int) * CHAR_BIT);
   dwords input;
   dwords result;

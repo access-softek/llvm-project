@@ -25,7 +25,7 @@
 // eeee | 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
 
-COMPILER_RT_ABI tu_int __fixunsxfti(long double a) {
+DECLARE_LIBCALL(tu_int, __fixunsxfti, long double a) {
   long_double_bits fb;
   fb.f = a;
   int e = (fb.u.high.s.low & 0x00007FFF) - 16383;

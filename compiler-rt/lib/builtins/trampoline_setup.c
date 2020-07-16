@@ -17,7 +17,7 @@ extern void __clear_cache(void *start, void *end);
 // and then jumps to the target nested function.
 
 #if __ppc__ && !defined(__powerpc64__)
-COMPILER_RT_ABI void __trampoline_setup(uint32_t *trampOnStack,
+DECLARE_LIBCALL(void, __trampoline_setup, uint32_t *trampOnStack,
                                         int trampSizeAllocated,
                                         const void *realFunc, void *localsPtr) {
   // should never happen, but if compiler did not allocate

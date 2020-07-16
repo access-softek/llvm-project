@@ -10,7 +10,7 @@
 #define DST_DOUBLE
 #include "fp_extend_impl.inc"
 
-COMPILER_RT_ABI double __extendsfdf2(float a) { return __extendXfYf2__(a); }
+DECLARE_LIBCALL(double, __extendsfdf2, float a) { return __extendXfYf2__(a); }
 
 #if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)

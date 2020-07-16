@@ -18,6 +18,6 @@ typedef si_int fixint_t;
 
 // Returns: a % b
 
-COMPILER_RT_ABI su_int __umodsi3(su_int a, su_int b) {
+DECLARE_LIBCALL(su_int, __umodsi3, su_int a, su_int b) {
   return __umodXi3(a, b);
 }

@@ -14,7 +14,7 @@
 
 // Returns: a / b
 
-COMPILER_RT_ABI si_int __divsi3(si_int a, si_int b) {
+DECLARE_LIBCALL(si_int, __divsi3, si_int a, si_int b) {
   const int bits_in_word_m1 = (int)(sizeof(si_int) * CHAR_BIT) - 1;
   si_int s_a = a >> bits_in_word_m1; // s_a = a < 0 ? -1 : 0
   si_int s_b = b >> bits_in_word_m1; // s_b = b < 0 ? -1 : 0

@@ -18,7 +18,7 @@
 
 // Effects: aborts if a * b overflows
 
-COMPILER_RT_ABI ti_int __mulvti3(ti_int a, ti_int b) {
+DECLARE_LIBCALL(ti_int, __mulvti3, ti_int a, ti_int b) {
   const int N = (int)(sizeof(ti_int) * CHAR_BIT);
   const ti_int MIN = (ti_int)1 << (N - 1);
   const ti_int MAX = ~MIN;

@@ -11,7 +11,7 @@
 
 // Precondition:  0 <= b < bits_in_dword
 
-COMPILER_RT_ABI ti_int __lshrti3(ti_int a, si_int b);
+DECLARE_LIBCALL(ti_int, __lshrti3, ti_int a, si_int b);
 
 int test__lshrti3(ti_int a, si_int b, ti_int expected)
 {

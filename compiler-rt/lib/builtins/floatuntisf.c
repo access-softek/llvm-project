@@ -21,7 +21,7 @@
 
 // seee eeee emmm mmmm mmmm mmmm mmmm mmmm
 
-COMPILER_RT_ABI float __floatuntisf(tu_int a) {
+DECLARE_LIBCALL(float, __floatuntisf, tu_int a) {
   if (a == 0)
     return 0.0F;
   const unsigned N = sizeof(tu_int) * CHAR_BIT;

@@ -7,7 +7,7 @@
 #include <math.h>
 
 
-extern COMPILER_RT_ABI float __subsf3vfp(float a, float b);
+extern DECLARE_LIBCALL(float, __subsf3vfp, float a, float b);
 
 #if __arm__ && __VFP_FP__
 int test__subsf3vfp(float a, float b)

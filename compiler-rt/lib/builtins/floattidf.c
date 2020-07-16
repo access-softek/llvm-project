@@ -22,7 +22,7 @@
 // seee eeee eeee mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm
 // mmmm
 
-COMPILER_RT_ABI double __floattidf(ti_int a) {
+DECLARE_LIBCALL(double, __floattidf, ti_int a) {
   if (a == 0)
     return 0.0;
   const unsigned N = sizeof(ti_int) * CHAR_BIT;

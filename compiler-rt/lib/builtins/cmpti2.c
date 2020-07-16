@@ -18,7 +18,7 @@
 //           if (a == b) returns 1
 //           if (a >  b) returns 2
 
-COMPILER_RT_ABI si_int __cmpti2(ti_int a, ti_int b) {
+DECLARE_LIBCALL(si_int, __cmpti2, ti_int a, ti_int b) {
   twords x;
   x.all = a;
   twords y;

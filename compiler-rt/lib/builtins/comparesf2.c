@@ -41,7 +41,7 @@
 
 enum LE_RESULT { LE_LESS = -1, LE_EQUAL = 0, LE_GREATER = 1, LE_UNORDERED = 1 };
 
-COMPILER_RT_ABI enum LE_RESULT __lesf2(fp_t a, fp_t b) {
+DECLARE_LIBCALL(enum LE_RESULT, __lesf2, fp_t a, fp_t b) {
 
   const srep_t aInt = toRep(a);
   const srep_t bInt = toRep(b);
@@ -96,7 +96,7 @@ enum GE_RESULT {
   GE_UNORDERED = -1 // Note: different from LE_UNORDERED
 };
 
-COMPILER_RT_ABI enum GE_RESULT __gesf2(fp_t a, fp_t b) {
+DECLARE_LIBCALL(enum GE_RESULT, __gesf2, fp_t a, fp_t b) {
 
   const srep_t aInt = toRep(a);
   const srep_t bInt = toRep(b);

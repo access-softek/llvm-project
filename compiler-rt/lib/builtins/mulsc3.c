@@ -15,7 +15,7 @@
 
 // Returns: the product of a + ib and c + id
 
-COMPILER_RT_ABI Fcomplex __mulsc3(float __a, float __b, float __c, float __d) {
+DECLARE_LIBCALL(Fcomplex, __mulsc3, float __a, float __b, float __c, float __d) {
   float __ac = __a * __c;
   float __bd = __b * __d;
   float __ad = __a * __d;

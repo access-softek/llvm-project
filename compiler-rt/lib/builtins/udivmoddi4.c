@@ -24,7 +24,7 @@
 #pragma warning(disable : 4724)
 #endif
 
-COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {
+DECLARE_LIBCALL(du_int, __udivmoddi4, du_int a, du_int b, du_int *rem) {
   const unsigned n_uword_bits = sizeof(su_int) * CHAR_BIT;
   const unsigned n_udword_bits = sizeof(du_int) * CHAR_BIT;
   udwords n;

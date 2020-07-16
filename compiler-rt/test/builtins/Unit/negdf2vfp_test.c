@@ -8,7 +8,7 @@
 
 
 #if __arm__ && __VFP_FP__
-extern COMPILER_RT_ABI double __negdf2vfp(double a);
+extern DECLARE_LIBCALL(double, __negdf2vfp, double a);
 
 int test__negdf2vfp(double a)
 {

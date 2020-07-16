@@ -12,7 +12,7 @@
 
 // Effects: aborts if a - b overflows
 
-COMPILER_RT_ABI ti_int __subvti3(ti_int a, ti_int b);
+DECLARE_LIBCALL(ti_int, __subvti3, ti_int a, ti_int b);
 
 int test__subvti3(ti_int a, ti_int b)
 {
