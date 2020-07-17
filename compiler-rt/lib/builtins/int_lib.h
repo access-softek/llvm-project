@@ -21,12 +21,10 @@
 // ABI macro definitions
 
 #if __ARM_EABI__
-#ifdef COMPILER_RT_ARMHF_TARGET
-#define COMPILER_RT_ABI
-#else
-#define COMPILER_RT_ABI __attribute__((__pcs__("aapcs")))
+#include "arm-libcall-overrides.h"
 #endif
-#else
+
+#ifndef COMPILER_RT_ABI
 #define COMPILER_RT_ABI
 #endif
 
@@ -36,8 +34,6 @@
   COMPILER_RT_ABI rettype libcall_name ATTR##libcall_name(__VA_ARGS__)
 
 #define AUX_DECLS(libcall_name) AUX_DECLS##libcall_name
-
-#define AEABI_RTABI __attribute__((__pcs__("aapcs")))
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define ALWAYS_INLINE __forceinline
