@@ -8,6 +8,13 @@
 
 #define AEABI_RTABI __attribute__((__pcs__("aapcs")))
 
+#define AUX_DECLS__ashldi3 COMPILER_RT_ALIAS(__ashldi3, __aeabi_llsl)
+#define AUX_DECLS__ashrdi3 COMPILER_RT_ALIAS(__ashrdi3, __aeabi_lasr)
+#define AUX_DECLS__lshrdi3 COMPILER_RT_ALIAS(__lshrdi3, __aeabi_llsr)
+#define AUX_DECLS__divsi3 COMPILER_RT_ALIAS(__divsi3, __aeabi_idiv)
+#define AUX_DECLS__muldi3 COMPILER_RT_ALIAS(__muldi3, __aeabi_lmul)
+#define AUX_DECLS__udivsi3 COMPILER_RT_ALIAS(__udivsi3, __aeabi_uidiv)
+
 #if defined(COMPILER_RT_ARMHF_TARGET)
 
 #define COMPILER_RT_ABI

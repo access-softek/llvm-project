@@ -30,6 +30,4 @@ DECLARE_LIBCALL(si_int, __divsi3, si_int a, si_int b) {
   return ((su_int)a / (su_int)b ^ s_a) - s_a; // negate if s_a == -1
 }
 
-#if defined(__ARM_EABI__)
-COMPILER_RT_ALIAS(__divsi3, __aeabi_idiv)
-#endif
+AUX_DECLS(__divsi3)

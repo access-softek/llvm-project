@@ -34,6 +34,4 @@ DECLARE_LIBCALL(di_int, __ashrdi3, di_int a, int b) {
   return result.all;
 }
 
-#if defined(__ARM_EABI__)
-COMPILER_RT_ALIAS(__ashrdi3, __aeabi_lasr)
-#endif
+AUX_DECLS(__ashrdi3)

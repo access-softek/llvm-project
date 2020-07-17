@@ -46,6 +46,4 @@ DECLARE_LIBCALL(di_int, __muldi3, di_int a, di_int b) {
   return r.all;
 }
 
-#if defined(__ARM_EABI__)
-COMPILER_RT_ALIAS(__muldi3, __aeabi_lmul)
-#endif
+AUX_DECLS(__muldi3)
