@@ -12,10 +12,4 @@
 
 DECLARE_LIBCALL(uint16_t, __truncdfhf2, double a) { return __truncXfYf2__(a); }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI uint16_t __aeabi_d2h(double a) { return __truncdfhf2(a); }
-#else
-COMPILER_RT_ALIAS(__truncdfhf2, __aeabi_d2h)
-#endif
-#endif
+AUX_DECLS(__truncdfhf2)

@@ -66,10 +66,4 @@ DECLARE_LIBCALL(float, __floatdisf, di_int a) {
   return fb.f;
 }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI float __aeabi_l2f(di_int a) { return __floatdisf(a); }
-#else
-COMPILER_RT_ALIAS(__floatdisf, __aeabi_l2f)
-#endif
-#endif
+AUX_DECLS(__floatdisf)

@@ -97,10 +97,4 @@ DECLARE_LIBCALL(double, __floatundidf, du_int a) {
 }
 #endif
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI double __aeabi_ul2d(du_int a) { return __floatundidf(a); }
-#else
-COMPILER_RT_ALIAS(__floatundidf, __aeabi_ul2d)
-#endif
-#endif
+AUX_DECLS(__floatundidf)

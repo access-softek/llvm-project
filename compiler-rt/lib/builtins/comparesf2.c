@@ -132,13 +132,7 @@ DECLARE_LIBCALL(int, __unordsf2, fp_t a, fp_t b) {
   return aAbs > infRep || bAbs > infRep;
 }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI int __aeabi_fcmpun(fp_t a, fp_t b) { return __unordsf2(a, b); }
-#else
-COMPILER_RT_ALIAS(__unordsf2, __aeabi_fcmpun)
-#endif
-#endif
+AUX_DECLS(__unordsf2)
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 // The alias mechanism doesn't work on Windows except for MinGW, so emit

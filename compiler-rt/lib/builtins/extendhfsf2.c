@@ -18,10 +18,4 @@ DECLARE_LIBCALL(NOINLINE float, __extendhfsf2, uint16_t a) {
 
 DECLARE_LIBCALL(float, __gnu_h2f_ieee, uint16_t a) { return __extendhfsf2(a); }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI float __aeabi_h2f(uint16_t a) { return __extendhfsf2(a); }
-#else
-COMPILER_RT_ALIAS(__extendhfsf2, __aeabi_h2f)
-#endif
-#endif
+AUX_DECLS(__extendhfsf2)

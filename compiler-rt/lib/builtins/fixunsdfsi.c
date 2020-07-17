@@ -13,10 +13,4 @@ typedef su_int fixuint_t;
 
 DECLARE_LIBCALL(su_int, __fixunsdfsi, fp_t a) { return __fixuint(a); }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI su_int __aeabi_d2uiz(fp_t a) { return __fixunsdfsi(a); }
-#else
-COMPILER_RT_ALIAS(__fixunsdfsi, __aeabi_d2uiz)
-#endif
-#endif
+AUX_DECLS(__fixunsdfsi)

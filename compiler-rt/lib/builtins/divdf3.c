@@ -201,10 +201,4 @@ DECLARE_LIBCALL(fp_t, __divdf3, fp_t a, fp_t b) {
   }
 }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI fp_t __aeabi_ddiv(fp_t a, fp_t b) { return __divdf3(a, b); }
-#else
-COMPILER_RT_ALIAS(__divdf3, __aeabi_ddiv)
-#endif
-#endif
+AUX_DECLS(__divdf3)

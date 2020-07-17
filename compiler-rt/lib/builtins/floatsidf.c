@@ -48,10 +48,4 @@ DECLARE_LIBCALL(fp_t, __floatsidf, si_int a) {
   return fromRep(result | sign);
 }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI fp_t __aeabi_i2d(si_int a) { return __floatsidf(a); }
-#else
-COMPILER_RT_ALIAS(__floatsidf, __aeabi_i2d)
-#endif
-#endif
+AUX_DECLS(__floatsidf)

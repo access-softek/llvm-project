@@ -35,10 +35,4 @@ DECLARE_LIBCALL(di_int, __fixsfdi, fp_t a) { return __fixint(a); }
 
 #endif
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI di_int __aeabi_f2lz(fp_t a) { return __fixsfdi(a); }
-#else
-COMPILER_RT_ALIAS(__fixsfdi, __aeabi_f2lz)
-#endif
-#endif
+AUX_DECLS(__fixsfdi)

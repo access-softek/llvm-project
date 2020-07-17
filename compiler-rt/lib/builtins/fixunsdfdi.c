@@ -33,10 +33,4 @@ DECLARE_LIBCALL(du_int, __fixunsdfdi, fp_t a) { return __fixuint(a); }
 
 #endif
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI du_int __aeabi_d2ulz(fp_t a) { return __fixunsdfdi(a); }
-#else
-COMPILER_RT_ALIAS(__fixunsdfdi, __aeabi_d2ulz)
-#endif
-#endif
+AUX_DECLS(__fixunsdfdi)
