@@ -247,6 +247,7 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   if (quotient_UQ1 < (implicitBit << 1)) {
     residualLo = (aSignificand << (significandBits + 1)) - quotient_UQ1 * bSignificand;
     writtenExponent -= 1;
+    aSignificand <<= 1;
 
     // the error is doubled
   } else {
@@ -276,19 +277,25 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
   // Now, quotient_UQ1_SB <= the correctly-rounded result
   // and may need taking NextAfter() up to 3 times (see error estimates above)
   // r = a - b * q
+  rep_t absResult;
+  if (writtenExponent > 0) {
+    // Clear the implicit bit
+    absResult = quotient_UQ1 & significandMask;
+    // Insert the exponent
+    absResult |= (rep_t)writtenExponent << significandBits;
+    residualLo <<= 1;
+  } else {
+    // Prevent shift amount from being negative
+    if (significandBits + writtenExponent < 0)
+      return fromRep(quotientSign);
 
-  if (writtenExponent < 0) {
-    // Result is definitely subnormal, flushing to zero
-    return fromRep(quotientSign);
+    absResult = quotient_UQ1 >> (-writtenExponent + 1);
+
+    // multiplied by two to prevent shift amount to be negative
+    residualLo = (aSignificand << (significandBits + writtenExponent)) - (absResult * bSignificand << 1);
   }
 
-  // Clear the implicit bit
-  rep_t absResult = quotient_UQ1 & significandMask;
-  // Insert the exponent
-  absResult |= (rep_t)writtenExponent << significandBits;
-
   // Round
-  residualLo <<= 1;
   residualLo += absResult & 1; // tie to even
   absResult += residualLo > bSignificand;
 #if defined(QUAD_PRECISION) || (defined(SINGLE_PRECISION) && NUMBER_OF_HALF_ITERATIONS > 0)
@@ -298,11 +305,5 @@ static __inline fp_t __divXf3(fp_t a, fp_t b) {
 #if defined(QUAD_PRECISION)
   absResult += absResult < infRep && residualLo > (4 + 1) * bSignificand;
 #endif
-
-  if ((absResult & ~significandMask) == 0) {
-    // Result is subnormal, flushing to zero
-    return fromRep(quotientSign);
-  }
-  // Result is normal, insert the sign and return
   return fromRep(absResult | quotientSign);
 }
