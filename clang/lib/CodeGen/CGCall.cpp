@@ -4474,23 +4474,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         } else if (I->hasLValue()) {
           auto LV = I->getKnownLValue();
           auto AS = LV.getAddressSpace();
+          bool isByValOrRef =
+              ArgInfo.isIndirectAliased() || ArgInfo.getIndirectByVal();
 
-          if (!ArgInfo.getIndirectByVal() ||
+          if (!isByValOrRef ||
               (LV.getAlignment() < getContext().getTypeAlignInChars(I->Ty))) {
             NeedCopy = true;
           }
           if (!getLangOpts().OpenCL) {
-            if ((ArgInfo.getIndirectByVal() &&
-                (AS != LangAS::Default &&
-                 AS != CGM.getASTAllocaAddressSpace()))) {
+            if ((isByValOrRef && (AS != LangAS::Default &&
+                                  AS != CGM.getASTAllocaAddressSpace()))) {
               NeedCopy = true;
             }
           }
           // For OpenCL even if RV is located in default or alloca address space
           // we don't want to perform address space cast for it.
-          else if ((ArgInfo.getIndirectByVal() &&
-                    Addr.getType()->getAddressSpace() != IRFuncTy->
-                      getParamType(FirstIRArg)->getPointerAddressSpace())) {
+          else if ((isByValOrRef && Addr.getType()->getAddressSpace() !=
+                                        IRFuncTy->getParamType(FirstIRArg)
+                                            ->getPointerAddressSpace())) {
             NeedCopy = true;
           }
         }

@@ -7511,11 +7511,18 @@ public:
     return DefaultABIInfo::classifyReturnType(RetTy);
   }
 
-  ABIArgInfo classifyArgumentType(QualType RetTy) const {
-    if (RetTy->isAnyComplexType())
+  ABIArgInfo classifyArgumentType(QualType Ty) const {
+    if (Ty->isAnyComplexType())
       return complexArgInfo();
 
-    return DefaultABIInfo::classifyArgumentType(RetTy);
+    // According to Section 3.5 of MSP430 EABI, structs, classes and unions
+    // are passed by reference. The callee is responsible for leaving them
+    // intact.
+    if (Ty->isStructureOrClassType() || Ty->isUnionType())
+      return ABIArgInfo::getIndirectAliased(
+          getContext().getTypeAlignInChars(Ty), /*AddrSpace=*/0);
+
+    return DefaultABIInfo::classifyArgumentType(Ty);
   }
 
   // Just copy the original implementations because
