@@ -23,19 +23,19 @@ namespace llvm {
 namespace mca {
 
 llvm::Error RetireStage::cycleStart() {
-  if (RCU.isEmpty())
+  if (!RCU || RCU->isEmpty())
     return llvm::ErrorSuccess();
 
-  const unsigned MaxRetirePerCycle = RCU.getMaxRetirePerCycle();
+  const unsigned MaxRetirePerCycle = RCU->getMaxRetirePerCycle();
   unsigned NumRetired = 0;
-  while (!RCU.isEmpty()) {
+  while (!RCU->isEmpty()) {
     if (MaxRetirePerCycle != 0 && NumRetired == MaxRetirePerCycle)
       break;
-    const RetireControlUnit::RUToken &Current = RCU.getCurrentToken();
+    const RetireControlUnit::RUToken &Current = RCU->getCurrentToken();
     if (!Current.Executed)
       break;
     notifyInstructionRetired(Current.IR);
-    RCU.consumeCurrentToken();
+    RCU->consumeCurrentToken();
     NumRetired++;
   }
 
@@ -43,7 +43,15 @@ llvm::Error RetireStage::cycleStart() {
 }
 
 llvm::Error RetireStage::execute(InstRef &IR) {
-  RCU.onInstructionExecuted(IR.getInstruction()->getRCUTokenID());
+  Instruction &IS = *IR.getInstruction();
+  if (RCU) {
+    RCU->onInstructionExecuted(IS.getRCUTokenID());
+    return llvm::ErrorSuccess();
+  }
+
+  IS.retire();
+  notifyInstructionRetired(IR);
+
   return llvm::ErrorSuccess();
 }
 

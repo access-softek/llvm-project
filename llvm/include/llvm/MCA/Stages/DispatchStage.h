@@ -52,7 +52,7 @@ class DispatchStage final : public Stage {
   unsigned CarryOver;
   InstRef CarriedOver;
   const MCSubtargetInfo &STI;
-  RetireControlUnit &RCU;
+  RetireControlUnit *RCU;
   RegisterFile &PRF;
 
   bool checkRCU(const InstRef &IR) const;
@@ -66,7 +66,7 @@ class DispatchStage final : public Stage {
 
 public:
   DispatchStage(const MCSubtargetInfo &Subtarget, const MCRegisterInfo &MRI,
-                unsigned MaxDispatchWidth, RetireControlUnit &R,
+                unsigned MaxDispatchWidth, RetireControlUnit *R,
                 RegisterFile &F);
 
   bool isAvailable(const InstRef &IR) const override;

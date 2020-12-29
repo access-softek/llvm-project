@@ -26,7 +26,7 @@ namespace mca {
 
 class RetireStage final : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
-  RetireControlUnit &RCU;
+  RetireControlUnit *RCU;
   RegisterFile &PRF;
   LSUnitBase &LSU;
 
@@ -34,10 +34,10 @@ class RetireStage final : public Stage {
   RetireStage &operator=(const RetireStage &Other) = delete;
 
 public:
-  RetireStage(RetireControlUnit &R, RegisterFile &F, LSUnitBase &LS)
+  RetireStage(RetireControlUnit *R, RegisterFile &F, LSUnitBase &LS)
       : Stage(), RCU(R), PRF(F), LSU(LS) {}
 
-  bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
+  bool hasWorkToComplete() const override { return RCU && !RCU->isEmpty(); }
   Error cycleStart() override;
   Error execute(InstRef &IR) override;
   void notifyInstructionRetired(const InstRef &IR) const;

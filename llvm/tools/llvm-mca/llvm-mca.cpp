@@ -335,9 +335,8 @@ int main(int argc, char **argv) {
     return 1;
 
   if (!PrintInstructionTables && !STI->getSchedModel().isOutOfOrder()) {
-    WithColor::error() << "please specify an out-of-order cpu. '" << MCPU
-                       << "' is an in-order cpu.\n";
-    return 1;
+    WithColor::warning() << "support for in-order CPU '" << MCPU
+                         << "' is experimental.\n";
   }
 
   if (!STI->getSchedModel().hasInstrSchedModel()) {

@@ -27,7 +27,7 @@ namespace mca {
 
 DispatchStage::DispatchStage(const MCSubtargetInfo &Subtarget,
                              const MCRegisterInfo &MRI,
-                             unsigned MaxDispatchWidth, RetireControlUnit &R,
+                             unsigned MaxDispatchWidth, RetireControlUnit *R,
                              RegisterFile &F)
     : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
       CarryOver(0U), CarriedOver(), STI(Subtarget), RCU(R), PRF(F) {
@@ -60,8 +60,10 @@ bool DispatchStage::checkPRF(const InstRef &IR) const {
 }
 
 bool DispatchStage::checkRCU(const InstRef &IR) const {
+  if (!RCU)
+    return true;
   const unsigned NumMicroOps = IR.getInstruction()->getNumMicroOps();
-  if (RCU.isAvailable(NumMicroOps))
+  if (RCU->isAvailable(NumMicroOps))
     return true;
   notifyEvent<HWStallEvent>(
       HWStallEvent(HWStallEvent::RetireControlUnitStall, IR));
@@ -124,9 +126,13 @@ Error DispatchStage::dispatch(InstRef IR) {
     PRF.addRegisterWrite(WriteRef(IR.getSourceIndex(), &WS), RegisterFiles);
 
   // Reserve entries in the reorder buffer.
-  unsigned RCUTokenID = RCU.dispatch(IR);
-  // Notify the instruction that it has been dispatched.
-  IS.dispatch(RCUTokenID);
+  if (RCU) {
+    unsigned RCUTokenID = RCU->dispatch(IR);
+    // Notify the instruction that it has been dispatched.
+    IS.dispatch(RCUTokenID);
+  } else {
+    IS.dispatch(0);
+  }
 
   // Notify listeners of the "instruction dispatched" event,
   // and move IR to the next stage.
@@ -180,7 +186,8 @@ Error DispatchStage::execute(InstRef &IR) {
 #ifndef NDEBUG
 void DispatchStage::dump() const {
   PRF.dump();
-  RCU.dump();
+  if (RCU)
+    RCU->dump();
 }
 #endif
 } // namespace mca
