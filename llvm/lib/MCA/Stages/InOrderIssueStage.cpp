@@ -55,7 +55,15 @@ bool InOrderIssueStage::canExecute(const InstRef &IR, int *StallCycles) const {
     for (const WriteRef &WR : Writes) {
       const WriteState *WS = WR.getWriteState();
       unsigned WriteResID = WS->getWriteResourceID();
-      int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
+      unsigned UseIndex = RD.UseIndex;
+      // Workaround for a branch instruction ReadAdvance
+      // support. Check how CG calls getReadAdvanceCycles and
+      // implement this properly.
+      if (RD.OpIndex == -1)
+	UseIndex = 0;
+      int ReadAdvance = STI.getReadAdvanceCycles(SC, UseIndex, WriteResID);
+      LLVM_DEBUG(dbgs() << "[E] ReadAdvance for #" << IR << ": "
+		 << ReadAdvance << '\n');
       assert(WS->getCyclesLeft() != UNKNOWN_CYCLES);
       int CyclesLeft = (int)WS->getCyclesLeft();
       if (CyclesLeft > ReadAdvance) {
@@ -65,6 +73,7 @@ bool InOrderIssueStage::canExecute(const InstRef &IR, int *StallCycles) const {
         *StallCycles = std::max(*StallCycles, CyclesLeft - ReadAdvance);
       }
     }
+    Writes.clear();
   }
 
   if (HasRegHazard) {
