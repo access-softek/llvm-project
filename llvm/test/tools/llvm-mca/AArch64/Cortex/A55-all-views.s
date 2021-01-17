@@ -10,19 +10,19 @@ str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      12
-# CHECK-NEXT: Total Cycles:      23
+# CHECK-NEXT: Total Cycles:      21
 # CHECK-NEXT: Total uOps:        14
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.61
-# CHECK-NEXT: IPC:               0.52
+# CHECK-NEXT: uOps Per Cycle:    0.67
+# CHECK-NEXT: IPC:               0.57
 # CHECK-NEXT: Block RThroughput: 3.5
 
-# CHECK:      Cycles with backend pressure increase [ 21.74% ]
+# CHECK:      Cycles with backend pressure increase [ 23.81% ]
 # CHECK-NEXT: Throughput Bottlenecks:
-# CHECK-NEXT:   Resource Pressure       [ 4.35% ]
-# CHECK-NEXT:   Data Dependencies:      [ 17.39% ]
-# CHECK-NEXT:   - Register Dependencies [ 17.39% ]
+# CHECK-NEXT:   Resource Pressure       [ 4.76% ]
+# CHECK-NEXT:   Data Dependencies:      [ 19.05% ]
+# CHECK-NEXT:   - Register Dependencies [ 19.05% ]
 # CHECK-NEXT:   - Memory Dependencies   [ 0.00% ]
 
 # CHECK:      Instruction Info:
@@ -42,43 +42,43 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT:  1      4     1.00           *            str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      12  (52.2%)
+# CHECK-NEXT: RAT     - Register unavailable:                      10  (47.6%)
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
-# CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 1  (4.3%)
+# CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 1  (4.8%)
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
-# CHECK-NEXT:  0,              14  (60.9%)
-# CHECK-NEXT:  1,              5  (21.7%)
-# CHECK-NEXT:  2,              3  (13.0%)
-# CHECK-NEXT:  3,              1  (4.3%)
+# CHECK-NEXT:  0,              12  (57.1%)
+# CHECK-NEXT:  1,              5  (23.8%)
+# CHECK-NEXT:  2,              3  (14.3%)
+# CHECK-NEXT:  3,              1  (4.8%)
 
 # CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
-# CHECK-NEXT:  0,          14  (60.9%)
-# CHECK-NEXT:  1,          5  (21.7%)
-# CHECK-NEXT:  2,          3  (13.0%)
-# CHECK-NEXT:  3,          1  (4.3%)
+# CHECK-NEXT:  0,          12  (57.1%)
+# CHECK-NEXT:  1,          5  (23.8%)
+# CHECK-NEXT:  2,          3  (14.3%)
+# CHECK-NEXT:  3,          1  (4.8%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: No scheduler resources used.
 
 # CHECK:      Retire Control Unit - number of cycles where we saw N instructions retired:
 # CHECK-NEXT: [# retired], [# cycles]
-# CHECK-NEXT:  0,           14  (60.9%)
-# CHECK-NEXT:  1,           6  (26.1%)
-# CHECK-NEXT:  2,           3  (13.0%)
+# CHECK-NEXT:  0,           12  (57.1%)
+# CHECK-NEXT:  1,           6  (28.6%)
+# CHECK-NEXT:  2,           3  (14.3%)
 
 # CHECK:      Total ROB Entries:                0
-# CHECK-NEXT: Max Used ROB Entries:             5  ( inf% )
+# CHECK-NEXT: Max Used ROB Entries:             6  ( inf% )
 # CHECK-NEXT: Average Used ROB Entries per cy:  2  ( inf% )
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    14
-# CHECK-NEXT: Max number of mappings used:         5
+# CHECK-NEXT: Max number of mappings used:         6
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - CortexA55UnitALU
@@ -109,20 +109,20 @@ str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT: Index     0123456789          0
 
-# CHECK:      [0,0]     DeeeER    .    .    . .   ldr	w4, [x2], #4
-# CHECK-NEXT: [0,1]     D=eeeER   .    .    . .   ldr	w5, [x3]
-# CHECK-NEXT: [0,2]     .D===eeeeER    .    . .   madd	w0, w5, w4, w0
-# CHECK-NEXT: [0,3]     .   DeeeER.    .    . .   add	x3, x3, x13
-# CHECK-NEXT: [0,4]     .    DeeeER    .    . .   subs	x1, x1, #1
-# CHECK-NEXT: [0,5]     .    D===eeeeER.    . .   str	w0, [x21, x18, lsl #2]
-# CHECK-NEXT: [1,0]     .    .  DeeeER .    . .   ldr	w4, [x2], #4
-# CHECK-NEXT: [1,1]     .    .   DeeeER.    . .   ldr	w5, [x3]
-# CHECK-NEXT: [1,2]     .    .   D===eeeeER . .   madd	w0, w5, w4, w0
-# CHECK-NEXT: [1,3]     .    .    . DeeeER  . .   add	x3, x3, x13
-# CHECK-NEXT: [1,4]     .    .    .  DeeeER . .   subs	x1, x1, #1
-# CHECK-NEXT: [1,5]     .    .    .  D===eeeeER   str	w0, [x21, x18, lsl #2]
+# CHECK:      [0,0]     DeeeER    .    .    .   ldr	w4, [x2], #4
+# CHECK-NEXT: [0,1]     D=eeeER   .    .    .   ldr	w5, [x3]
+# CHECK-NEXT: [0,2]     .D===eeeeER    .    .   madd	w0, w5, w4, w0
+# CHECK-NEXT: [0,3]     .   DeeeER.    .    .   add	x3, x3, x13
+# CHECK-NEXT: [0,4]     .    DeeeER    .    .   subs	x1, x1, #1
+# CHECK-NEXT: [0,5]     .    D==eeeeER .    .   str	w0, [x21, x18, lsl #2]
+# CHECK-NEXT: [1,0]     .    . DeeeER  .    .   ldr	w4, [x2], #4
+# CHECK-NEXT: [1,1]     .    .  DeeeER .    .   ldr	w5, [x3]
+# CHECK-NEXT: [1,2]     .    .  D===eeeeER  .   madd	w0, w5, w4, w0
+# CHECK-NEXT: [1,3]     .    .    .DeeeER   .   add	x3, x3, x13
+# CHECK-NEXT: [1,4]     .    .    . DeeeER  .   subs	x1, x1, #1
+# CHECK-NEXT: [1,5]     .    .    . D==eeeeER   str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -136,5 +136,5 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT: 2.     2     4.0    0.0    0.0       madd	w0, w5, w4, w0
 # CHECK-NEXT: 3.     2     1.0    0.0    0.0       add	x3, x3, x13
 # CHECK-NEXT: 4.     2     1.0    0.0    0.0       subs	x1, x1, #1
-# CHECK-NEXT: 5.     2     4.0    0.0    0.0       str	w0, [x21, x18, lsl #2]
-# CHECK-NEXT:        2     2.1    0.0    0.0       <total>
+# CHECK-NEXT: 5.     2     3.0    0.0    0.0       str	w0, [x21, x18, lsl #2]
+# CHECK-NEXT:        2     1.9    0.0    0.0       <total>
