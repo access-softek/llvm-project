@@ -2,9 +2,9 @@
 # CHECK: IPC:
 # CHECK-SAME: 2.00
 
+# FIXME: this test does not work for some reason. There should be 1
+# cycle stall for the second instruction.
+
 add	w8, w8, #1
-add	w10, w10, #1
-add	w11, w10, #1
+add	w10, w8, #1
 add	w12, w8, #1
-cmp	w8, w9
-b.lt	.LBB0_5
