@@ -75,6 +75,10 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
+static cl::opt<bool> EnableSubregWriteOpt("arm-subreg-write", cl::Hidden,
+					  cl::desc("Optimize subregister writes"),
+					  cl::init(false));
+
 namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
@@ -102,6 +106,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMBlockPlacementPass(Registry);
   initializeMVEGatherScatterLoweringPass(Registry);
   initializeARMSLSHardeningPass(Registry);
+  initializeARMSubregWritePass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -502,6 +507,9 @@ void ARMPassConfig::addPreRegAlloc() {
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
+
+    if (EnableSubregWriteOpt)
+      addPass(createARMSubregWrite());
   }
 }
 

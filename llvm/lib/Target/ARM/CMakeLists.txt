@@ -50,6 +50,7 @@ add_llvm_target(ARMCodeGen
   ARMRegisterBankInfo.cpp
   ARMSelectionDAGInfo.cpp
   ARMSLSHardening.cpp
+  ARMSubregWrite.cpp
   ARMSubtarget.cpp
   ARMTargetMachine.cpp
   ARMTargetObjectFile.cpp

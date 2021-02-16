@@ -58,6 +58,7 @@ createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget 
 Pass *createMVEGatherScatterLoweringPass();
 FunctionPass *createARMSLSHardeningPass();
 FunctionPass *createARMIndirectThunks();
+FunctionPass *createARMSubregWrite();
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
@@ -76,7 +77,7 @@ void initializeARMBlockPlacementPass(PassRegistry &);
 void initializeMVETailPredicationPass(PassRegistry &);
 void initializeMVEGatherScatterLoweringPass(PassRegistry &);
 void initializeARMSLSHardeningPass(PassRegistry &);
-
+void initializeARMSubregWritePass(PassRegistry &);
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARM_H
