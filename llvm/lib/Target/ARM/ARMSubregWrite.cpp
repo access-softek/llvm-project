@@ -140,19 +140,37 @@ struct DQRegDesc {
   SmallVector<Register, 4> SRegs;
 };
 
-bool operator<(const DQRegDesc &LHS, const DQRegDesc &RHS) {
-  if (LHS.SRegs.size() != RHS.SRegs.size())
-    return LHS.SRegs.size() < RHS.SRegs.size();
-
-  for (unsigned I = 0; I < LHS.SRegs.size(); ++I) {
-    if (LHS.SRegs[I] < RHS.SRegs[I])
-      return true;
+// Provide DenseMapInfo for chars.
+template<> struct llvm::DenseMapInfo<DQRegDesc> {
+  static inline DQRegDesc getEmptyKey() {
+    return DQRegDesc();
   }
-  return false;
-}
+  static inline DQRegDesc getTombstoneKey() {
+    DQRegDesc DQReg;
+    DQReg.SRegs.push_back(0);
+    return DQReg;
+  }
+  static unsigned getHashValue(const DQRegDesc& DQReg) {
+    unsigned Val = 0;
+    for (unsigned I = 0; I < DQReg.SRegs.size(); ++I) {
+      Val |= DQReg.SRegs[I] << (I * 8);
+    }
+    return Val;
+  }
+  static bool isEqual(const DQRegDesc &LHS, const DQRegDesc &RHS) {
+    if (LHS.SRegs.size() != RHS.SRegs.size())
+      return false;
+
+    for (unsigned I = 0; I < LHS.SRegs.size(); ++I) {
+      if (LHS.SRegs[I] != RHS.SRegs[I])
+	return false;
+    }
+    return true;
+  }
+};
 
 static bool matchSRegSequence(MachineInstr &MI, const MachineRegisterInfo &MRI,
-                              SmallVector<Register, 4> &SRegs) {
+                              SmallVectorImpl<Register> &SRegs) {
   if (!MI.isRegSequence())
     return false;
 
@@ -199,7 +217,7 @@ static bool matchSRegSequence(MachineInstr &MI, const MachineRegisterInfo &MRI,
 static bool matchSRegInsertSubreg(MachineInstr &MI,
                                   const MachineRegisterInfo &MRI,
                                   Register &SrcReg,
-                                  SmallVector<Register, 4> &SRegs) {
+                                  SmallVectorImpl<Register> &SRegs) {
   if (!MI.isInsertSubreg())
     return false;
 
@@ -343,7 +361,7 @@ Register rewriteSRegDef(Register SReg, uint16_t Index, Register DQReg,
   llvm_unreachable("Unhandled instruction");
 }
 
-typedef std::map<DQRegDesc, SmallVector<MachineOperand *>> DQRegToUsersMap;
+typedef DenseMap<DQRegDesc, SmallVector<MachineOperand *, 8>> DQRegToUsersMap;
 
 static void findHazardCandidates(MachineInstr &MI, MachineRegisterInfo &MRI,
                                  DQRegToUsersMap &HazardCandidates) {
