@@ -235,10 +235,10 @@ static bool matchSRegInsertSubreg(MachineInstr &MI,
     Index = 1;
     break;
   case ARM::ssub_2:
-    Index = 1;
+    Index = 2;
     break;
   case ARM::ssub_3:
-    Index = 1;
+    Index = 3;
     break;
   default:
     llvm_unreachable("Unhandled index.");
