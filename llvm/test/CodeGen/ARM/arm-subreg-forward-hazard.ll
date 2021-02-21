@@ -129,3 +129,11 @@ define <4 x float> @foov4(float* %0, float* %1) {
   %7 = call <4 x float> @llvm.arm.neon.vmaxnm.v4f32(<4 x float> %6, <4 x float> %4)
   ret <4 x float> %7
 }
+
+define <4 x float> @t1v4(<4 x float>* %0, <4 x float>* %1) {
+  %3 = load <4 x float>, <4 x float>* %0, align 4
+  %4 = load <4 x float>, <4 x float>* %1, align 4
+
+  %5 = call <4 x float> @llvm.arm.neon.vmaxnm.v4f32(<4 x float> %3, <4 x float> %4)
+  ret <4 x float> %5
+}

@@ -137,6 +137,7 @@ static bool isFPASIMDInstr(const MachineInstr &MI) {
 }
 
 struct DQRegDesc {
+  SmallVector<Register, 2> DRegs;
   SmallVector<Register, 4> SRegs;
 };
 
@@ -152,14 +153,25 @@ template<> struct llvm::DenseMapInfo<DQRegDesc> {
   }
   static unsigned getHashValue(const DQRegDesc& DQReg) {
     unsigned Val = 0;
+    for (unsigned I = 0; I < DQReg.DRegs.size(); ++I) {
+      Val |= DQReg.DRegs[I] << (I * 8);
+    }
     for (unsigned I = 0; I < DQReg.SRegs.size(); ++I) {
       Val |= DQReg.SRegs[I] << (I * 8);
     }
     return Val;
   }
   static bool isEqual(const DQRegDesc &LHS, const DQRegDesc &RHS) {
+    if (LHS.DRegs.size() != RHS.DRegs.size())
+      return false;
+
     if (LHS.SRegs.size() != RHS.SRegs.size())
       return false;
+
+    for (unsigned I = 0; I < LHS.DRegs.size(); ++I) {
+      if (LHS.DRegs[I] != RHS.DRegs[I])
+	return false;
+    }
 
     for (unsigned I = 0; I < LHS.SRegs.size(); ++I) {
       if (LHS.SRegs[I] != RHS.SRegs[I])
@@ -262,11 +274,11 @@ static bool matchSRegInsertSubreg(MachineInstr &MI,
 
 // Insert a pair of VMOVRS and VSETLNi32 to copy an S-register using a
 // scalar write to the corresponding D-register.
-Register insertSRegCopy(Register SReg, uint16_t Index, Register DQReg,
-                        MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator InsertPt,
-                        const DebugLoc &DL, const TargetInstrInfo &TII,
-                        MachineRegisterInfo &MRI) {
+DQRegDesc insertSRegCopy(Register SReg, uint16_t Index, DQRegDesc DQReg,
+			 MachineBasicBlock &MBB,
+			 MachineBasicBlock::iterator InsertPt,
+			 const DebugLoc &DL, const TargetInstrInfo &TII,
+			 MachineRegisterInfo &MRI) {
   // FIXME: VSETLN doesn't work with S-registers, so we have to copy
   // via a core register. Is there a better way to do this?
   Register TmpGPReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
@@ -276,24 +288,29 @@ Register insertSRegCopy(Register SReg, uint16_t Index, Register DQReg,
           .add(predOps(ARMCC::AL));
   LLVM_DEBUG(dbgs() << "New instr: " << *TmpCopyDef);
 
-  Register NewDQReg = MRI.cloneVirtualRegister(DQReg);
+  unsigned DRegIndex = Index / 2;
+  Register DReg = DQReg.DRegs[DRegIndex];
+
+  Register NewDReg = MRI.cloneVirtualRegister(DReg);
   MachineInstr *NewDef =
-      BuildMI(MBB, InsertPt, DL, TII.get(ARM::VSETLNi32), NewDQReg)
-          .addReg(DQReg)
+      BuildMI(MBB, InsertPt, DL, TII.get(ARM::VSETLNi32), NewDReg)
+          .addReg(DReg)
           .addReg(TmpGPReg)
           .addImm(Index)
           .add(predOps(ARMCC::AL));
   LLVM_DEBUG(dbgs() << "New instr: " << *NewDef);
-  return NewDQReg;
+
+  DQReg.DRegs[DRegIndex] = NewDReg;
+  return DQReg;
 }
 
 // Insert a VLD1 to replace a VLDRS instruction.
-Register insertVLD1FromVLDRS(Register AddrReg, unsigned VLDRSOffset,
-                             uint16_t Index, Register DQReg,
-                             MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator InsertPt,
-                             const DebugLoc &DL, const TargetInstrInfo &TII,
-                             MachineRegisterInfo &MRI) {
+DQRegDesc insertVLD1FromVLDRS(Register AddrReg, unsigned VLDRSOffset,
+			      uint16_t Index, DQRegDesc DQReg,
+			      MachineBasicBlock &MBB,
+			      MachineBasicBlock::iterator InsertPt,
+			      const DebugLoc &DL, const TargetInstrInfo &TII,
+			      MachineRegisterInfo &MRI) {
   if (VLDRSOffset != 0) {
     unsigned UnscaledOffset = VLDRSOffset * 4;
     bool IsSub = UnscaledOffset > 1024;
@@ -311,25 +328,29 @@ Register insertVLD1FromVLDRS(Register AddrReg, unsigned VLDRSOffset,
     AddrReg = NewAddr;
   }
 
-  Register NewDQReg = MRI.cloneVirtualRegister(DQReg);
+  unsigned DRegIndex = Index / 2;
+  Register DReg = DQReg.DRegs[DRegIndex];
+
+  Register NewDReg = MRI.cloneVirtualRegister(DReg);
   unsigned Alignment = 0; // conservatively set to zero
   MachineInstr *NewDef =
-      BuildMI(MBB, InsertPt, DL, TII.get(ARM::VLD1LNd32), NewDQReg)
+      BuildMI(MBB, InsertPt, DL, TII.get(ARM::VLD1LNd32), NewDReg)
           .addReg(AddrReg)
           .addImm(Alignment)
-          .addReg(DQReg)
+          .addReg(DReg)
           .addImm(Index)
           .add(predOps(ARMCC::AL));
   LLVM_DEBUG(dbgs() << "New instr: " << *NewDef);
 
-  return NewDQReg;
+  DQReg.DRegs[DRegIndex] = NewDReg;
+  return DQReg;
 }
 
-Register rewriteSRegDef(Register SReg, uint16_t Index, Register DQReg,
-                        MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator InsertPt,
-                        const DebugLoc &DL, const TargetInstrInfo &TII,
-                        MachineRegisterInfo &MRI) {
+DQRegDesc rewriteSRegDef(Register SReg, uint16_t Index, DQRegDesc DQReg,
+			 MachineBasicBlock &MBB,
+			 MachineBasicBlock::iterator InsertPt,
+			 const DebugLoc &DL, const TargetInstrInfo &TII,
+			 MachineRegisterInfo &MRI) {
   assert(SReg);
   MachineOperand *SRegDefOp = MRI.getOneDef(SReg);
   if (!SRegDefOp || &MBB != SRegDefOp->getParent()->getParent()) {
@@ -348,9 +369,8 @@ Register rewriteSRegDef(Register SReg, uint16_t Index, Register DQReg,
 
     Register AddrReg = AddrOp.getReg();
     unsigned Offset = SRegDef->getOperand(2).getImm();
-    Register NewDQReg = insertVLD1FromVLDRS(AddrReg, Offset, Index, DQReg, MBB,
-                                            InsertPt, DL, TII, MRI);
-    return NewDQReg;
+    return insertVLD1FromVLDRS(AddrReg, Offset, Index, DQReg, MBB,
+			       InsertPt, DL, TII, MRI);
   }
   default: {
     return insertSRegCopy(SReg, Index, DQReg, MBB, InsertPt, DL, TII, MRI);
@@ -404,22 +424,34 @@ static void findHazardCandidates(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
 }
 
-Register createDQReg(const DQRegDesc &DQReg,
+DQRegDesc createDQReg(const DQRegDesc &DQReg,
                      MachineBasicBlock::iterator InsertPt,
                      MachineBasicBlock &MBB, const DebugLoc &DL,
                      MachineRegisterInfo &MRI, const TargetInstrInfo &TII) {
   assert(DQReg.SRegs.size() == 2 || DQReg.SRegs.size() == 4);
 
   bool IsDReg = DQReg.SRegs.size() == 2;
-  const TargetRegisterClass *RC =
-      IsDReg ? &ARM::DPRRegClass : &ARM::QPRRegClass;
+  const TargetRegisterClass *DRC = &ARM::DPRRegClass;
 
-  Register Reg = MRI.createVirtualRegister(RC);
-  MachineInstr *ImplicitDef =
-      BuildMI(MBB, InsertPt, DL, TII.get(TargetOpcode::IMPLICIT_DEF), Reg);
-  LLVM_DEBUG(dbgs() << "New instr: " << *ImplicitDef);
+  DQRegDesc NewDQReg;
+  Register DReg0 = MRI.createVirtualRegister(DRC);
+  MachineInstr *ImplicitDef0 =
+      BuildMI(MBB, InsertPt, DL, TII.get(TargetOpcode::IMPLICIT_DEF), DReg0);
+  LLVM_DEBUG(dbgs() << "New instr: " << *ImplicitDef0);
 
-  return Reg;
+  if (IsDReg){
+    NewDQReg.DRegs.push_back(DReg0);
+    return NewDQReg;
+  }
+
+  Register DReg1 = MRI.createVirtualRegister(DRC);
+  MachineInstr *ImplicitDef1 =
+      BuildMI(MBB, InsertPt, DL, TII.get(TargetOpcode::IMPLICIT_DEF), DReg1);
+  LLVM_DEBUG(dbgs() << "New instr: " << *ImplicitDef1);
+
+  NewDQReg.DRegs.push_back(DReg0);
+  NewDQReg.DRegs.push_back(DReg1);
+  return NewDQReg;
 }
 
 bool ARMSubregWrite::runOnBasicBlock(MachineBasicBlock &MBB,
@@ -446,7 +478,7 @@ bool ARMSubregWrite::runOnBasicBlock(MachineBasicBlock &MBB,
     MachineBasicBlock::iterator InsertPt(DQRegUser);
     const DebugLoc &DL = DQRegUser->getDebugLoc();
 
-    Register NewDQReg = createDQReg(DQReg, InsertPt, MBB, DL, MRI, *TII);
+    DQRegDesc NewDQReg = createDQReg(DQReg, InsertPt, MBB, DL, MRI, *TII);
 
     for (unsigned I = 0; I < DQReg.SRegs.size(); ++I) {
       Register SReg = DQReg.SRegs[I];
@@ -455,9 +487,22 @@ bool ARMSubregWrite::runOnBasicBlock(MachineBasicBlock &MBB,
             rewriteSRegDef(SReg, I, NewDQReg, MBB, InsertPt, DL, *TII, MRI);
       }
     }
-
+    Register NewReg;
+    if (NewDQReg.DRegs.size() == 1) {
+      NewReg = NewDQReg.DRegs[0];
+    } else {
+      assert(NewDQReg.DRegs.size() == 2);
+      NewReg = MRI.createVirtualRegister(&ARM::MQPRRegClass);
+      MachineInstr *RegSeq =
+	BuildMI(MBB, InsertPt, DL, TII->get(ARM::REG_SEQUENCE), NewReg)
+	.addReg(NewDQReg.DRegs[0])
+	.addImm(ARM::dsub_0)
+	.addReg(NewDQReg.DRegs[1])
+	.addImm(ARM::dsub_1);
+      LLVM_DEBUG(dbgs() << "New instr: " << *RegSeq);
+    }
     for (MachineOperand *Op : FixOps) {
-      Op->setReg(NewDQReg);
+      Op->setReg(NewReg);
     }
   }
 
