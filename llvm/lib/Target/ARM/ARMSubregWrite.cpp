@@ -12,6 +12,7 @@
 
 #include "ARM.h"
 #include "ARMInstrInfo.h"
+#include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -306,10 +307,9 @@ DQRegDesc insertVLD1FromVLDRS(Register AddrReg, unsigned VLDRSOffset,
 			      const DebugLoc &DL, const TargetInstrInfo &TII,
 			      MachineRegisterInfo &MRI) {
   if (VLDRSOffset != 0) {
-    unsigned UnscaledOffset = VLDRSOffset * 4;
-    bool IsSub = UnscaledOffset > 1024;
-    if (IsSub)
-      UnscaledOffset -= 1024;
+    unsigned Offset = ARM_AM::getAM5Offset(VLDRSOffset);
+    unsigned UnscaledOffset = Offset * 4;
+    bool IsSub = ARM_AM::getAM5Op(VLDRSOffset) == ARM_AM::sub;
     Register NewAddr = MRI.cloneVirtualRegister(AddrReg);
     MachineInstr *NewAddrDef =
         BuildMI(MBB, InsertPt, DL, TII.get(IsSub ? ARM::SUBri : ARM::ADDri),
