@@ -106,16 +106,10 @@ static bool isFPASIMDInstr(const MachineInstr &MI) {
   case ARM::VMINfq:
   case ARM::VMLAfd:
   case ARM::VMLAfq:
-  case ARM::VMLAslfd:
-  case ARM::VMLAslfq:
   case ARM::VMLSfd:
   case ARM::VMLSfq:
-  case ARM::VMLSslfd:
-  case ARM::VMLSslfq:
   case ARM::VMULfd:
   case ARM::VMULfq:
-  case ARM::VMULslfd:
-  case ARM::VMULslfq:
   case ARM::VNEGfd:
   case ARM::VNEGf32q:
   case ARM::VRECPEfd:
