@@ -552,13 +552,14 @@ define <8 x i8> @check_i8_varidx(<16 x i8> %v, i32 %idx) {
 ; CHECK-NEXT:    .pad #28
 ; CHECK-NEXT:    sub sp, sp, #28
 ; CHECK-NEXT:    bic sp, sp, #15
-; CHECK-NEXT:    ldr r12, [r11, #4]
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    ldr r0, [r11, #4]
 ; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    and r0, r12, #15
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r1:128], r0
-; CHECK-NEXT:    vld1.8 {d16[]}, [r1]
+; CHECK-NEXT:    and r0, r0, #15
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r1:128]
+; CHECK-NEXT:    orr r0, r1, r0
+; CHECK-NEXT:    vld1.8 {d16[]}, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov sp, r11
 ; CHECK-NEXT:    pop {r11}

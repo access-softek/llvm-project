@@ -14728,6 +14728,7 @@ static SDValue PerformLOADCombine(SDNode *N,
 
   // If this is a legal vector load, try to combine it into a VLD1_UPD.
   if (ISD::isNormalLoad(N) && VT.isVector() &&
+      (VT.getVectorElementType().isInteger() || VT.getSizeInBits() <= 64) &&
       DCI.DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return CombineBaseUpdate(N, DCI);
 
@@ -15036,6 +15037,7 @@ static SDValue PerformSTORECombine(SDNode *N,
 
   // If this is a legal vector store, try to combine it into a VST1_UPD.
   if (Subtarget->hasNEON() && ISD::isNormalStore(N) && VT.isVector() &&
+      (VT.getVectorElementType().isInteger() || VT.getSizeInBits() <= 64) &&
       DCI.DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return CombineBaseUpdate(N, DCI);
 

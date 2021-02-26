@@ -202,6 +202,8 @@ char ARMLoadStoreOpt::ID = 0;
 INITIALIZE_PASS(ARMLoadStoreOpt, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME, false,
                 false)
 
+static unsigned getLSMultipleTransferSize(const MachineInstr *MI);
+
 static bool definesCPSR(const MachineInstr &MI) {
   for (const auto &MO : MI.operands()) {
     if (!MO.isReg())
@@ -215,8 +217,33 @@ static bool definesCPSR(const MachineInstr &MI) {
   return false;
 }
 
+static bool isVLDST1(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+  case ARM::VLD1d8:
+  case ARM::VLD1d16:
+  case ARM::VLD1d32:
+  case ARM::VLD1d64:
+  case ARM::VLD1q8:
+  case ARM::VLD1q16:
+  case ARM::VLD1q32:
+  case ARM::VLD1q64:
+  case ARM::VST1d8:
+  case ARM::VST1d16:
+  case ARM::VST1d32:
+  case ARM::VST1d64:
+  case ARM::VST1q8:
+  case ARM::VST1q16:
+  case ARM::VST1q32:
+  case ARM::VST1q64:
+    return true;
+  }
+}
+
 static int getMemoryOpOffset(const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
+
   bool isAM3 = Opcode == ARM::LDRD || Opcode == ARM::STRD;
   unsigned NumOperands = MI.getDesc().getNumOperands();
   unsigned OffField = MI.getOperand(NumOperands - 3).getImm();
@@ -453,7 +480,24 @@ static unsigned getLSMultipleTransferSize(const MachineInstr *MI) {
     return 4;
   case ARM::VLDRD:
   case ARM::VSTRD:
+  case ARM::VLD1d8:
+  case ARM::VLD1d16:
+  case ARM::VLD1d32:
+  case ARM::VLD1d64:
+  case ARM::VST1d8:
+  case ARM::VST1d16:
+  case ARM::VST1d32:
+  case ARM::VST1d64:
     return 8;
+  case ARM::VLD1q8:
+  case ARM::VLD1q16:
+  case ARM::VLD1q32:
+  case ARM::VLD1q64:
+  case ARM::VST1q8:
+  case ARM::VST1q16:
+  case ARM::VST1q32:
+  case ARM::VST1q64:
+    return 16;
   case ARM::LDMIA:
   case ARM::LDMDA:
   case ARM::LDMDB:
@@ -1457,6 +1501,23 @@ static unsigned getPostIndexedLoadStoreOpcode(unsigned Opc,
   case ARM::MVE_VSTRWU32:
     return ARM::MVE_VSTRWU32_post;
 
+  case ARM::VLD1d8: return ARM::VLD1d8wb_fixed;
+  case ARM::VLD1d16: return ARM::VLD1d16wb_fixed;
+  case ARM::VLD1d32: return ARM::VLD1d32wb_fixed;
+  case ARM::VLD1d64: return ARM::VLD1d64wb_fixed;
+  case ARM::VLD1q8: return ARM::VLD1q8wb_fixed;
+  case ARM::VLD1q16: return ARM::VLD1q16wb_fixed;
+  case ARM::VLD1q32: return ARM::VLD1q32wb_fixed;
+  case ARM::VLD1q64: return ARM::VLD1q64wb_fixed;
+  case ARM::VST1d8: return ARM::VST1d8wb_fixed;
+  case ARM::VST1d16: return ARM::VST1d16wb_fixed;
+  case ARM::VST1d32: return ARM::VST1d32wb_fixed;
+  case ARM::VST1d64: return ARM::VST1d64wb_fixed;
+  case ARM::VST1q8: return ARM::VST1q8wb_fixed;
+  case ARM::VST1q16: return ARM::VST1q16wb_fixed;
+  case ARM::VST1q32: return ARM::VST1q32wb_fixed;
+  case ARM::VST1q64: return ARM::VST1q64wb_fixed;
+
   default: llvm_unreachable("Unhandled opcode!");
   }
 }
@@ -2179,6 +2240,7 @@ namespace {
     bool RescheduleLoadStoreInstrs(MachineBasicBlock *MBB);
     bool DistributeIncrements();
     bool DistributeIncrements(Register Base);
+    bool MergeVLDSTPostIndexed();
   };
 
 } // end anonymous namespace
@@ -2212,6 +2274,8 @@ bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   bool Modified = DistributeIncrements();
   for (MachineBasicBlock &MFI : Fn)
     Modified |= RescheduleLoadStoreInstrs(&MFI);
+
+  Modified |= MergeVLDSTPostIndexed();
 
   return Modified;
 }
@@ -3002,6 +3066,92 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements() {
   for (auto Base : Visited)
     Changed |= DistributeIncrements(Base);
 
+  return Changed;
+}
+
+static bool TryMergingVLDSTAndAdd(const TargetInstrInfo *TII,
+                                  MachineInstr *VLDST, MachineInstr *Add) {
+  // Do not cross basic block boundary
+  if (VLDST->getParent() != Add->getParent())
+    return false;
+
+  const unsigned TransferSize = getLSMultipleTransferSize(VLDST);
+  const unsigned Addend = Add->getOperand(2).getImm();
+  if (Addend != TransferSize)
+    return false;
+
+  // Add is virtually
+  //   %res = ADD killed %Base, TransferSize
+  // replacing with post-incremented %Base
+  auto &MBB = *VLDST->getParent();
+  const DebugLoc &DL = VLDST->getDebugLoc();
+  const unsigned PostIndexedOpcode =
+      getPostIndexedLoadStoreOpcode(VLDST->getOpcode(), ARM_AM::add);
+  auto PostIndexedVLDST = BuildMI(MBB, VLDST, DL, TII->get(PostIndexedOpcode));
+  // Copy operands
+  if (VLDST->mayLoad())
+    PostIndexedVLDST.addDef(VLDST->getOperand(0).getReg());
+  PostIndexedVLDST.addDef(Add->getOperand(0).getReg());
+  for (unsigned i = VLDST->getNumDefs(), E = VLDST->getNumOperands(); i != E;
+       ++i)
+    PostIndexedVLDST.add(VLDST->getOperand(i));
+
+  VLDST->eraseFromParent();
+  Add->eraseFromParent();
+  return true;
+}
+
+bool ARMPreAllocLoadStoreOpt::MergeVLDSTPostIndexed() {
+  bool Changed = false;
+  SmallSetVector<Register, 4> Visited;
+  for (auto &MBB : *MF) {
+    for (auto &MI : MBB) {
+      if (!isVLDST1(MI.getOpcode()))
+        continue;
+      const MachineOperand &BaseOp = MI.getOperand(MI.mayLoad() ? 1 : 0);
+      if (BaseOp.isReg() && BaseOp.getReg().isVirtual())
+        Visited.insert(BaseOp.getReg());
+    }
+  }
+
+  for (Register Base : Visited) {
+    MachineInstr *LastVLDST = nullptr;
+    MachineInstr *KilledAdd = nullptr;
+    for (auto &Use : MRI->use_nodbg_instructions(Base)) {
+      Register PredReg;
+      const ARMCC::CondCodes Pred = getInstrPredicate(Use, PredReg);
+      const unsigned Opcode = Use.getOpcode();
+
+      MachineInstr *PrevVLDST = LastVLDST;
+      if (Use.readsRegister(Base))
+        KilledAdd = nullptr;
+      if (Use.modifiesRegister(Base))
+        LastVLDST = nullptr;
+
+      if (Pred != ARMCC::AL)
+        continue;
+
+      // FIXME: Check TIs?
+      if (KilledAdd != nullptr && PrevVLDST != nullptr &&
+          Use.definesRegister(Base))
+        Changed |= TryMergingVLDSTAndAdd(TII, PrevVLDST, KilledAdd);
+
+      if (isVLDST1(Opcode))
+        LastVLDST = &Use;
+
+      if (Opcode == ARM::ADDri || Opcode == ARM::t2ADDri) {
+        const unsigned NumOps = Use.getNumOperands();
+        MachineOperand &Op1 = Use.getOperand(1);
+        MachineOperand &Op2 = Use.getOperand(2);
+        MachineOperand &LastOp = Use.getOperand(NumOps - 1);
+        if (Op1.isReg() && Op1.getReg() == Base && Op2.isImm() &&
+            LastOp.getReg() == ARM::NoRegister)
+          KilledAdd = &Use;
+      }
+    }
+    if (KilledAdd != nullptr && LastVLDST != nullptr)
+      Changed |= TryMergingVLDSTAndAdd(TII, LastVLDST, KilledAdd);
+  }
   return Changed;
 }
 

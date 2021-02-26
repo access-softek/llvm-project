@@ -60,12 +60,14 @@ extern cl::opt<bool> EnableMaskedGatherScatters;
 
 extern cl::opt<unsigned> MVEMaxSupportedInterleaveFactor;
 
-/// Convert a vector load intrinsic into a simple llvm load instruction.
+/// Convert a vector load/store intrinsic into a simple llvm instruction.
 /// This is beneficial when the underlying object being addressed comes
 /// from a constant, since we get constant-folding for free.
-static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
-                               InstCombiner::BuilderTy &Builder) {
-  auto *IntrAlign = dyn_cast<ConstantInt>(II.getArgOperand(1));
+static Value *simplifyNeonVld1OrVst1(const IntrinsicInst &II, unsigned MemAlign,
+                                     InstCombiner::BuilderTy &Builder,
+                                     bool IsLoad) {
+  auto *IntrAlign =
+      dyn_cast<ConstantInt>(II.getArgOperand(II.getNumArgOperands() - 1));
 
   if (!IntrAlign)
     return nullptr;
@@ -77,9 +79,15 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
   if (!isPowerOf2_32(Alignment))
     return nullptr;
 
-  auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
-                                          PointerType::get(II.getType(), 0));
-  return Builder.CreateAlignedLoad(II.getType(), BCastInst, Align(Alignment));
+  Type *PtrType = PointerType::get(
+      IsLoad ? II.getType() : II.getArgOperand(1)->getType(), 0);
+
+  auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0), PtrType);
+  if (IsLoad)
+    return Builder.CreateAlignedLoad(II.getType(), BCastInst, Align(Alignment));
+  else
+    return Builder.CreateAlignedStore(II.getArgOperand(1), BCastInst,
+                                      Align(Alignment));
 }
 
 bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
@@ -127,9 +135,18 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Align MemAlign =
         getKnownAlignment(II.getArgOperand(0), IC.getDataLayout(), &II,
                           &IC.getAssumptionCache(), &IC.getDominatorTree());
-    if (Value *V = simplifyNeonVld1(II, MemAlign.value(), IC.Builder)) {
+    if (Value *V =
+            simplifyNeonVld1OrVst1(II, MemAlign.value(), IC.Builder, true)) {
       return IC.replaceInstUsesWith(II, V);
     }
+    break;
+  }
+  case Intrinsic::arm_neon_vst1: {
+    Align MemAlign =
+        getKnownAlignment(II.getArgOperand(0), IC.getDataLayout(), &II,
+                          &IC.getAssumptionCache(), &IC.getDominatorTree());
+    if (simplifyNeonVld1OrVst1(II, MemAlign.value(), IC.Builder, false))
+      return IC.eraseInstFromFunction(II);
     break;
   }
 
@@ -139,7 +156,6 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::arm_neon_vld2lane:
   case Intrinsic::arm_neon_vld3lane:
   case Intrinsic::arm_neon_vld4lane:
-  case Intrinsic::arm_neon_vst1:
   case Intrinsic::arm_neon_vst2:
   case Intrinsic::arm_neon_vst3:
   case Intrinsic::arm_neon_vst4:

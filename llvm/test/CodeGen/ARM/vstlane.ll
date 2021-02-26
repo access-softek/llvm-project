@@ -528,25 +528,24 @@ define void @vst4laneQf(float* %A, <4 x float>* %B) nounwind {
 define <8 x i16> @variable_insertelement(<8 x i16> %a, i16 %b, i32 %c) nounwind readnone {
 ; CHECK-LABEL: variable_insertelement:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    push {r11}
 ; CHECK-NEXT:    mov r11, sp
-; CHECK-NEXT:    sub sp, sp, #24
+; CHECK-NEXT:    sub sp, sp, #28
 ; CHECK-NEXT:    bic sp, sp, #15
-; CHECK-NEXT:    ldr lr, [r11, #12]
 ; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    ldrh r12, [r11, #4]
 ; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    ldr r0, [r11, #8]
 ; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    and r0, lr, #7
-; CHECK-NEXT:    mov r2, r1
-; CHECK-NEXT:    ldrh r12, [r11, #8]
-; CHECK-NEXT:    lsl r0, r0, #1
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r2:128], r0
-; CHECK-NEXT:    strh r12, [r2]
+; CHECK-NEXT:    and r0, r0, #7
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r1:128]
+; CHECK-NEXT:    orr r0, r1, r0, lsl #1
+; CHECK-NEXT:    strh r12, [r0]
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1:128]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov sp, r11
-; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    pop {r11}
 ; CHECK-NEXT:    mov pc, lr
     %r = insertelement <8 x i16> %a, i16 %b, i32 %c
     ret <8 x i16> %r

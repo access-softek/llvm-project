@@ -1079,7 +1079,7 @@ def mve_shift_imm1_15 : Operand<i32>,
 //
 def MemImm12OffsetAsmOperand : AsmOperandClass { let Name = "MemImm12Offset"; }
 class AddrMode_Imm12 : MemOperand,
-                     ComplexPattern<i32, 2, "SelectAddrModeImm12", []> {
+                     ComplexPattern<i32, 2, "SelectAddrModeImm<12, 0>", []> {
   // 12-bit immediate operand. Note that instructions using this encode
   // #0 and #-0 differently. We flag #-0 as the magic value INT32_MIN. All other
   // immediate values are as normal.
@@ -1096,6 +1096,12 @@ def addrmode_imm12 : AddrMode_Imm12 {
 
 def addrmode_imm12_pre : AddrMode_Imm12 {
   let PrintMethod = "printAddrModeImm12Operand<true>";
+}
+
+// Immediate offset operand for V(LD|ST)1*_indexed pseudo instructions
+def addrmode_vldst_indexed : MemOperand,
+        ComplexPattern<i32, 3, "SelectAddrModeVLDSTIndexedPseudo", [], [SDNPWantParent]> {
+  let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm, i32imm:$alignment);
 }
 
 // ldst_so_reg := reg +/- reg shop imm

@@ -20,9 +20,9 @@ define void @t2() nounwind ssp {
 entry:
 ; CHECK-7A-LABEL: t2:
 ; CHECK-7A: vmov.i32 {{q[0-9]+}}, #0x0
-; CHECK-7A: movs r1, #10
-; CHECK-7A: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r2], r1
-; CHECK-7A: vst1.16 {d{{[0-9]+}}, d{{[0-9]+}}}, [r2]
+; CHECK-7A: vst1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[R1:[0-9]+]]:64]
+; CHECK-7A: add.w r[[R2:[0-9]+]], r[[R1]], #10
+; CHECK-7A: vst1.16 {d{{[0-9]+}}, d{{[0-9]+}}}, [r[[R2]]]
 ; CHECK-6M-LABEL: t2:
 ; CHECK-6M: movs [[REG:r[0-9]+]], #0
 ; CHECK-6M-DAG: str  [[REG]], [sp, #20]

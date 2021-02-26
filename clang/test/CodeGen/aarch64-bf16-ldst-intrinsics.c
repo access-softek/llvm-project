@@ -260,8 +260,8 @@ void test_vst1_bf16(bfloat16_t *ptr, bfloat16x4_t val) {
 // CHECK-LABEL: test_vst1_bf16
 // CHECK64: %0 = bitcast bfloat* %ptr to <4 x bfloat>*
 // CHECK64-NEXT: store <4 x bfloat> %val, <4 x bfloat>* %0, align 2
-// CHECK32: %0 = bitcast bfloat* %ptr to i8*
-// CHECK32-NEXT: tail call void @llvm.arm.neon.vst1.p0i8.v4bf16(i8* %0, <4 x bfloat> %val, i32 2)
+// CHECK32: %0 = bitcast bfloat* %ptr to <4 x bfloat>*
+// CHECK32-NEXT: store <4 x bfloat> %val, <4 x bfloat>* %0, align 2
 
 void test_vst1q_bf16(bfloat16_t *ptr, bfloat16x8_t val) {
   vst1q_bf16(ptr, val);
@@ -269,8 +269,8 @@ void test_vst1q_bf16(bfloat16_t *ptr, bfloat16x8_t val) {
 // CHECK-LABEL: test_vst1q_bf16
 // CHECK64: %0 = bitcast bfloat* %ptr to <8 x bfloat>*
 // CHECK64-NEXT: store <8 x bfloat> %val, <8 x bfloat>* %0, align 2
-// CHECK32: %0 = bitcast bfloat* %ptr to i8*
-// CHECK32-NEXT: tail call void @llvm.arm.neon.vst1.p0i8.v8bf16(i8* %0, <8 x bfloat> %val, i32 2)
+// CHECK32: %0 = bitcast bfloat* %ptr to <8 x bfloat>*
+// CHECK32-NEXT: store <8 x bfloat> %val, <8 x bfloat>* %0, align 2
 
 void test_vst1_lane_bf16(bfloat16_t *ptr, bfloat16x4_t val) {
   vst1_lane_bf16(ptr, val, 1);

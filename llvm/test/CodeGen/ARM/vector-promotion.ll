@@ -389,7 +389,7 @@ define void @simpleOneInstructionPromotion8x8(<8 x i8>* %addr1, i8* %dest) {
 ;
 ; Make sure we got rid of any expensive vmov.32 instructions.
 ; ASM-LABEL: simpleOneInstructionPromotion4x32:
-; ASM: vld1.64 {[[LOAD:d[0-9]+]], d{{[0-9]+}}}, [r0]
+; ASM: vld1.64 {[[LOAD:d[0-9]+]], d{{[0-9]+}}}, [r0:64]
 ; The Q register used here must be [[LOAD]] / 2, but we cannot express that.
 ; ASM-NEXT: vorr.i32 q{{[[0-9]+}}, #0x1
 ; ASM-NEXT: vst1.32 {[[LOAD]][1]}, [r1]

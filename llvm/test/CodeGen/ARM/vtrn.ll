@@ -251,7 +251,7 @@ define <8 x float> @vtrnQf_QQres(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vtrn.32 q9, q8
-; CHECK-NEXT:    vst1.32 {d18, d19}, [r0:128]!
+; CHECK-NEXT:    vst1.64 {d18, d19}, [r0:128]!
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <4 x float>, <4 x float>* %A

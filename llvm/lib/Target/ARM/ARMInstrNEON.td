@@ -613,15 +613,32 @@ class VLD1Q<bits<4> op7_4, string Dt, Operand AddrMode>
   let DecoderMethod = "DecodeVLDST1Instruction";
 }
 
-def  VLD1d8   : VLD1D<{0,0,0,?}, "8",  addrmode6align64>;
-def  VLD1d16  : VLD1D<{0,1,0,?}, "16", addrmode6align64>;
-def  VLD1d32  : VLD1D<{1,0,0,?}, "32", addrmode6align64>;
-def  VLD1d64  : VLD1D<{1,1,0,?}, "64", addrmode6align64>;
+multiclass VLD1DWithPseudo<bits<4> op7_4, string Dt, Operand AddrMode> {
+  def NAME : VLD1D<op7_4, Dt, AddrMode>;
+  def _indexed : PseudoNLdSt<(outs VecListOneD:$Vd),
+                             (ins addrmode_vldst_indexed:$addr), IIC_VLD1, ""> {
+    let isPseudo = 1;
+    let hasNoSchedulingInfo = 1;
+  }
+}
+multiclass VLD1QWithPseudo<bits<4> op7_4, string Dt, Operand AddrMode> {
+  def NAME : VLD1Q<op7_4, Dt, AddrMode>;
+  def _indexed : PseudoNLdSt<(outs VecListDPair:$Vd),
+                             (ins addrmode_vldst_indexed:$addr), IIC_VLD1x2, ""> {
+    let isPseudo = 1;
+    let hasNoSchedulingInfo = 1;
+  }
+}
 
-def  VLD1q8   : VLD1Q<{0,0,?,?}, "8",  addrmode6align64or128>;
-def  VLD1q16  : VLD1Q<{0,1,?,?}, "16", addrmode6align64or128>;
-def  VLD1q32  : VLD1Q<{1,0,?,?}, "32", addrmode6align64or128>;
-def  VLD1q64  : VLD1Q<{1,1,?,?}, "64", addrmode6align64or128>;
+defm  VLD1d8   : VLD1DWithPseudo<{0,0,0,?}, "8",  addrmode6align64>;
+defm  VLD1d16  : VLD1DWithPseudo<{0,1,0,?}, "16", addrmode6align64>;
+defm  VLD1d32  : VLD1DWithPseudo<{1,0,0,?}, "32", addrmode6align64>;
+defm  VLD1d64  : VLD1DWithPseudo<{1,1,0,?}, "64", addrmode6align64>;
+
+defm  VLD1q8   : VLD1QWithPseudo<{0,0,?,?}, "8",  addrmode6align64or128>;
+defm  VLD1q16  : VLD1QWithPseudo<{0,1,?,?}, "16", addrmode6align64or128>;
+defm  VLD1q32  : VLD1QWithPseudo<{1,0,?,?}, "32", addrmode6align64or128>;
+defm  VLD1q64  : VLD1QWithPseudo<{1,1,?,?}, "64", addrmode6align64or128>;
 
 // ...with address register writeback:
 multiclass VLD1DWB<bits<4> op7_4, string Dt, Operand AddrMode> {
@@ -1679,15 +1696,30 @@ class VST1Q<bits<4> op7_4, string Dt, Operand AddrMode>
   let DecoderMethod = "DecodeVLDST1Instruction";
 }
 
-def  VST1d8   : VST1D<{0,0,0,?}, "8",  addrmode6align64>;
-def  VST1d16  : VST1D<{0,1,0,?}, "16", addrmode6align64>;
-def  VST1d32  : VST1D<{1,0,0,?}, "32", addrmode6align64>;
-def  VST1d64  : VST1D<{1,1,0,?}, "64", addrmode6align64>;
+multiclass VST1DWithPseudo<bits<4> op7_4, string Dt, Operand AddrMode> {
+  def NAME : VST1D<op7_4, Dt, AddrMode>;
+  def _indexed : PseudoNLdSt<(outs), (ins addrmode_vldst_indexed:$addr, VecListOneD:$Vd), IIC_VST1, ""> {
+    let isPseudo = 1;
+    let hasNoSchedulingInfo = 1;
+  }
+}
+multiclass VST1QWithPseudo<bits<4> op7_4, string Dt, Operand AddrMode> {
+  def NAME : VST1Q<op7_4, Dt, AddrMode>;
+  def _indexed : PseudoNLdSt<(outs), (ins addrmode_vldst_indexed:$addr, VecListDPair:$Vd), IIC_VST1x2, ""> {
+    let isPseudo = 1;
+    let hasNoSchedulingInfo = 1;
+  }
+}
 
-def  VST1q8   : VST1Q<{0,0,?,?}, "8",  addrmode6align64or128>;
-def  VST1q16  : VST1Q<{0,1,?,?}, "16", addrmode6align64or128>;
-def  VST1q32  : VST1Q<{1,0,?,?}, "32", addrmode6align64or128>;
-def  VST1q64  : VST1Q<{1,1,?,?}, "64", addrmode6align64or128>;
+defm  VST1d8   : VST1DWithPseudo<{0,0,0,?}, "8",  addrmode6align64>;
+defm  VST1d16  : VST1DWithPseudo<{0,1,0,?}, "16", addrmode6align64>;
+defm  VST1d32  : VST1DWithPseudo<{1,0,0,?}, "32", addrmode6align64>;
+defm  VST1d64  : VST1DWithPseudo<{1,1,0,?}, "64", addrmode6align64>;
+
+defm  VST1q8   : VST1QWithPseudo<{0,0,?,?}, "8",  addrmode6align64or128>;
+defm  VST1q16  : VST1QWithPseudo<{0,1,?,?}, "16", addrmode6align64or128>;
+defm  VST1q32  : VST1QWithPseudo<{1,0,?,?}, "32", addrmode6align64or128>;
+defm  VST1q64  : VST1QWithPseudo<{1,1,?,?}, "64", addrmode6align64or128>;
 
 // ...with address register writeback:
 multiclass VST1DWB<bits<4> op7_4, string Dt, Operand AddrMode> {
@@ -2401,43 +2433,43 @@ def VST4LNq32Pseudo_UPD : VSTQQQQLNWBPseudo<IIC_VST4lnu>, Sched<[WriteVST2]>;
 
 // Use vld1/vst1 for unaligned f64 load / store
 let Predicates = [IsLE,HasNEON] in {
-def : Pat<(f64 (hword_alignedload addrmode6:$addr)),
-          (VLD1d16 addrmode6:$addr)>;
-def : Pat<(hword_alignedstore (f64 DPR:$value), addrmode6:$addr),
-          (VST1d16 addrmode6:$addr, DPR:$value)>;
-def : Pat<(f64 (byte_alignedload addrmode6:$addr)),
-          (VLD1d8 addrmode6:$addr)>;
-def : Pat<(byte_alignedstore (f64 DPR:$value), addrmode6:$addr),
-          (VST1d8 addrmode6:$addr, DPR:$value)>;
+def : Pat<(f64 (hword_alignedload addrmode_vldst_indexed:$addr)),
+          (VLD1d16_indexed addrmode_vldst_indexed:$addr)>;
+def : Pat<(hword_alignedstore (f64 DPR:$value), addrmode_vldst_indexed:$addr),
+          (VST1d16_indexed addrmode_vldst_indexed:$addr, DPR:$value)>;
+def : Pat<(f64 (byte_alignedload addrmode_vldst_indexed:$addr)),
+          (VLD1d8_indexed addrmode_vldst_indexed:$addr)>;
+def : Pat<(byte_alignedstore (f64 DPR:$value), addrmode_vldst_indexed:$addr),
+          (VST1d8_indexed addrmode_vldst_indexed:$addr, DPR:$value)>;
 }
 let Predicates = [IsBE,HasNEON] in {
-def : Pat<(f64 (non_word_alignedload addrmode6:$addr)),
-          (VLD1d64 addrmode6:$addr)>;
-def : Pat<(non_word_alignedstore (f64 DPR:$value), addrmode6:$addr),
-          (VST1d64 addrmode6:$addr, DPR:$value)>;
+def : Pat<(f64 (non_word_alignedload addrmode_vldst_indexed:$addr)),
+          (VLD1d64_indexed addrmode_vldst_indexed:$addr)>;
+def : Pat<(non_word_alignedstore (f64 DPR:$value), addrmode_vldst_indexed:$addr),
+          (VST1d64_indexed addrmode_vldst_indexed:$addr, DPR:$value)>;
 }
 
 // Use vld1/vst1 for Q and QQ. Also use them for unaligned v2f64
 // load / store if it's legal.
 let Predicates = [HasNEON] in {
-def : Pat<(v2f64 (dword_alignedload addrmode6:$addr)),
-          (VLD1q64 addrmode6:$addr)>;
-def : Pat<(dword_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
-          (VST1q64 addrmode6:$addr, QPR:$value)>;
+def : Pat<(v2f64 (dword_alignedload addrmode_vldst_indexed:$addr)),
+          (VLD1q64_indexed addrmode_vldst_indexed:$addr)>;
+def : Pat<(dword_alignedstore (v2f64 QPR:$value), addrmode_vldst_indexed:$addr),
+          (VST1q64_indexed addrmode_vldst_indexed:$addr, QPR:$value)>;
 }
 let Predicates = [IsLE,HasNEON] in {
-def : Pat<(v2f64 (word_alignedload addrmode6:$addr)),
-          (VLD1q32 addrmode6:$addr)>;
-def : Pat<(word_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
-          (VST1q32 addrmode6:$addr, QPR:$value)>;
-def : Pat<(v2f64 (hword_alignedload addrmode6:$addr)),
-          (VLD1q16 addrmode6:$addr)>;
-def : Pat<(hword_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
-          (VST1q16 addrmode6:$addr, QPR:$value)>;
-def : Pat<(v2f64 (byte_alignedload addrmode6:$addr)),
-          (VLD1q8 addrmode6:$addr)>;
-def : Pat<(byte_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
-          (VST1q8 addrmode6:$addr, QPR:$value)>;
+def : Pat<(v2f64 (word_alignedload addrmode_vldst_indexed:$addr)),
+          (VLD1q32_indexed addrmode_vldst_indexed:$addr)>;
+def : Pat<(word_alignedstore (v2f64 QPR:$value), addrmode_vldst_indexed:$addr),
+          (VST1q32_indexed addrmode_vldst_indexed:$addr, QPR:$value)>;
+def : Pat<(v2f64 (hword_alignedload addrmode_vldst_indexed:$addr)),
+          (VLD1q16_indexed addrmode_vldst_indexed:$addr)>;
+def : Pat<(hword_alignedstore (v2f64 QPR:$value), addrmode_vldst_indexed:$addr),
+          (VST1q16_indexed addrmode_vldst_indexed:$addr, QPR:$value)>;
+def : Pat<(v2f64 (byte_alignedload addrmode_vldst_indexed:$addr)),
+          (VLD1q8_indexed addrmode_vldst_indexed:$addr)>;
+def : Pat<(byte_alignedstore (v2f64 QPR:$value), addrmode_vldst_indexed:$addr),
+          (VST1q8_indexed addrmode_vldst_indexed:$addr, QPR:$value)>;
 }
 
 //===----------------------------------------------------------------------===//
