@@ -500,7 +500,7 @@ static bool matchSRegInsertSubreg(MachineInstr &MI,
 void insertSRegCopy(DQRegDesc &DQReg, Register SReg, uint16_t Index,
 		    MachineBasicBlock &MBB,
 		    MachineBasicBlock::iterator InsertPt,
-		    const DebugLoc &DL, const TargetInstrInfo &TII,
+		    DebugLoc DL, const TargetInstrInfo &TII,
 		    MachineRegisterInfo &MRI) {
   // FIXME: VSETLN doesn't work with S-registers, so we have to copy
   // via a core register. Is there a better way to do this?
@@ -531,7 +531,7 @@ void insertVLD1FromVLDRS(DQRegDesc &DQReg, Register AddrReg,
 			 unsigned VLDRSOffset, uint16_t Index,
 			 MachineBasicBlock &MBB,
 			 MachineBasicBlock::iterator InsertPt,
-			 const DebugLoc &DL, const TargetInstrInfo &TII,
+			 DebugLoc DL, const TargetInstrInfo &TII,
 			 MachineRegisterInfo &MRI) {
   if (VLDRSOffset != 0) {
     unsigned Offset = ARM_AM::getAM5Offset(VLDRSOffset);
@@ -574,7 +574,7 @@ void insertVLD1FromVLDRS(DQRegDesc &DQReg, Register AddrReg,
 void rewriteSRegDef(DQRegDesc &DQReg, Register SReg, uint16_t Index,
 		    MachineBasicBlock &MBB,
 		    MachineBasicBlock::iterator InsertPt,
-		    const DebugLoc &DL, const TargetInstrInfo &TII,
+		    DebugLoc DL, const TargetInstrInfo &TII,
 		    MachineRegisterInfo &MRI) {
   assert(SReg);
   MachineOperand *SRegDefOp = MRI.getOneDef(SReg);
@@ -656,7 +656,7 @@ static void findHazardCandidates(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 DQRegDesc createDQReg(const DQRegDesc &DQReg,
                      MachineBasicBlock::iterator InsertPt,
-                     MachineBasicBlock &MBB, const DebugLoc &DL,
+                     MachineBasicBlock &MBB, DebugLoc DL,
                      MachineRegisterInfo &MRI, const TargetInstrInfo &TII) {
   assert(DQReg.SRegs.size() == 2 || DQReg.SRegs.size() == 4);
 
@@ -706,7 +706,7 @@ bool ARMSubregWrite::runOnBasicBlock(MachineBasicBlock &MBB,
 
     MachineInstr *DQRegUser = FixOps[0]->getParent();
     MachineBasicBlock::iterator InsertPt(DQRegUser);
-    const DebugLoc &DL = DQRegUser->getDebugLoc();
+    DebugLoc DL = DQRegUser->getDebugLoc();
 
     DQRegDesc NewDQReg = createDQReg(DQReg, InsertPt, MBB, DL, MRI, *TII);
 
