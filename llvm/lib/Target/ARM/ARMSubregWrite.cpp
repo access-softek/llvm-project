@@ -227,20 +227,12 @@ static bool isFPASIMDInstr(const MachineInstr &MI) {
   case ARM::VMINsv4i32:
   case ARM::VMINuv2i32:
   case ARM::VMINuv4i32:
-  case ARM::VMLALslsv2i32:
-  case ARM::VMLALsluv2i32:
   case ARM::VMLALsv4i32:
   case ARM::VMLALuv4i32:
-  case ARM::VMLAslv2i32:
-  case ARM::VMLAslv4i32:
   case ARM::VMLAv2i32:
   case ARM::VMLAv4i32:
-  case ARM::VMLSLslsv2i32:
-  case ARM::VMLSLsluv2i32:
   case ARM::VMLSLsv4i32:
   case ARM::VMLSLuv4i32:
-  case ARM::VMLSslv2i32:
-  case ARM::VMLSslv4i32:
   case ARM::VMLSv2i32:
   case ARM::VMLSv4i32:
   case ARM::VMOVLsv4i32:
@@ -250,12 +242,8 @@ static bool isFPASIMDInstr(const MachineInstr &MI) {
   case ARM::VMOVv2i32:
   case ARM::VMOVv4f32:
   case ARM::VMOVv4i32:
-  case ARM::VMULLslsv2i32:
-  case ARM::VMULLsluv2i32:
   case ARM::VMULLsv4i32:
   case ARM::VMULLuv4i32:
-  case ARM::VMULslv2i32:
-  case ARM::VMULslv4i32:
   case ARM::VMULv2i32:
   case ARM::VMULv4i32:
   case ARM::VMVNv2i32:
@@ -276,31 +264,20 @@ static bool isFPASIMDInstr(const MachineInstr &MI) {
   case ARM::VQADDsv4i32:
   case ARM::VQADDuv2i32:
   case ARM::VQADDuv4i32:
-  case ARM::VQDMLALslv2i32:
   case ARM::VQDMLALv4i32:
-  case ARM::VQDMLSLslv2i32:
   case ARM::VQDMLSLv4i32:
-  case ARM::VQDMULHslv2i32:
-  case ARM::VQDMULHslv4i32:
   case ARM::VQDMULHv2i32:
   case ARM::VQDMULHv4i32:
-  case ARM::VQDMULLslv2i32:
   case ARM::VQDMULLv4i32:
   case ARM::VQMOVNsuv2i32:
   case ARM::VQMOVNsv2i32:
   case ARM::VQMOVNuv2i32:
   case ARM::VQNEGv2i32:
   case ARM::VQNEGv4i32:
-  case ARM::VQRDMLAHslv2i32:
-  case ARM::VQRDMLAHslv4i32:
   case ARM::VQRDMLAHv2i32:
   case ARM::VQRDMLAHv4i32:
-  case ARM::VQRDMLSHslv2i32:
-  case ARM::VQRDMLSHslv4i32:
   case ARM::VQRDMLSHv2i32:
   case ARM::VQRDMLSHv4i32:
-  case ARM::VQRDMULHslv2i32:
-  case ARM::VQRDMULHslv4i32:
   case ARM::VQRDMULHv2i32:
   case ARM::VQRDMULHv4i32:
   case ARM::VQRSHLsv2i32:
