@@ -520,11 +520,11 @@ static bool matchSRegInsertSubreg(MachineInstr &MI,
 
 // Insert a pair of VMOVRS and VSETLNi32 to copy an S-register using a
 // scalar write to the corresponding D-register.
-DQRegDesc insertSRegCopy(Register SReg, uint16_t Index, DQRegDesc DQReg,
-			 MachineBasicBlock &MBB,
-			 MachineBasicBlock::iterator InsertPt,
-			 const DebugLoc &DL, const TargetInstrInfo &TII,
-			 MachineRegisterInfo &MRI) {
+void insertSRegCopy(DQRegDesc &DQReg, Register SReg, uint16_t Index,
+		    MachineBasicBlock &MBB,
+		    MachineBasicBlock::iterator InsertPt,
+		    const DebugLoc &DL, const TargetInstrInfo &TII,
+		    MachineRegisterInfo &MRI) {
   // FIXME: VSETLN doesn't work with S-registers, so we have to copy
   // via a core register. Is there a better way to do this?
   Register TmpGPReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
@@ -547,16 +547,15 @@ DQRegDesc insertSRegCopy(Register SReg, uint16_t Index, DQRegDesc DQReg,
   LLVM_DEBUG(dbgs() << "New instr: " << *NewDef);
 
   DQReg.DRegs[DRegIndex] = NewDReg;
-  return DQReg;
 }
 
 // Insert a VLD1 to replace a VLDRS instruction.
-DQRegDesc insertVLD1FromVLDRS(Register AddrReg, unsigned VLDRSOffset,
-			      uint16_t Index, DQRegDesc DQReg,
-			      MachineBasicBlock &MBB,
-			      MachineBasicBlock::iterator InsertPt,
-			      const DebugLoc &DL, const TargetInstrInfo &TII,
-			      MachineRegisterInfo &MRI) {
+void insertVLD1FromVLDRS(DQRegDesc &DQReg, Register AddrReg,
+			 unsigned VLDRSOffset, uint16_t Index,
+			 MachineBasicBlock &MBB,
+			 MachineBasicBlock::iterator InsertPt,
+			 const DebugLoc &DL, const TargetInstrInfo &TII,
+			 MachineRegisterInfo &MRI) {
   if (VLDRSOffset != 0) {
     unsigned Offset = ARM_AM::getAM5Offset(VLDRSOffset);
     unsigned UnscaledOffset = Offset * 4;
@@ -593,19 +592,19 @@ DQRegDesc insertVLD1FromVLDRS(Register AddrReg, unsigned VLDRSOffset,
   LLVM_DEBUG(dbgs() << "New instr: " << *NewDef);
 
   DQReg.DRegs[DRegIndex] = NewDReg;
-  return DQReg;
 }
 
-DQRegDesc rewriteSRegDef(Register SReg, uint16_t Index, DQRegDesc DQReg,
-			 MachineBasicBlock &MBB,
-			 MachineBasicBlock::iterator InsertPt,
-			 const DebugLoc &DL, const TargetInstrInfo &TII,
-			 MachineRegisterInfo &MRI) {
+void rewriteSRegDef(DQRegDesc &DQReg, Register SReg, uint16_t Index,
+		    MachineBasicBlock &MBB,
+		    MachineBasicBlock::iterator InsertPt,
+		    const DebugLoc &DL, const TargetInstrInfo &TII,
+		    MachineRegisterInfo &MRI) {
   assert(SReg);
   MachineOperand *SRegDefOp = MRI.getOneDef(SReg);
   if (!SRegDefOp || &MBB != SRegDefOp->getParent()->getParent()) {
     LLVM_DEBUG(dbgs() << "No def found in the current BB\n");
-    return insertSRegCopy(SReg, Index, DQReg, MBB, InsertPt, DL, TII, MRI);
+    insertSRegCopy(DQReg, SReg, Index, MBB, InsertPt, DL, TII, MRI);
+    return;
   }
   MachineInstr *SRegDef = SRegDefOp->getParent();
 
@@ -614,19 +613,23 @@ DQRegDesc rewriteSRegDef(Register SReg, uint16_t Index, DQRegDesc DQReg,
   case ARM::VLDRS: {
     const MachineOperand &AddrOp = SRegDef->getOperand(1);
     if (!AddrOp.isReg()) {
-      return insertSRegCopy(SReg, Index, DQReg, MBB, InsertPt, DL, TII, MRI);
+      insertSRegCopy(DQReg, SReg, Index, MBB, InsertPt, DL, TII, MRI);
+      return;
     }
 
     Register AddrReg = AddrOp.getReg();
     unsigned Offset = SRegDef->getOperand(2).getImm();
-    return insertVLD1FromVLDRS(AddrReg, Offset, Index, DQReg, MBB,
-			       InsertPt, DL, TII, MRI);
+    insertVLD1FromVLDRS(DQReg, AddrReg, Offset, Index, MBB,
+			InsertPt, DL, TII, MRI);
+    return;
+  }
+  case TargetOpcode::IMPLICIT_DEF: {
+    return;
   }
   default: {
-    return insertSRegCopy(SReg, Index, DQReg, MBB, InsertPt, DL, TII, MRI);
+    insertSRegCopy(DQReg, SReg, Index, MBB, InsertPt, DL, TII, MRI);
+    return;
   }
-  case TargetOpcode::IMPLICIT_DEF:
-    return DQReg;
   }
   llvm_unreachable("Unhandled instruction");
 }
@@ -733,8 +736,7 @@ bool ARMSubregWrite::runOnBasicBlock(MachineBasicBlock &MBB,
     for (unsigned I = 0; I < DQReg.SRegs.size(); ++I) {
       Register SReg = DQReg.SRegs[I];
       if (SReg) {
-        NewDQReg =
-            rewriteSRegDef(SReg, I, NewDQReg, MBB, InsertPt, DL, *TII, MRI);
+	rewriteSRegDef(NewDQReg, SReg, I, MBB, InsertPt, DL, *TII, MRI);
       }
     }
     Register NewReg;
