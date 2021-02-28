@@ -126,6 +126,28 @@ static bool isFPASIMDInstr(const MachineInstr &MI) {
   case ARM::VSUBfq:
   case ARM::VEXTd32:
   case ARM::VEXTq32:
+  case ARM::VORNd:
+  case ARM::VORNq:
+  case ARM::VORRd:
+  case ARM::VORRq:
+  case ARM::VANDd:
+  case ARM::VANDq:
+  case ARM::VEORd:
+  case ARM::VEORq:
+  case ARM::VBICd:
+  case ARM::VBICq:
+  case ARM::VBIFd:
+  case ARM::VBIFq:
+  case ARM::VBITd:
+  case ARM::VBITq:
+  case ARM::VBSLd:
+  case ARM::VBSLq:
+  case ARM::VBSPd:
+  case ARM::VBSPq:
+  case ARM::VCNTd:
+  case ARM::VCNTq:
+  case ARM::VMVNd:
+  case ARM::VMVNq:
     return true;
   default:
     return false;
