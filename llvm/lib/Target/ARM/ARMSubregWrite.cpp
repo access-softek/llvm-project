@@ -364,7 +364,6 @@ struct DQRegDesc {
   SmallVector<Register, 4> SRegs;
 };
 
-// Provide DenseMapInfo for chars.
 template<> struct llvm::DenseMapInfo<DQRegDesc> {
   static inline DQRegDesc getEmptyKey() {
     return DQRegDesc();
@@ -712,15 +711,17 @@ bool ARMSubregWrite::runOnBasicBlock(MachineBasicBlock &MBB,
 
     for (unsigned I = 0; I < DQReg.SRegs.size(); ++I) {
       Register SReg = DQReg.SRegs[I];
-      if (SReg) {
-	rewriteSRegDef(NewDQReg, SReg, I, MBB, InsertPt, DL, *TII, MRI);
-      }
+      if (!SReg)
+	continue;
+      rewriteSRegDef(NewDQReg, SReg, I, MBB, InsertPt, DL, *TII, MRI);
     }
-    Register NewReg;
-    if (NewDQReg.DRegs.size() == 1) {
-      NewReg = NewDQReg.DRegs[0];
-    } else {
-      assert(NewDQReg.DRegs.size() == 2);
+
+
+    Register NewReg = NewDQReg.DRegs[0];
+
+    // If the original register is a Q-register, define a new one from
+    // a pair of D-registers.
+    if (NewDQReg.DRegs.size() == 2) {
       NewReg = MRI.createVirtualRegister(&ARM::MQPRRegClass);
       MachineInstr *RegSeq =
 	BuildMI(MBB, InsertPt, DL, TII->get(ARM::REG_SEQUENCE), NewReg)
@@ -730,6 +731,7 @@ bool ARMSubregWrite::runOnBasicBlock(MachineBasicBlock &MBB,
 	.addImm(ARM::dsub_1);
       LLVM_DEBUG(dbgs() << "New instr: " << *RegSeq);
     }
+
     for (MachineOperand *Op : FixOps) {
       Op->setReg(NewReg);
     }
