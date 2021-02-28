@@ -105,8 +105,8 @@ define <2 x float> @baz(double %0, <2 x float> %vf0) {
 define <4 x float> @foov4(float* %0, float* %1) {
 ; CHECK-LABEL: foov4:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vld1.32 {q8[0]}, [r0]
-; CHECK-NEXT:    vld1.32 {q9[0]}, [r1]
+; CHECK-NEXT:    vld1.32 {d16[0]}, [r0]
+; CHECK-NEXT:    vld1.32 {d18[0]}, [r1]
 ; CHECK-NEXT:    vmaxnm.f32 q8, q9, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
@@ -128,12 +128,4 @@ define <4 x float> @foov4(float* %0, float* %1) {
 
   %7 = call <4 x float> @llvm.arm.neon.vmaxnm.v4f32(<4 x float> %6, <4 x float> %4)
   ret <4 x float> %7
-}
-
-define <4 x float> @t1v4(<4 x float>* %0, <4 x float>* %1) {
-  %3 = load <4 x float>, <4 x float>* %0, align 4
-  %4 = load <4 x float>, <4 x float>* %1, align 4
-
-  %5 = call <4 x float> @llvm.arm.neon.vmaxnm.v4f32(<4 x float> %3, <4 x float> %4)
-  ret <4 x float> %5
 }
