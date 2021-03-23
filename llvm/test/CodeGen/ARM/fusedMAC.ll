@@ -1,4 +1,5 @@
-; RUN: llc < %s -mtriple=armv7-eabi -mattr=+neon,+vfp4 -fp-contract=fast | FileCheck %s
+; RUN: llc < %s -mtriple=armv7-eabi -mattr=+neon,+vfp4 -fp-contract=fast | FileCheck %s -check-prefixes=CHECK,PREFER-FMA
+; RUN: llc < %s -mtriple=armv7-eabi -mattr=+neon,+vfp4,+mlxasfastasfmx -fp-contract=fast | FileCheck %s -check-prefixes=CHECK,FAST-MLA
 ; RUN: llc < %s -mtriple=arm-arm-eabi -mcpu=cortex-m7  -fp-contract=fast | FileCheck %s
 ; RUN: llc < %s -mtriple=arm-arm-eabi -mcpu=cortex-m4  -fp-contract=fast | FileCheck %s -check-prefix=DONT-FUSE
 ; RUN: llc < %s -mtriple=arm-arm-eabi -mcpu=cortex-m33 -fp-contract=fast | FileCheck %s -check-prefix=DONT-FUSE
@@ -226,6 +227,18 @@ entry:
   ret void
 }
 
+; Using vfma instruction would require an additional vdup due to scalar argument
+define arm_aapcs_vfpcc <4 x float> @test_fma_lane(<4 x float> %a, <4 x float> %b, <2 x float> %c) {
+; CHECK: test_fma_lane
+; PREFER-FMA: vdup.32 q[[Q8:[0-9]+]], d4[1]
+; PREFER-FMA: vfma.f32 q0, q[[Q8]], q1
+; FAST-MLA-NOT: vdup
+; FAST-MLA:     vmla.f32 q0, q1, d4[1]
+  %c_lane_1 = shufflevector <2 x float> %c, <2 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %mul = fmul fast <4 x float> %c_lane_1, %b
+  %add = fadd fast <4 x float> %mul, %a
+  ret <4 x float> %add
+}
 
 declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare double @llvm.fma.f64(double, double, double) nounwind readnone

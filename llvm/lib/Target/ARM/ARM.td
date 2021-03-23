@@ -307,6 +307,14 @@ def FeatureHasSlowFPVMLx  : SubtargetFeature<"slowfpvmlx", "SlowFPVMLx", "true",
 def FeatureHasSlowFPVFMx  : SubtargetFeature<"slowfpvfmx", "SlowFPVFMx", "true",
                                              "Disable VFP / NEON FMA instructions">;
 
+// Some processors have much higher latency of VMLA/VMLS compared to VFMA/VFMS,
+// so it may be worth replacing VMLx with VDUP + VFMx even for the "by scalar"
+// use case. For other CPUs, these instructions are mostly equivalent from the
+// performance point of view, so no need to increase the code size and use
+// extra registers.
+def FeatureVMLxAsFastAsVFMx : SubtargetFeature<"mlxasfastasfmx", "VMLxAsFastAsVFMx", "true",
+                                               "Do not assume FP VMLx is slower than VFMx">;
+
 // Cortex-A8 / A9 Advanced SIMD has multiplier accumulator forwarding.
 def FeatureVMLxForwarding : SubtargetFeature<"vmlx-forwarding",
                                              "HasVMLxForwarding", "true",
@@ -1264,13 +1272,15 @@ def : ProcessorModel<"cortex-a57",  CortexA57Model,     [ARMv8a, ProcA57,
                                                          FeatureCRC,
                                                          FeatureFPAO,
                                                          FeatureAvoidPartialCPSR,
-                                                         FeatureCheapPredicableCPSR]>;
+                                                         FeatureCheapPredicableCPSR,
+                                                         FeatureVMLxAsFastAsVFMx]>;
 
 def : ProcessorModel<"cortex-a72",  CortexA57Model,     [ARMv8a, ProcA72,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,
-                                                         FeatureCRC]>;
+                                                         FeatureCRC,
+                                                         FeatureVMLxAsFastAsVFMx]>;
 
 def : ProcNoItin<"cortex-a73",                          [ARMv8a, ProcA73,
                                                          FeatureHWDivThumb,

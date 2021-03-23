@@ -217,6 +217,10 @@ protected:
   /// whether the FP VML[AS] instructions are slow (if so, don't use them).
   bool SlowFPVMLx = false;
 
+  /// VMLxAsFastAsVFMx - If the VFP2 / NEON instructions are available,
+  /// indicates that FP VML[AS] is not expected to be slower than VFM[AS].
+  bool VMLxAsFastAsVFMx = false;
+
   /// SlowFPVFMx - If the VFP4 / NEON instructions are available, indicates
   /// whether the FP VFM[AS] instructions are slow (if so, don't use them).
   bool SlowFPVFMx = false;
@@ -668,6 +672,7 @@ public:
 
   bool useMulOps() const { return UseMulOps; }
   bool useFPVMLx() const { return !SlowFPVMLx; }
+  bool hasFastVMLxLane() const { return VMLxAsFastAsVFMx; }
   bool useFPVFMx() const {
     return !isTargetDarwin() && hasVFP4Base() && !SlowFPVFMx;
   }

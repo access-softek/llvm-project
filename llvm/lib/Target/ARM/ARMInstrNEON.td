@@ -4403,16 +4403,16 @@ defm VMLAsl   : N3VMulOpSL_HS<0b0000, IIC_VMACi16D, IIC_VMACi32D,
                               IIC_VMACi16Q, IIC_VMACi32Q, "vmla", "i", add>;
 def  VMLAslfd : N3VDMulOpSL<0b10, 0b0001, IIC_VMACD, "vmla", "f32",
                             v2f32, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, UseFPVMLx]>;
+                Requires<[HasNEON, UseFPVMLxLane]>;
 def  VMLAslfq : N3VQMulOpSL<0b10, 0b0001, IIC_VMACQ, "vmla", "f32",
                             v4f32, v2f32, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, UseFPVMLx]>;
+                Requires<[HasNEON, UseFPVMLxLane]>;
 def  VMLAslhd : N3VDMulOpSL16<0b01, 0b0001, IIC_VMACD, "vmla", "f16",
                             v4f16, fmul, fadd>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLxLane]>;
 def  VMLAslhq : N3VQMulOpSL16<0b01, 0b0001, IIC_VMACQ, "vmla", "f16",
                             v8f16, v4f16, fmul, fadd>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLxLane]>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(v8i16 (add (v8i16 QPR:$src1),
@@ -4440,7 +4440,7 @@ def : Pat<(v4f32 (fadd_mlx (v4f32 QPR:$src1),
                            (v2f32 (EXTRACT_SUBREG QPR:$src3,
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>,
-          Requires<[HasNEON, UseFPVMLx]>;
+          Requires<[HasNEON, UseFPVMLxLane]>;
 
 //   VMLAL    : Vector Multiply Accumulate Long (Q += D * D)
 defm VMLALs   : N3VLMulOp_QHS<0,1,0b1000,0, IIC_VMACi16D, IIC_VMACi32D,
@@ -4637,16 +4637,16 @@ defm VMLSsl   : N3VMulOpSL_HS<0b0100, IIC_VMACi16D, IIC_VMACi32D,
                               IIC_VMACi16Q, IIC_VMACi32Q, "vmls", "i", sub>;
 def  VMLSslfd : N3VDMulOpSL<0b10, 0b0101, IIC_VMACD, "vmls", "f32",
                             v2f32, fmul_su, fsub_mlx>,
-                Requires<[HasNEON, UseFPVMLx]>;
+                Requires<[HasNEON, UseFPVMLxLane]>;
 def  VMLSslfq : N3VQMulOpSL<0b10, 0b0101, IIC_VMACQ, "vmls", "f32",
                             v4f32, v2f32, fmul_su, fsub_mlx>,
-                Requires<[HasNEON, UseFPVMLx]>;
+                Requires<[HasNEON, UseFPVMLxLane]>;
 def  VMLSslhd : N3VDMulOpSL16<0b01, 0b0101, IIC_VMACD, "vmls", "f16",
                             v4f16, fmul, fsub>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLxLane]>;
 def  VMLSslhq : N3VQMulOpSL16<0b01, 0b0101, IIC_VMACQ, "vmls", "f16",
                             v8f16, v4f16, fmul, fsub>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLxLane]>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(v8i16 (sub (v8i16 QPR:$src1),
@@ -4673,7 +4673,7 @@ def : Pat<(v4f32 (fsub_mlx (v4f32 QPR:$src1),
                            (v2f32 (EXTRACT_SUBREG QPR:$src3,
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>,
-          Requires<[HasNEON, UseFPVMLx]>;
+          Requires<[HasNEON, UseFPVMLxLane]>;
 
 //   VMLSL    : Vector Multiply Subtract Long (Q -= D * D)
 defm VMLSLs   : N3VLMulOp_QHS<0,1,0b1010,0, IIC_VMACi16D, IIC_VMACi32D,

@@ -87,7 +87,8 @@ class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
       ARM::FeatureVirtualization, ARM::FeatureMClass, ARM::FeatureRClass,
       ARM::FeatureAClass, ARM::FeatureNaClTrap, ARM::FeatureStrictAlign,
       ARM::FeatureLongCalls, ARM::FeatureExecuteOnly, ARM::FeatureReserveR9,
-      ARM::FeatureNoMovt, ARM::FeatureNoNegativeImmediates
+      ARM::FeatureNoMovt, ARM::FeatureNoNegativeImmediates,
+      ARM::FeatureVMLxAsFastAsVFMx,
   };
 
   const ARMSubtarget *getST() const { return ST; }
