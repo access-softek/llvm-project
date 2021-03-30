@@ -525,6 +525,7 @@ namespace {
     bool reassociationCanBreakAddressingModePattern(unsigned Opc,
                                                     const SDLoc &DL, SDValue N0,
                                                     SDValue N1);
+    bool reassociationCanBreakPostIndexingPattern(SDNode *N);
     SDValue reassociateOpsCommutative(unsigned Opc, const SDLoc &DL, SDValue N0,
                                       SDValue N1);
     SDValue reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
@@ -1049,6 +1050,36 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
     }
   }
 
+  return false;
+}
+
+bool DAGCombiner::reassociationCanBreakPostIndexingPattern(SDNode *N) {
+  const DataLayout &DL = DAG.getDataLayout();
+  if (N->getOpcode() != ISD::ADD)
+    return false;
+
+  auto Const = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!Const)
+    return false;
+
+  const APInt &APIntVal = Const->getAPIntValue();
+  if (APIntVal.getBitWidth() > 64)
+    return false;
+  const int64_t ConstValue = APIntVal.getSExtValue();
+
+  // Check for (load/store (add x, const))
+
+  for (SDNode *Node : N->getOperand(0)->uses()) {
+    auto LoadStore = dyn_cast<MemSDNode>(Node);
+    if (!LoadStore)
+      continue;
+
+    EVT VT = LoadStore->getMemoryVT();
+    Type *AccessTy = VT.getTypeForEVT(*DAG.getContext());
+    unsigned AS = LoadStore->getAddressSpace();
+    if (TLI.isPostIndexingBeneficial(DL, AccessTy, AS, ConstValue))
+      return true;
+  }
   return false;
 }
 
@@ -2335,7 +2366,9 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return NewSel;
 
   // reassociate add
-  if (!reassociationCanBreakAddressingModePattern(ISD::ADD, DL, N0, N1)) {
+  if (!reassociationCanBreakAddressingModePattern(ISD::ADD, DL, N0, N1) &&
+      !reassociationCanBreakPostIndexingPattern(N) &&
+      !reassociationCanBreakPostIndexingPattern(N0.getNode())) {
     if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
       return RADD;
   }

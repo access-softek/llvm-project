@@ -127,6 +127,126 @@ define <2 x double> @vld1Qf64(double* %A) nounwind {
 	ret <2 x double> %tmp1
 }
 
+define <4 x float> @vld1_post_index(float* %A) {
+;CHECK-LABEL: vld1_post_index:
+;CHECK-NOT: add
+;CHECK-NOT: sub
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]
+  %X.ptr = bitcast float* %A to <4 x float>*
+  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 4
+  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 8
+  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+define <4 x float> @vld1_post_index_positive_initial_offset(float* %A) {
+;CHECK-LABEL: vld1_post_index_positive_initial_offset:
+;CHECK: add r0, r0, #32
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]
+  %X.ptr.elt = getelementptr inbounds float, float* %A, i32 8
+  %X.ptr = bitcast float* %X.ptr.elt to <4 x float>*
+  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 12
+  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 16
+  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+define <4 x float> @vld1_post_index_negative_initial_offset(float* %A) {
+;CHECK-LABEL: vld1_post_index_negative_initial_offset:
+;CHECK: sub r0, r0, #64
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]
+  %X.ptr.elt = getelementptr inbounds float, float* %A, i32 -16
+  %X.ptr = bitcast float* %X.ptr.elt to <4 x float>*
+  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 -12
+  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 -8
+  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+@global_float_array = external global [128 x float], align 4
+define <4 x float> @vld1_post_index_from_global() {
+;CHECK-LABEL: vld1_post_index_from_global:
+;CHECK: ldr r[[BASE:[0-9]+]],
+;CHECK: add r[[BASE]], r[[BASE]], #32
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]
+  %X = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([128 x float], [128 x float]* @global_float_array, i32 0, i32 8) to <4 x float>*), align 4
+  %Y = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([128 x float], [128 x float]* @global_float_array, i32 0, i32 12) to <4 x float>*), align 4
+  %Z = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([128 x float], [128 x float]* @global_float_array, i32 0, i32 16) to <4 x float>*), align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+define <4 x float> @vld1_post_index_from_stack() {
+;CHECK-LABEL: vld1_post_index_from_stack:
+;CHECK: bl external_function
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE:[0-9]+]]]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]!
+;CHECK: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]
+  %array = alloca [32 x float], align 4
+  %arraydecay = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 0
+  call void @external_function(float* %arraydecay)
+  %X.ptr = bitcast [32 x float]* %array to <4 x float>*
+  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+  %Y.ptr.elt = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 4
+  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+  %Z.ptr.elt = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 8
+  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+define <2 x double> @vld1_post_index_double(double* %A) {
+;CHECK-LABEL: vld1_post_index_double:
+;CHECK: add r0, r0, #64
+;CHECK: vld1.64 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.64 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+;CHECK: vld1.64 {{{d[0-9]+, d[0-9]+}}}, [r0]
+  %X.ptr.elt = getelementptr inbounds double, double* %A, i32 8
+  %X.ptr = bitcast double* %X.ptr.elt to <2 x double>*
+  %X = load <2 x double>, <2 x double>* %X.ptr, align 8
+  %Y.ptr.elt = getelementptr inbounds double, double* %A, i32 10
+  %Y.ptr = bitcast double* %Y.ptr.elt to <2 x double>*
+  %Y = load <2 x double>, <2 x double>* %Y.ptr, align 8
+  %Z.ptr.elt = getelementptr inbounds double, double* %A, i32 12
+  %Z.ptr = bitcast double* %Z.ptr.elt to <2 x double>*
+  %Z = load <2 x double>, <2 x double>* %Z.ptr, align 8
+  %tmp.sum = fadd <2 x double> %X, %Y
+  %sum = fadd <2 x double> %tmp.sum, %Z
+  ret <2 x double> %sum
+}
+
+declare void @external_function(float*)
+
 declare <8 x i8>  @llvm.arm.neon.vld1.v8i8.p0i8(i8*, i32) nounwind readonly
 declare <4 x i16> @llvm.arm.neon.vld1.v4i16.p0i8(i8*, i32) nounwind readonly
 declare <2 x i32> @llvm.arm.neon.vld1.v2i32.p0i8(i8*, i32) nounwind readonly

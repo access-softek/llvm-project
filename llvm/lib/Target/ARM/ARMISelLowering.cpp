@@ -17355,6 +17355,16 @@ bool ARMTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
+bool ARMTargetLowering::isPostIndexingBeneficial(const DataLayout &DL, Type *Ty,
+                                                 unsigned AddrSpace, int64_t Increment) const {
+  // NEON has rather restricted address calculation for vector load / store
+  // instructions compared to MVE or AArch64 ASIMD.
+  if (Subtarget->hasMVEIntegerOps())
+    return false;
+
+  return Ty->isVectorTy() && DL.getTypeSizeInBits(Ty) / 8 == Increment;
+}
+
 /// isLegalICmpImmediate - Return true if the specified immediate is legal
 /// icmp immediate, that is the target has icmp instructions which can compare
 /// a register against the immediate without having to materialize the

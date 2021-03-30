@@ -439,6 +439,9 @@ class VectorType;
                                Type *Ty, unsigned AS,
                                Instruction *I = nullptr) const override;
 
+    bool isPostIndexingBeneficial(const DataLayout &DL, Type *Ty,
+                                  unsigned AddrSpace, int64_t Increment) const override;
+
     /// getScalingFactorCost - Return the cost of the scaling used in
     /// addressing mode represented by AM.
     /// If the AM is supported, the return value must be >= 0.
