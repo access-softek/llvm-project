@@ -89,6 +89,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMLoadStoreOptPass(Registry);
+  initializeARMPostIndexingOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
   initializeARMParallelDSPPass(Registry);
   initializeARMConstantIslandsPass(Registry);
@@ -462,6 +463,7 @@ bool ARMPassConfig::addPreISel() {
   if (TM->getOptLevel() != CodeGenOpt::None) {
     addPass(createHardwareLoopsPass());
     addPass(createMVETailPredicationPass());
+    addPass(createARMPostIndexingOptimizationPass());
   }
 
   return false;

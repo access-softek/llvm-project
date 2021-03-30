@@ -2341,6 +2341,15 @@ public:
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
 
+  /// Return true if it is beneficial to retain post-indexing-friendly patterns
+  /// while performing optimizations.
+  virtual bool shouldRetainImmediatePostIncrement(const DataLayout &DL,
+                                                  Type *Ty, CombineLevel Level,
+                                                  unsigned AddrSpace,
+                                                  int64_t Increment) const {
+    return false;
+  }
+
   /// Return the cost of the scaling factor used in the addressing mode
   /// represented by AM for this target, for a load/store of the specified type.
   ///

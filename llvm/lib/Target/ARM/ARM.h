@@ -43,6 +43,7 @@ FunctionPass *createARMISelDag(ARMBaseTargetMachine &TM,
                                CodeGenOpt::Level OptLevel);
 FunctionPass *createA15SDOptimizerPass();
 FunctionPass *createARMLoadStoreOptimizationPass(bool PreAlloc = false);
+FunctionPass *createARMPostIndexingOptimizationPass();
 FunctionPass *createARMExpandPseudoPass();
 FunctionPass *createARMConstantIslandPass();
 FunctionPass *createMLxExpansionPass();
@@ -65,6 +66,7 @@ void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
 
 void initializeARMParallelDSPPass(PassRegistry &);
 void initializeARMLoadStoreOptPass(PassRegistry &);
+void initializeARMPostIndexingOptPass(PassRegistry &);
 void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);
 void initializeARMConstantIslandsPass(PassRegistry &);
 void initializeARMExpandPseudoPass(PassRegistry &);

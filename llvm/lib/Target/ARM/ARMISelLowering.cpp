@@ -17745,6 +17745,27 @@ bool ARMTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
+bool ARMTargetLowering::shouldRetainImmediatePostIncrement(
+    const DataLayout &DL, Type *Ty, CombineLevel Level, unsigned AddrSpace,
+    int64_t Increment) const {
+  // NEON has rather restricted address calculation for vector load / store
+  // instructions compared to MVE or AArch64 ASIMD.
+  if (Subtarget->hasMVEIntegerOps())
+    return false;
+
+  // If the first DAG optimization pass did not consume this increment,
+  // try combining as usual during subsequent optimization passes.
+  if (Level != CombineLevel::BeforeLegalizeTypes)
+    return false;
+
+  if (!Ty->isVectorTy())
+    return false;
+
+  unsigned BitSize = DL.getTypeSizeInBits(Ty);
+
+  return BitSize > 64 && isPowerOf2_32(BitSize);
+}
+
 /// isLegalICmpImmediate - Return true if the specified immediate is legal
 /// icmp immediate, that is the target has icmp instructions which can compare
 /// a register against the immediate without having to materialize the
