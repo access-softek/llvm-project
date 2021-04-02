@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fcxx-exceptions -fexceptions -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fcxx-exceptions -fexceptions -emit-llvm -o - %s | tee %s.ll | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fcxx-exceptions -fexceptions -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_SMALL:.*]] = type { i32* }
@@ -202,7 +202,8 @@ void testIgnoredLarge() {
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_TRIVIAL:.*]], align 4
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_TRIVIAL]], %[[STRUCT_TRIVIAL]]* %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load i32, i32* %[[COERCE_DIVE]], align 4
-// CHECK: %[[COERCE_VAL_II:.*]] = zext i32 %[[V0]] to i64
+// CHECK: %[[COERCE_VAL_VEC:.*]] = insertelement <2 x i32> undef, i32 %[[V0]], i8 0
+// CHECK: %[[COERCE_VAL_II:.*]] = bitcast <2 x i32> %[[COERCE_VAL_VEC]] to i64
 // CHECK: ret i64 %[[COERCE_VAL_II]]
 // CHECK: }
 

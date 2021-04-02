@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | tee %s.ll | FileCheck %s
 
 // CHECK: define{{.*}} signext i8 @f0()
 char f0(void) {
@@ -744,4 +744,64 @@ float32x3_t test_hva_v3_call(HFAv3 *a) {
 // CHECK-LABEL: define{{.*}} <3 x float> @test_hva_v3_call(%struct.HFAv3* %a)
 // CHECK: call <3 x float> (i32, ...) @test_hva_v3(i32 1, [4 x <4 x float>] {{.*}})
   return test_hva_v3(1, *a);
+}
+
+char ret_coerce1(void) {
+  // CHECK-LABEL: i8 @ret_coerce1
+  // CHECK:      alloca i8
+  // CHECK-NEXT: load i8
+  // CHECK-NEXT: ret i8
+}
+
+short ret_coerce2(void) {
+  // CHECK-LABEL: i16 @ret_coerce2
+  // CHECK:      alloca i16
+  // CHECK-NEXT: load i16
+  // CHECK-NEXT: ret i16
+}
+
+int ret_coerce3(void) {
+  // CHECK-LABEL: i32 @ret_coerce3
+  // CHECK:      alloca i32
+  // CHECK-NEXT: load i32
+  // CHECK-NEXT: ret i32
+}
+
+struct ret_coerce_char {
+  char f0;
+};
+struct ret_coerce_char ret_coerce4(void) {
+  // CHECK-LABEL: i64 @ret_coerce4
+  // CHECK: %[[ALLOCA:.*]] = alloca %struct.ret_coerce_char
+  // CHECK: %[[GEP:.*]] = getelementptr {{.*}} %[[ALLOCA]], i32 0, i32 0
+  // CHECK: %[[LOAD:.*]] = load i8, i8* %[[GEP]]
+  // CHECK: %[[VEC:.*]] = insertelement <8 x i8> undef, i8 %[[LOAD]], i8 0
+  // CHECK: %[[CAST:.*]] = bitcast <8 x i8> %[[VEC]] to i64
+  // CHECK: ret i64 %[[CAST]]
+}
+
+struct ret_coerce_short {
+  short f0;
+};
+struct ret_coerce_short ret_coerce5(void) {
+  // CHECK-LABEL: i64 @ret_coerce5
+  // CHECK: %[[ALLOCA:.*]] = alloca %struct.ret_coerce_short
+  // CHECK: %[[GEP:.*]] = getelementptr {{.*}} %[[ALLOCA]], i32 0, i32 0
+  // CHECK: %[[LOAD:.*]] = load i16, i16* %[[GEP]]
+  // CHECK: %[[VEC:.*]] = insertelement <4 x i16> undef, i16 %[[LOAD]], i8 0
+  // CHECK: %[[CAST:.*]] = bitcast <4 x i16> %[[VEC]] to i64
+  // CHECK: ret i64 %[[CAST]]
+}
+
+struct ret_coerce_int {
+  int f0;
+};
+struct ret_coerce_int ret_coerce6(void) {
+  // CHECK-LABEL: i64 @ret_coerce6
+  // CHECK: %[[ALLOCA:.*]] = alloca %struct.ret_coerce_int
+  // CHECK: %[[GEP:.*]] = getelementptr {{.*}} %[[ALLOCA]], i32 0, i32 0
+  // CHECK: %[[LOAD:.*]] = load i32, i32* %[[GEP]]
+  // CHECK: %[[VEC:.*]] = insertelement <2 x i32> undef, i32 %[[LOAD]], i8 0
+  // CHECK: %[[CAST:.*]] = bitcast <2 x i32> %[[VEC]] to i64
+  // CHECK: ret i64 %[[CAST]]
 }

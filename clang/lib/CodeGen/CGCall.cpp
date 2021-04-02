@@ -1171,8 +1171,8 @@ EnterStructPointerForCoercedAccess(Address SrcPtr,
 /// This behaves as if the value were coerced through memory, so on big-endian
 /// targets the high bits are preserved in a truncation, while little-endian
 /// targets preserve the low bits.
-static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val,
-                                             llvm::Type *Ty,
+static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val, llvm::Type *Ty,
+                                             bool UndefUnusedBits,
                                              CodeGenFunction &CGF) {
   if (Val->getType() == Ty)
     return Val;
@@ -1206,8 +1206,26 @@ static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val,
         Val = CGF.Builder.CreateShl(Val, DstSize - SrcSize, "coerce.highbits");
       }
     } else {
-      // Little-endian targets preserve the low bits. No shifts required.
-      Val = CGF.Builder.CreateIntCast(Val, DestIntTy, false, "coerce.val.ii");
+      llvm::IntegerType *OrigType = cast<llvm::IntegerType>(Val->getType());
+      unsigned OrigWidth = OrigType->getBitWidth();
+      unsigned DestWidth = cast<llvm::IntegerType>(DestIntTy)->getBitWidth();
+      if (UndefUnusedBits && DestWidth > OrigWidth &&
+          DestWidth % OrigWidth == 0) {
+        // Insert the value in an undef vector, and then bitcast the vector to
+        // the destination type. Unused vector elements and the corresponding
+        // bits of the destination value can be treated as undef by
+        // optimizations.
+        llvm::VectorType *VecType =
+            llvm::VectorType::get(OrigType, DestWidth / OrigWidth,
+                                  /*Scalable=*/false);
+        llvm::Value *Vec = CGF.Builder.CreateInsertElement(
+            llvm::UndefValue::get(VecType), Val, CGF.Builder.getInt8(0),
+            "coerce.val.vec");
+        Val = CGF.Builder.CreateBitCast(Vec, DestIntTy, "coerce.val.vec.ii");
+      } else {
+        // Little-endian targets preserve the low bits. No shifts required.
+        Val = CGF.Builder.CreateIntCast(Val, DestIntTy, false, "coerce.val.ii");
+      }
     }
   }
 
@@ -1215,8 +1233,6 @@ static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val,
     Val = CGF.Builder.CreateIntToPtr(Val, Ty, "coerce.val.ip");
   return Val;
 }
-
-
 
 /// CreateCoercedLoad - Create a load from \arg SrcPtr interpreted as
 /// a pointer to an object of type \arg Ty, known to be aligned to
@@ -1226,6 +1242,7 @@ static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val,
 /// destination type; in this situation the values of bits which not
 /// present in the src are undefined.
 static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
+                                      bool UndefUnusedBits,
                                       CodeGenFunction &CGF) {
   llvm::Type *SrcTy = Src.getElementType();
 
@@ -1248,7 +1265,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   if ((isa<llvm::IntegerType>(Ty) || isa<llvm::PointerType>(Ty)) &&
       (isa<llvm::IntegerType>(SrcTy) || isa<llvm::PointerType>(SrcTy))) {
     llvm::Value *Load = CGF.Builder.CreateLoad(Src);
-    return CoerceIntOrPtrToIntOrPtr(Load, Ty, CGF);
+    return CoerceIntOrPtrToIntOrPtr(Load, Ty, UndefUnusedBits, CGF);
   }
 
   // If load is legal, just bitcast the src pointer.
@@ -1314,9 +1331,8 @@ void CodeGenFunction::EmitAggregateStore(llvm::Value *Val, Address Dest,
 ///
 /// This safely handles the case when the src type is larger than the
 /// destination type; the upper bits of the src will be lost.
-static void CreateCoercedStore(llvm::Value *Src,
-                               Address Dst,
-                               bool DstIsVolatile,
+static void CreateCoercedStore(llvm::Value *Src, Address Dst,
+                               bool DstIsVolatile, bool UndefUnusedBits,
                                CodeGenFunction &CGF) {
   llvm::Type *SrcTy = Src->getType();
   llvm::Type *DstTy = Dst.getElementType();
@@ -1346,7 +1362,7 @@ static void CreateCoercedStore(llvm::Value *Src,
   // extension or truncation to the desired type.
   if ((isa<llvm::IntegerType>(SrcTy) || isa<llvm::PointerType>(SrcTy)) &&
       (isa<llvm::IntegerType>(DstTy) || isa<llvm::PointerType>(DstTy))) {
-    Src = CoerceIntOrPtrToIntOrPtr(Src, DstTy, CGF);
+    Src = CoerceIntOrPtrToIntOrPtr(Src, DstTy, UndefUnusedBits, CGF);
     CGF.Builder.CreateStore(Src, Dst, DstIsVolatile);
     return;
   }
@@ -2873,7 +2889,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         assert(NumIRArgs == 1);
         auto AI = Fn->getArg(FirstIRArg);
         AI->setName(Arg->getName() + ".coerce");
-        CreateCoercedStore(AI, Ptr, /*DstIsVolatile=*/false, *this);
+        CreateCoercedStore(AI, Ptr, /*DstIsVolatile=*/false,
+                           /*UndefUnusedBits=*/false, *this);
       }
 
       // Match to what EmitParmDecl is expecting for this type.
@@ -3458,7 +3475,8 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
       // If the value is offset in memory, apply the offset now.
       Address V = emitAddressAtOffset(*this, ReturnValue, RetAI);
 
-      RV = CreateCoercedLoad(V, RetAI.getCoerceToType(), *this);
+      RV = CreateCoercedLoad(V, RetAI.getCoerceToType(),
+                             /*UndefUnusedBits=*/true, *this);
     }
 
     // In ARC, end functions that return a retainable type with a call
@@ -4928,8 +4946,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       } else {
         // In the simple case, just pass the coerced loaded value.
         assert(NumIRArgs == 1);
-        llvm::Value *Load =
-            CreateCoercedLoad(Src, ArgInfo.getCoerceToType(), *this);
+        llvm::Value *Load = CreateCoercedLoad(Src, ArgInfo.getCoerceToType(),
+                                              /*UndefUnusedBits=*/false, *this);
 
         if (CallInfo.isCmseNSCall()) {
           // For certain parameter types, clear padding bits, as they may reveal
@@ -5406,7 +5424,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // If the value is offset in memory, apply the offset now.
       Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
-      CreateCoercedStore(CI, StorePtr, DestIsVolatile, *this);
+      CreateCoercedStore(CI, StorePtr, DestIsVolatile, /*UndefUnusedBits=*/true,
+                         *this);
 
       return convertTempToRValue(DestPtr, RetTy, SourceLocation());
     }
