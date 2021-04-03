@@ -571,3 +571,28 @@ define i8* @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptr
   %ptr = bitcast <1 x i8*> %ptrvec to i8*
   ret i8* %ptr
 }
+
+define i64 @bitcast_from_undef_insert_elem(i64 %val) {
+; CHECK-LABEL: @bitcast_from_undef_insert_elem
+; CHECK-SAME:    (i64 %[[VAL:.*]])
+; CHECK-NEXT:    ret i64 %[[VAL]]
+;
+  %coerce.val.ii = trunc i64 %val to i32
+  %coerce.val.vec = insertelement <2 x i32> undef, i32 %coerce.val.ii, i8 0
+  %coerce.val.vec.ii = bitcast <2 x i32> %coerce.val.vec to i64
+  ret i64 %coerce.val.vec.ii
+}
+
+define i64 @bitcast_from_undef_insert_elem_incompatible_size(i32 %val) {
+; CHECK-LABEL: @bitcast_from_undef_insert_elem
+; CHECK-SAME:    (i32 %[[VAL:.*]])
+; CHECK-NEXT:    %[[COERCE:.*]] = trunc i32 %[[VAL]] to i16
+; CHECK-NEXT:    %[[VEC:.*]] = insertelement <4 x i16> undef, i16 %[[COERCE]], i8 0
+; CHECK-NEXT:    %[[BITCAST:.*]] = bitcast <4 x i16> %[[VEC]] to i64
+; CHECK-NEXT:    ret i64 %[[BITCAST]]
+;
+  %coerce.val.ii = trunc i32 %val to i16
+  %coerce.val.vec = insertelement <4 x i16> undef, i16 %coerce.val.ii, i8 0
+  %coerce.val.vec.ii = bitcast <4 x i16> %coerce.val.vec to i64
+  ret i64 %coerce.val.vec.ii
+}

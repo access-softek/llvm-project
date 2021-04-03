@@ -2359,6 +2359,28 @@ static Instruction *foldBitCastSelect(BitCastInst &BitCast,
   return nullptr;
 }
 
+// Optimize bitcast(insertelt(undef,trunc(X))) --> bitcast(X)
+static Value *foldBitCastUndefInsElem(BitCastInst &BitCast,
+                                      InstCombiner::BuilderTy &Builder) {
+  Value *OrigVal;
+  uint64_t Idx = ~0U;
+  if (!match(BitCast.getOperand(0),
+             m_OneUse(m_InsertElt(m_Undef(), m_Trunc(m_Value(OrigVal)),
+                                  m_ConstantInt(Idx))))) {
+    return nullptr;
+  }
+
+  if (Idx != 0)
+    return nullptr;
+
+  if (OrigVal->getType()->getScalarSizeInBits() !=
+      BitCast.getType()->getScalarSizeInBits()) {
+    return nullptr;
+  }
+
+  return Builder.CreateBitCast(OrigVal, BitCast.getType());
+}
+
 /// Check if all users of CI are StoreInsts.
 static bool hasStoreUsersOnly(CastInst &CI) {
   for (User *U : CI.users()) {
@@ -2719,6 +2741,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
 
   if (Instruction *I = foldBitCastSelect(CI, Builder))
     return I;
+
+  if (Value *V = foldBitCastUndefInsElem(CI, Builder))
+    return replaceInstUsesWith(CI, V);
 
   if (SrcTy->isPointerTy())
     return commonPointerCastTransforms(CI);
