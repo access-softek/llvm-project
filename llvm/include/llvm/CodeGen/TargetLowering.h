@@ -2342,7 +2342,7 @@ public:
 
   /// Return true if it is beneficial to retain post-indexing-friendly patterns
   /// while performing optimizations.
-  virtual bool isPostIndexingBeneficial(const DataLayout &DL, Type *Ty,
+  virtual bool shouldRetainImmediatePostIncrement(const DataLayout &DL, Type *Ty,
                                         unsigned AddrSpace, int64_t Increment) const {
     return false;
   }

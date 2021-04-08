@@ -1077,7 +1077,7 @@ bool DAGCombiner::reassociationCanBreakPostIndexingPattern(SDNode *N) {
     EVT VT = LoadStore->getMemoryVT();
     Type *AccessTy = VT.getTypeForEVT(*DAG.getContext());
     unsigned AS = LoadStore->getAddressSpace();
-    if (TLI.isPostIndexingBeneficial(DL, AccessTy, AS, ConstValue))
+    if (TLI.shouldRetainImmediatePostIncrement(DL, AccessTy, AS, ConstValue))
       return true;
   }
   return false;

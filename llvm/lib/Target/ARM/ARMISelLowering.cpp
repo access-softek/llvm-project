@@ -17355,7 +17355,7 @@ bool ARMTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
-bool ARMTargetLowering::isPostIndexingBeneficial(const DataLayout &DL, Type *Ty,
+bool ARMTargetLowering::shouldRetainImmediatePostIncrement(const DataLayout &DL, Type *Ty,
                                                  unsigned AddrSpace, int64_t Increment) const {
   // NEON has rather restricted address calculation for vector load / store
   // instructions compared to MVE or AArch64 ASIMD.

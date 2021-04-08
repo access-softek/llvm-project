@@ -97,6 +97,8 @@ char ARMPostIndexingOpt::ID = 0;
 INITIALIZE_PASS(ARMPostIndexingOpt, DEBUG_TYPE, PASS_DESC, false, false)
 
 bool ARMPostIndexingOpt::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
   // If MVE is available, skip this function.
   const auto &TPC = getAnalysis<TargetPassConfig>();
   const auto &TM = TPC.getTM<TargetMachine>();
