@@ -59,8 +59,6 @@ struct LdStInfo {
 
   // Returns current *direct* base operand
   Value *getBaseOperand() { return LdSt->getOperand(BaseOperandIndex); }
-
-  bool canUsePostIncrementedAddressFrom(const LdStInfo &Predecessor) const;
 };
 
 struct ARMPostIndexingOpt : public FunctionPass {
@@ -81,13 +79,17 @@ struct ARMPostIndexingOpt : public FunctionPass {
 private:
   // Returns (nullptr, 0) for instructions not handled by this pass
   std::pair<Type *, unsigned> getDataTypeAndBaseIndex(Instruction *I) const;
+  // Guess a common stride (aside from post-incrementing by access size) that
+  // is suitable for "[Rn], Rm" addressing mode, if any
+  int32_t guessCustomAccessStride(ArrayRef<LdStInfo> Instructions) const;
   // Rewrite a memory address used by Second to use address of First incremented
-  // by access size of First
-  bool rewriteAddressCalculation(LdStInfo &First, LdStInfo &Second) const;
+  // by a constant value
+  bool rewriteAddressCalculation(LdStInfo &First, LdStInfo &Second, int32_t RegStride) const;
   bool runOnBasicBlock(BasicBlock &BB) const;
 
   const DataLayout *DL;
   const TargetLibraryInfo *TLInfo;
+  PointerType *BytePtrTy;
 };
 
 } // end anonymous namespace
@@ -106,8 +108,11 @@ bool ARMPostIndexingOpt::runOnFunction(Function &F) {
   if (STI.hasMVEIntegerOps())
     return false;
 
+  LLVMContext &C = F.getContext();
   DL = &F.getParent()->getDataLayout();
   TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  Type *Int8Ty = IntegerType::get(C, 8);
+  BytePtrTy = PointerType::get(Int8Ty, /* AddressSpace = */ 0);
 
   bool Modified = false;
   for (auto &BB : F)
@@ -161,21 +166,35 @@ LdStInfo::LdStInfo(const DataLayout &DL, Instruction *LdSt,
   }
 }
 
-bool LdStInfo::canUsePostIncrementedAddressFrom(const LdStInfo &Predecessor) const {
-  return IndirectBase == Predecessor.IndirectBase &&
-      Offset == Predecessor.Offset + Predecessor.AccessSize;
+int32_t ARMPostIndexingOpt::guessCustomAccessStride(ArrayRef<LdStInfo> Instructions) const {
+  int32_t Stride = 0; // not decided
+  assert(!Instructions.empty());
+  for (auto I = Instructions.begin(), End = Instructions.end(); std::next(I) != End; ++I) {
+    int32_t ThisStride = std::next(I)->Offset - I->Offset;
+    // Check if "[Rn]!" addressing mode can be used
+    if (ThisStride == I->AccessSize)
+      continue;
+    // If this is the first instruction requiring a register operand,
+    // request this stride value
+    if (Stride == 0)
+      Stride = ThisStride;
+    // If multiple different stride values have to be used,
+    // conservatively refrain from using "[Rn], Rm" addressing mode
+    if (Stride != ThisStride)
+      return 0;
+  }
+  return Stride;
 }
 
-bool ARMPostIndexingOpt::rewriteAddressCalculation(LdStInfo &First, LdStInfo &Second) const {
+bool ARMPostIndexingOpt::rewriteAddressCalculation(LdStInfo &First, LdStInfo &Second, int32_t RegStride) const {
   LLVM_DEBUG(dbgs() << "Rewriting address for post-indexing: ";
              Second.LdSt->dump());
 
   IRBuilder<> IRB(Second.LdSt);
-  PointerType *PtrTy = cast<PointerType>(Second.getBaseOperand()->getType());
-  unsigned ElementSize = DL->getTypeSizeInBits(PtrTy->getElementType()) / 8;
-  if (First.AccessSize % ElementSize != 0)
-    return false; // Not yet handled
-  unsigned ElementOffset = First.AccessSize / ElementSize;
+
+  int32_t Stride = Second.Offset - First.Offset;
+  if (Stride != First.AccessSize && Stride != RegStride)
+    return false;
 
   // In case GEPOperand matched ContantExpr, replace it by instruction to
   // prevent folding
@@ -185,17 +204,33 @@ bool ARMPostIndexingOpt::rewriteAddressCalculation(LdStInfo &First, LdStInfo &Se
     First.LdSt->replaceUsesOfWith(Const, Inst);
   }
 
-  Value *BaseCasted = IRB.CreatePointerCast(First.getBaseOperand(), PtrTy);
-  Value *OldBaseExact = Second.getBaseOperand();
-  Value *NewBaseExact = IRB.CreateConstGEP1_32(BaseCasted, ElementOffset,
-                                               "postinc");
-  Second.LdSt->replaceUsesOfWith(OldBaseExact, NewBaseExact);
-  RecursivelyDeleteTriviallyDeadInstructions(OldBaseExact, TLInfo, nullptr);
+  Value *FirstBase = First.getBaseOperand();
+  Value *OldSecondBase = Second.getBaseOperand();
+  PointerType *FirstBaseTy = cast<PointerType>(FirstBase->getType());
+  PointerType *SecondBaseTy = cast<PointerType>(OldSecondBase->getType());
+  assert(FirstBaseTy->getAddressSpace() == 0 && "Unexpected address space");
+  assert(SecondBaseTy->getAddressSpace() == 0 && "Unexpected address space");
+
+  int32_t FirstElementSize = DL->getTypeSizeInBits(FirstBaseTy->getElementType()) / 8;
+
+  Value *NewSecondBase;
+  if (FirstBaseTy == SecondBaseTy && Stride % FirstElementSize == 0) {
+    int32_t ElementStride = Stride / FirstElementSize;
+    NewSecondBase = IRB.CreateConstGEP1_32(FirstBase, ElementStride, "postinc");
+  } else {
+    Value *FirstBaseBytePtr = IRB.CreateBitCast(FirstBase, BytePtrTy, "oldbase.byteptr");
+    Value *NewSecondBaseBytePtr = IRB.CreateConstGEP1_32(FirstBaseBytePtr, Stride, "postinc.byteptr");
+    NewSecondBase = IRB.CreateBitCast(NewSecondBaseBytePtr, SecondBaseTy, "postinc");
+  }
+  Second.LdSt->replaceUsesOfWith(OldSecondBase, NewSecondBase);
+  RecursivelyDeleteTriviallyDeadInstructions(OldSecondBase, TLInfo, nullptr);
   return true;
 }
 
 bool ARMPostIndexingOpt::runOnBasicBlock(BasicBlock &BB) const {
-  SmallVector<LdStInfo, 16> Worklist;
+  DenseMap<Value *, SmallVector<LdStInfo, 16>> LdStMap;
+
+  // Collect relevant load/store instructions, grouped by guessed base address
   for (auto &I : BB) {
     Type *ValueTy;
     unsigned BaseOperandIndex;
@@ -204,19 +239,20 @@ bool ARMPostIndexingOpt::runOnBasicBlock(BasicBlock &BB) const {
       continue;
 
     unsigned AccessSize = DL->getTypeSizeInBits(ValueTy) / 8;
-    if (isPowerOf2_32(AccessSize))
-      Worklist.emplace_back(*DL, &I, BaseOperandIndex, AccessSize);
+    if (isPowerOf2_32(AccessSize)) {
+      LdStInfo LSI(*DL, &I, BaseOperandIndex, AccessSize);
+      LdStMap[LSI.IndirectBase].push_back(std::move(LSI));
+    }
   }
 
+  // For each group, form a chain of address increments
   bool Modified = false;
-  for (auto I = Worklist.begin(), E = Worklist.end(); I != E; ++I) {
-    // Find some other instruction that is after the current one and can use
-    // post-incremented address value.
-    auto Next = std::find_if(I, E, [I](LdStInfo Successor) {
-      return Successor.canUsePostIncrementedAddressFrom(*I);
-    });
-    if (Next != E)
-      Modified |= rewriteAddressCalculation(*I, *Next);
+  for (auto BaseAndWorklist : LdStMap) {
+    auto Worklist = BaseAndWorklist.second;
+    int32_t RegStride = guessCustomAccessStride(Worklist);
+    assert(!Worklist.empty());
+    for (auto I = Worklist.begin(), E = Worklist.end(); std::next(I) != E; ++I)
+      Modified |= rewriteAddressCalculation(*I, *std::next(I), RegStride);
   }
   return Modified;
 }

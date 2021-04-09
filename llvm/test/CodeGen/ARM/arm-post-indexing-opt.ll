@@ -36,6 +36,105 @@ define <4 x float> @test(float* %A) {
 ;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
 ;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]
 
+define <4 x float> @test_stride(float* %A) {
+  %X.ptr = bitcast float* %A to <4 x float>*
+  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 6
+  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 12
+  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+; IR-LABEL: define <4 x float> @test_stride(float* %A) {
+; IR-NEXT:    %X.ptr = bitcast float* %A to <4 x float>*
+; IR-NEXT:    %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+; IR-NEXT:    %oldbase.byteptr = bitcast <4 x float>* %X.ptr to i8*
+; IR-NEXT:    %postinc.byteptr = getelementptr i8, i8* %oldbase.byteptr, i32 24
+; IR-NEXT:    %postinc = bitcast i8* %postinc.byteptr to <4 x float>*
+; IR-NEXT:    %Y = load <4 x float>, <4 x float>* %postinc, align 4
+; IR-NEXT:    %oldbase.byteptr1 = bitcast <4 x float>* %postinc to i8*
+; IR-NEXT:    %postinc.byteptr2 = getelementptr i8, i8* %oldbase.byteptr1, i32 24
+; IR-NEXT:    %postinc3 = bitcast i8* %postinc.byteptr2 to <4 x float>*
+; IR-NEXT:    %Z = load <4 x float>, <4 x float>* %postinc3, align 4
+; IR-NEXT:    %tmp.sum = fadd <4 x float> %X, %Y
+; IR-NEXT:    %sum = fadd <4 x float> %tmp.sum, %Z
+; IR-NEXT:    ret <4 x float> %sum
+; IR-NEXT:  }
+
+; ASM-LABEL: test_stride:
+; ASM: mov r[[STRIDE:[0-9]+]], #24
+; ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0], r[[STRIDE]]
+; ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0], r[[STRIDE]]
+; ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]
+
+define <4 x float> @test_stride_mixed(float* %A) {
+  %X.ptr = bitcast float* %A to <4 x float>*
+  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 6
+  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 10
+  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+; IR-LABEL: define <4 x float> @test_stride_mixed(float* %A) {
+; IR-NEXT:    %X.ptr = bitcast float* %A to <4 x float>*
+; IR-NEXT:    %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+; IR-NEXT:    %oldbase.byteptr = bitcast <4 x float>* %X.ptr to i8*
+; IR-NEXT:    %postinc.byteptr = getelementptr i8, i8* %oldbase.byteptr, i32 24
+; IR-NEXT:    %postinc = bitcast i8* %postinc.byteptr to <4 x float>*
+; IR-NEXT:    %Y = load <4 x float>, <4 x float>* %postinc, align 4
+; IR-NEXT:    %postinc1 = getelementptr <4 x float>, <4 x float>* %postinc, i32 1
+; IR-NEXT:    %Z = load <4 x float>, <4 x float>* %postinc1, align 4
+; IR-NEXT:    %tmp.sum = fadd <4 x float> %X, %Y
+; IR-NEXT:    %sum = fadd <4 x float> %tmp.sum, %Z
+; IR-NEXT:    ret <4 x float> %sum
+; IR-NEXT:  }
+
+; ASM-LABEL: test_stride_mixed:
+; ASM: mov r[[STRIDE:[0-9]+]], #24
+; ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0], r[[STRIDE]]
+; ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]!
+; ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r0]
+
+; Refrain from using multiple stride registers
+define <4 x float> @test_stride_noop(float* %A) {
+  %X.ptr = bitcast float* %A to <4 x float>*
+  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 6
+  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 14
+  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %tmp.sum = fadd <4 x float> %X, %Y
+  %sum = fadd <4 x float> %tmp.sum, %Z
+  ret <4 x float> %sum
+}
+
+; IR-LABEL: define <4 x float> @test_stride_noop(float* %A) {
+; IR-NEXT:    %X.ptr = bitcast float* %A to <4 x float>*
+; IR-NEXT:    %X = load <4 x float>, <4 x float>* %X.ptr, align 4
+; IR-NEXT:    %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 6
+; IR-NEXT:    %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
+; IR-NEXT:    %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
+; IR-NEXT:    %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 14
+; IR-NEXT:    %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
+; IR-NEXT:    %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+; IR-NEXT:    %tmp.sum = fadd <4 x float> %X, %Y
+; IR-NEXT:    %sum = fadd <4 x float> %tmp.sum, %Z
+; IR-NEXT:    ret <4 x float> %sum
+; IR-NEXT:  }
+
 define <4 x float> @test_positive_initial_offset(float* %A) {
   %X.ptr.elt = getelementptr inbounds float, float* %A, i32 8
   %X.ptr = bitcast float* %X.ptr.elt to <4 x float>*
@@ -218,17 +317,17 @@ define void @test_various_instructions(float* %A) {
 }
 
 ; IR-LABEL: define void @test_various_instructions(float* %A) {
-; IR-NEXT:   %X.ptr = bitcast float* %A to i8*
-; IR-NEXT:   %X = call <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8* %X.ptr, i32 1)
-; IR-NEXT:   %1 = bitcast i8* %X.ptr to <4 x float>*
-; IR-NEXT:   %postinc = getelementptr <4 x float>, <4 x float>* %1, i32 1
-; IR-NEXT:   %Y = load <4 x float>, <4 x float>* %postinc, align 4
-; IR-NEXT:   %Z = fadd <4 x float> %X, %Y
-; IR-NEXT:   %2 = bitcast <4 x float>* %postinc to i8*
-; IR-NEXT:   %postinc1 = getelementptr i8, i8* %2, i32 16
-; IR-NEXT:   tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* nonnull %postinc1, <4 x float> %Z, i32 4)
-; IR-NEXT:   ret void
-; IR-NEXT: }
+; IR-NEXT:    %X.ptr = bitcast float* %A to i8*
+; IR-NEXT:    %X = call <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8* %X.ptr, i32 1)
+; IR-NEXT:    %postinc.byteptr = getelementptr i8, i8* %X.ptr, i32 16
+; IR-NEXT:    %postinc = bitcast i8* %postinc.byteptr to <4 x float>*
+; IR-NEXT:    %Y = load <4 x float>, <4 x float>* %postinc, align 4
+; IR-NEXT:    %Z = fadd <4 x float> %X, %Y
+; IR-NEXT:    %oldbase.byteptr = bitcast <4 x float>* %postinc to i8*
+; IR-NEXT:    %postinc.byteptr1 = getelementptr i8, i8* %oldbase.byteptr, i32 16
+; IR-NEXT:    tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* nonnull %postinc.byteptr1, <4 x float> %Z, i32 4)
+; IR-NEXT:    ret void
+; IR-NEXT:  }
 
 ; ASM-LABEL: test_various_instructions:
 ; ASM:       @ %bb.0:

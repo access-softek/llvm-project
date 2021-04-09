@@ -17367,7 +17367,7 @@ bool ARMTargetLowering::shouldRetainImmediatePostIncrement(const DataLayout &DL,
 
   unsigned BitSize = DL.getTypeSizeInBits(Ty);
 
-  return BitSize > 64 && isPowerOf2_32(BitSize) && BitSize == Increment * 8;
+  return BitSize > 64 && isPowerOf2_32(BitSize);
 }
 
 /// isLegalICmpImmediate - Return true if the specified immediate is legal

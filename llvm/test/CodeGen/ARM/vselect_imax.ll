@@ -272,230 +272,234 @@ define void @func_blend20(%T0_20* %loadaddr, %T0_20* %loadaddr2,
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, r8, r9, r11, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    mov r2, r1
-; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r2:128]!
-; CHECK-NEXT:    add r8, r0, #32
-; CHECK-NEXT:    add r9, r1, #32
-; CHECK-NEXT:    add r12, r0, #96
-; CHECK-NEXT:    vld1.64 {d22, d23}, [r7:128]!
-; CHECK-NEXT:    add r0, r0, #64
-; CHECK-NEXT:    mov lr, #0
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    vld1.64 {d22, d23}, [r2:128]!
+; CHECK-NEXT:    add lr, r0, #64
+; CHECK-NEXT:    mov r8, #0
+; CHECK-NEXT:    vld1.64 {d24, d25}, [r6:128]!
+; CHECK-NEXT:    mov r12, lr
+; CHECK-NEXT:    add lr, lr, #32
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2:128]
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r7:128]
-; CHECK-NEXT:    vmov.32 r2, d16[0]
-; CHECK-NEXT:    vmov.32 r7, d18[0]
-; CHECK-NEXT:    vmov.32 r6, d16[1]
-; CHECK-NEXT:    vmov.32 r5, d18[1]
-; CHECK-NEXT:    vld1.64 {d24, d25}, [r8:128]!
-; CHECK-NEXT:    vld1.64 {d28, d29}, [r9:128]!
-; CHECK-NEXT:    vld1.64 {d30, d31}, [r12:128]!
-; CHECK-NEXT:    vmov.32 r4, d31[0]
-; CHECK-NEXT:    subs r2, r7, r2
-; CHECK-NEXT:    vmov.32 r7, d20[0]
-; CHECK-NEXT:    sbcs r2, r5, r6
-; CHECK-NEXT:    vmov.32 r6, d22[0]
+; CHECK-NEXT:    vld1.64 {d18, d19}, [r6:128]
+; CHECK-NEXT:    vmov.32 r6, d17[0]
+; CHECK-NEXT:    vmov.32 r5, d19[0]
+; CHECK-NEXT:    vmov.32 r4, d17[1]
+; CHECK-NEXT:    vmov.32 r2, d19[1]
+; CHECK-NEXT:    vld1.64 {d0, d1}, [r12:128]!
+; CHECK-NEXT:    subs r6, r5, r6
+; CHECK-NEXT:    vmov.32 r6, d1[0]
+; CHECK-NEXT:    sbcs r2, r2, r4
+; CHECK-NEXT:    add r4, r1, #64
 ; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    vmov.32 r5, d20[1]
+; CHECK-NEXT:    mov r5, r4
+; CHECK-NEXT:    movlt r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    vld1.64 {d30, d31}, [r5:128]!
+; CHECK-NEXT:    mvnne r2, #0
+; CHECK-NEXT:    vdup.32 d21, r2
+; CHECK-NEXT:    vmov.32 r2, d31[0]
+; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    vmov.32 r6, d1[1]
+; CHECK-NEXT:    vmov.32 r2, d31[1]
+; CHECK-NEXT:    sbcs r2, r6, r2
+; CHECK-NEXT:    vmov.32 r6, d0[0]
+; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    movlt r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
-; CHECK-NEXT:    subs r7, r6, r7
-; CHECK-NEXT:    vmov.32 r6, d21[0]
-; CHECK-NEXT:    vmov.32 r7, d22[1]
-; CHECK-NEXT:    sbcs r7, r7, r5
-; CHECK-NEXT:    vmov.32 r5, d23[0]
-; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    movlt r7, #1
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    mvnne r7, #0
-; CHECK-NEXT:    subs r6, r5, r6
-; CHECK-NEXT:    vmov.32 r5, d23[1]
-; CHECK-NEXT:    vmov.32 r6, d21[1]
-; CHECK-NEXT:    sbcs r6, r5, r6
-; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    movlt r6, #1
-; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    mvnne r6, #0
-; CHECK-NEXT:    vdup.32 d27, r6
-; CHECK-NEXT:    vdup.32 d26, r7
-; CHECK-NEXT:    vmov.32 r7, d29[0]
-; CHECK-NEXT:    vbif q11, q10, q13
-; CHECK-NEXT:    vmov.32 r6, d25[0]
-; CHECK-NEXT:    subs r7, r6, r7
-; CHECK-NEXT:    vmov.32 r6, d25[1]
-; CHECK-NEXT:    vmov.32 r7, d29[1]
-; CHECK-NEXT:    sbcs r7, r6, r7
-; CHECK-NEXT:    vmov.32 r6, d24[0]
-; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    movlt r7, #1
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    mvnne r7, #0
-; CHECK-NEXT:    vdup.32 d1, r7
-; CHECK-NEXT:    vmov.32 r7, d28[0]
-; CHECK-NEXT:    subs r7, r6, r7
-; CHECK-NEXT:    vmov.32 r6, d24[1]
-; CHECK-NEXT:    vmov.32 r7, d28[1]
-; CHECK-NEXT:    sbcs r7, r6, r7
-; CHECK-NEXT:    add r6, r1, #96
-; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    add r1, r1, #64
-; CHECK-NEXT:    movlt r7, #1
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    mvnne r7, #0
-; CHECK-NEXT:    vdup.32 d0, r7
-; CHECK-NEXT:    vorr q10, q0, q0
-; CHECK-NEXT:    vbsl q10, q12, q14
-; CHECK-NEXT:    vld1.64 {d0, d1}, [r6:128]!
-; CHECK-NEXT:    vmov.32 r7, d1[0]
-; CHECK-NEXT:    vld1.64 {d26, d27}, [r0:128]!
-; CHECK-NEXT:    vld1.64 {d6, d7}, [r1:128]!
-; CHECK-NEXT:    vmov.32 r5, d27[0]
-; CHECK-NEXT:    vld1.64 {d24, d25}, [r6:128]
-; CHECK-NEXT:    vmov.32 r6, d19[0]
-; CHECK-NEXT:    vld1.64 {d28, d29}, [r1:128]
-; CHECK-NEXT:    vmov.32 r1, d17[1]
-; CHECK-NEXT:    vld1.64 {d2, d3}, [r9:128]
-; CHECK-NEXT:    subs r4, r4, r7
-; CHECK-NEXT:    vmov.32 r7, d31[1]
-; CHECK-NEXT:    vmov.32 r4, d1[1]
-; CHECK-NEXT:    sbcs r4, r7, r4
-; CHECK-NEXT:    vmov.32 r7, d30[0]
-; CHECK-NEXT:    mov r4, #0
-; CHECK-NEXT:    movlt r4, #1
-; CHECK-NEXT:    cmp r4, #0
-; CHECK-NEXT:    mvnne r4, #0
-; CHECK-NEXT:    vdup.32 d5, r4
-; CHECK-NEXT:    vmov.32 r4, d0[0]
-; CHECK-NEXT:    subs r4, r7, r4
-; CHECK-NEXT:    vmov.32 r7, d30[1]
-; CHECK-NEXT:    vmov.32 r4, d0[1]
-; CHECK-NEXT:    sbcs r4, r7, r4
-; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    vmov.32 r4, d7[0]
-; CHECK-NEXT:    movlt r7, #1
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    mvnne r7, #0
-; CHECK-NEXT:    vdup.32 d4, r7
-; CHECK-NEXT:    subs r4, r5, r4
-; CHECK-NEXT:    vmov.32 r5, d27[1]
-; CHECK-NEXT:    vmov.32 r4, d7[1]
-; CHECK-NEXT:    sbcs r4, r5, r4
-; CHECK-NEXT:    vmov.32 r5, d26[0]
-; CHECK-NEXT:    mov r4, #0
-; CHECK-NEXT:    movlt r4, #1
-; CHECK-NEXT:    cmp r4, #0
-; CHECK-NEXT:    mvnne r4, #0
-; CHECK-NEXT:    vdup.32 d9, r4
-; CHECK-NEXT:    vmov.32 r4, d6[0]
-; CHECK-NEXT:    subs r4, r5, r4
-; CHECK-NEXT:    vmov.32 r5, d26[1]
-; CHECK-NEXT:    vmov.32 r4, d6[1]
-; CHECK-NEXT:    sbcs r4, r5, r4
-; CHECK-NEXT:    vmov.32 r5, d19[1]
-; CHECK-NEXT:    mov r4, #0
-; CHECK-NEXT:    movlt r4, #1
-; CHECK-NEXT:    cmp r4, #0
-; CHECK-NEXT:    mvnne r4, #0
-; CHECK-NEXT:    vdup.32 d8, r4
-; CHECK-NEXT:    vmov.32 r4, d17[0]
-; CHECK-NEXT:    vbif q13, q3, q4
-; CHECK-NEXT:    vbif q15, q0, q2
-; CHECK-NEXT:    vld1.64 {d0, d1}, [r8:128]
-; CHECK-NEXT:    vmov.32 r7, d0[0]
-; CHECK-NEXT:    vmov.32 r8, d29[0]
-; CHECK-NEXT:    subs r4, r6, r4
+; CHECK-NEXT:    vdup.32 d3, r2
+; CHECK-NEXT:    vmov.32 r2, d30[0]
+; CHECK-NEXT:    subs r2, r6, r2
 ; CHECK-NEXT:    vmov.32 r6, d0[1]
-; CHECK-NEXT:    sbcs r1, r5, r1
-; CHECK-NEXT:    vmov.32 r4, d3[0]
+; CHECK-NEXT:    vmov.32 r2, d30[1]
+; CHECK-NEXT:    sbcs r2, r6, r2
+; CHECK-NEXT:    vmov.32 r6, d25[0]
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    movlt r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    mvnne r2, #0
+; CHECK-NEXT:    vdup.32 d2, r2
+; CHECK-NEXT:    vmov.32 r2, d23[0]
+; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    vmov.32 r6, d25[1]
+; CHECK-NEXT:    vmov.32 r2, d23[1]
+; CHECK-NEXT:    sbcs r2, r6, r2
+; CHECK-NEXT:    vmov.32 r6, d24[0]
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    movlt r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    mvnne r2, #0
+; CHECK-NEXT:    vdup.32 d27, r2
+; CHECK-NEXT:    vmov.32 r2, d22[0]
+; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    vmov.32 r6, d24[1]
+; CHECK-NEXT:    vmov.32 r2, d22[1]
+; CHECK-NEXT:    sbcs r2, r6, r2
+; CHECK-NEXT:    add r6, r0, #32
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    add r0, r1, #32
+; CHECK-NEXT:    movlt r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    vld1.64 {d4, d5}, [r0:128]!
+; CHECK-NEXT:    mvnne r2, #0
+; CHECK-NEXT:    vld1.64 {d28, d29}, [r6:128]!
+; CHECK-NEXT:    vdup.32 d26, r2
+; CHECK-NEXT:    vmov.32 r1, d5[0]
+; CHECK-NEXT:    vbif q12, q11, q13
+; CHECK-NEXT:    vmov.32 r2, d29[0]
+; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    vmov.32 r2, d29[1]
+; CHECK-NEXT:    vmov.32 r1, d5[1]
+; CHECK-NEXT:    sbcs r1, r2, r1
+; CHECK-NEXT:    vmov.32 r2, d28[0]
 ; CHECK-NEXT:    mov r1, #0
-; CHECK-NEXT:    vmov.32 r5, d3[1]
 ; CHECK-NEXT:    movlt r1, #1
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    mvnne r1, #0
 ; CHECK-NEXT:    vdup.32 d7, r1
-; CHECK-NEXT:    vmov.32 r1, d2[0]
-; CHECK-NEXT:    vdup.32 d6, r2
-; CHECK-NEXT:    vmov.32 r2, d2[1]
-; CHECK-NEXT:    vbit q8, q9, q3
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
-; CHECK-NEXT:    vmov.32 r0, d19[1]
-; CHECK-NEXT:    subs r1, r7, r1
-; CHECK-NEXT:    vmov.32 r7, d18[1]
-; CHECK-NEXT:    vmov.32 r1, d1[1]
-; CHECK-NEXT:    sbcs r2, r6, r2
-; CHECK-NEXT:    vmov.32 r6, d1[0]
+; CHECK-NEXT:    vmov.32 r1, d4[0]
+; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    vmov.32 r2, d28[1]
+; CHECK-NEXT:    vmov.32 r1, d4[1]
+; CHECK-NEXT:    sbcs r1, r2, r1
+; CHECK-NEXT:    vmov.32 r2, d18[0]
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    vdup.32 d6, r1
+; CHECK-NEXT:    vmov.32 r1, d16[0]
+; CHECK-NEXT:    vorr q11, q3, q3
+; CHECK-NEXT:    vbsl q11, q14, q2
+; CHECK-NEXT:    vld1.64 {d28, d29}, [r5:128]
+; CHECK-NEXT:    vld1.64 {d4, d5}, [r0:128]
+; CHECK-NEXT:    vmov.32 r5, d4[0]
+; CHECK-NEXT:    vmov.32 r9, d29[0]
+; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    vmov.32 r2, d18[1]
+; CHECK-NEXT:    vmov.32 r1, d16[1]
+; CHECK-NEXT:    sbcs r1, r2, r1
+; CHECK-NEXT:    add r2, r4, #32
+; CHECK-NEXT:    vld1.64 {d6, d7}, [r2:128]!
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    vld1.64 {d26, d27}, [r2:128]
+; CHECK-NEXT:    vbit q15, q0, q1
+; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    vld1.64 {d0, d1}, [r6:128]
+; CHECK-NEXT:    vmov.32 r7, d0[0]
+; CHECK-NEXT:    vdup.32 d20, r1
+; CHECK-NEXT:    vmov.32 r1, d4[1]
+; CHECK-NEXT:    vmov.32 r6, d0[1]
+; CHECK-NEXT:    vld1.64 {d2, d3}, [lr:128]!
+; CHECK-NEXT:    vbif q9, q8, q10
+; CHECK-NEXT:    vmov.32 r2, d6[0]
+; CHECK-NEXT:    vmov.32 r4, d6[1]
+; CHECK-NEXT:    vmov.32 r0, d1[0]
+; CHECK-NEXT:    subs r7, r7, r5
+; CHECK-NEXT:    vmov.32 r5, d3[1]
+; CHECK-NEXT:    vmov.32 r7, d2[1]
+; CHECK-NEXT:    sbcs r1, r6, r1
+; CHECK-NEXT:    vmov.32 r6, d2[0]
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    vmov.32 r6, d7[0]
+; CHECK-NEXT:    sbcs r7, r7, r4
+; CHECK-NEXT:    vmov.32 r4, d3[0]
+; CHECK-NEXT:    vmov.32 r2, d7[1]
+; CHECK-NEXT:    mov r7, #0
+; CHECK-NEXT:    movlt r7, #1
+; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    mvnne r7, #0
+; CHECK-NEXT:    subs r6, r4, r6
+; CHECK-NEXT:    vmov.32 r4, d1[1]
+; CHECK-NEXT:    sbcs r2, r5, r2
+; CHECK-NEXT:    vmov.32 r5, d5[0]
+; CHECK-NEXT:    vmov.32 r6, d5[1]
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    movlt r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
-; CHECK-NEXT:    subs r4, r6, r4
-; CHECK-NEXT:    vmov.32 r6, d28[0]
-; CHECK-NEXT:    sbcs r1, r1, r5
-; CHECK-NEXT:    vmov.32 r5, d28[1]
-; CHECK-NEXT:    mov r1, #0
-; CHECK-NEXT:    vmov.32 r4, d19[0]
-; CHECK-NEXT:    movlt r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    mvnne r1, #0
-; CHECK-NEXT:    vdup.32 d5, r1
-; CHECK-NEXT:    vmov.32 r1, d18[0]
-; CHECK-NEXT:    vdup.32 d4, r2
-; CHECK-NEXT:    vmov.32 r2, d29[1]
-; CHECK-NEXT:    vbif q0, q1, q2
-; CHECK-NEXT:    vld1.64 {d2, d3}, [r12:128]
-; CHECK-NEXT:    subs r1, r1, r6
-; CHECK-NEXT:    vmov.32 r6, d24[1]
-; CHECK-NEXT:    sbcs r1, r7, r5
-; CHECK-NEXT:    vmov.32 r5, d24[0]
-; CHECK-NEXT:    mov r1, #0
-; CHECK-NEXT:    vmov.32 r7, d3[0]
-; CHECK-NEXT:    movlt r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    mvnne r1, #0
-; CHECK-NEXT:    subs r4, r4, r8
-; CHECK-NEXT:    sbcs r0, r0, r2
-; CHECK-NEXT:    vmov.32 r4, d2[1]
+; CHECK-NEXT:    vdup.32 d11, r2
+; CHECK-NEXT:    vdup.32 d10, r7
+; CHECK-NEXT:    vorr q8, q5, q5
+; CHECK-NEXT:    vbsl q8, q1, q3
+; CHECK-NEXT:    vld1.64 {d20, d21}, [r12:128]
+; CHECK-NEXT:    vmov.32 r7, d21[0]
+; CHECK-NEXT:    vmov.32 r2, d21[1]
+; CHECK-NEXT:    vmov.32 r12, d27[0]
+; CHECK-NEXT:    subs r0, r0, r5
+; CHECK-NEXT:    vmov.32 r5, d28[0]
+; CHECK-NEXT:    sbcs r0, r4, r6
+; CHECK-NEXT:    vmov.32 r6, d28[1]
 ; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    vmov.32 r8, d25[0]
+; CHECK-NEXT:    vmov.32 r4, d20[1]
 ; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vmov.32 r2, d3[1]
-; CHECK-NEXT:    vdup.32 d7, r0
-; CHECK-NEXT:    vmov.32 r0, d2[0]
-; CHECK-NEXT:    vdup.32 d6, r1
-; CHECK-NEXT:    vmov.32 r1, d25[1]
-; CHECK-NEXT:    vbif q9, q14, q3
+; CHECK-NEXT:    vdup.32 d9, r0
+; CHECK-NEXT:    vmov.32 r0, d20[0]
+; CHECK-NEXT:    vdup.32 d8, r1
+; CHECK-NEXT:    vmov.32 r1, d29[1]
+; CHECK-NEXT:    vbif q0, q2, q4
+; CHECK-NEXT:    vld1.64 {d4, d5}, [lr:128]
+; CHECK-NEXT:    subs r0, r0, r5
+; CHECK-NEXT:    vmov.32 r5, d26[0]
+; CHECK-NEXT:    sbcs r0, r4, r6
+; CHECK-NEXT:    vmov.32 r6, d26[1]
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmov.32 r4, d4[1]
+; CHECK-NEXT:    movlt r0, #1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mvnne r0, #0
+; CHECK-NEXT:    subs r7, r7, r9
+; CHECK-NEXT:    sbcs r1, r2, r1
+; CHECK-NEXT:    vmov.32 r7, d5[0]
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    vmov.32 r2, d5[1]
+; CHECK-NEXT:    movlt r1, #1
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    mvnne r1, #0
+; CHECK-NEXT:    vdup.32 d3, r1
+; CHECK-NEXT:    vdup.32 d2, r0
+; CHECK-NEXT:    vmov.32 r0, d4[0]
+; CHECK-NEXT:    vbif q10, q14, q1
+; CHECK-NEXT:    vmov.32 r1, d27[1]
 ; CHECK-NEXT:    subs r0, r0, r5
 ; CHECK-NEXT:    sbcs r0, r4, r6
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    subs r7, r7, r8
+; CHECK-NEXT:    subs r7, r7, r12
 ; CHECK-NEXT:    sbcs r1, r2, r1
-; CHECK-NEXT:    movlt lr, #1
-; CHECK-NEXT:    cmp lr, #0
-; CHECK-NEXT:    mvnne lr, #0
-; CHECK-NEXT:    vdup.32 d5, lr
-; CHECK-NEXT:    vdup.32 d4, r0
+; CHECK-NEXT:    movlt r8, #1
+; CHECK-NEXT:    cmp r8, #0
+; CHECK-NEXT:    mvnne r8, #0
+; CHECK-NEXT:    vdup.32 d7, r8
+; CHECK-NEXT:    vdup.32 d6, r0
 ; CHECK-NEXT:    mov r0, r3
-; CHECK-NEXT:    vbit q12, q1, q2
-; CHECK-NEXT:    vst1.64 {d22, d23}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]
-; CHECK-NEXT:    add r0, r3, #96
-; CHECK-NEXT:    vst1.64 {d30, d31}, [r0:128]!
-; CHECK-NEXT:    vst1.64 {d24, d25}, [r0:128]
-; CHECK-NEXT:    add r0, r3, #64
-; CHECK-NEXT:    vst1.64 {d26, d27}, [r0:128]!
+; CHECK-NEXT:    vst1.64 {d24, d25}, [r0:128]!
+; CHECK-NEXT:    vorr q12, q3, q3
+; CHECK-NEXT:    vbsl q12, q2, q13
 ; CHECK-NEXT:    vst1.64 {d18, d19}, [r0:128]
+; CHECK-NEXT:    add r0, r3, #64
+; CHECK-NEXT:    add r1, r0, #32
+; CHECK-NEXT:    vst1.64 {d30, d31}, [r0:128]!
+; CHECK-NEXT:    vst1.64 {d20, d21}, [r0:128]
 ; CHECK-NEXT:    add r0, r3, #32
-; CHECK-NEXT:    vst1.64 {d20, d21}, [r0:128]!
+; CHECK-NEXT:    vst1.64 {d22, d23}, [r0:128]!
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r1:128]!
 ; CHECK-NEXT:    vst1.64 {d0, d1}, [r0:128]
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vst1.64 {d24, d25}, [r1:128]
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, r9, r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %v0 = load %T0_20, %T0_20* %loadaddr
