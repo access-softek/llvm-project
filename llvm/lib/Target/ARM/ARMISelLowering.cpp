@@ -17362,7 +17362,12 @@ bool ARMTargetLowering::shouldRetainImmediatePostIncrement(const DataLayout &DL,
   if (Subtarget->hasMVEIntegerOps())
     return false;
 
-  return Ty->isVectorTy() && DL.getTypeSizeInBits(Ty) / 8 == Increment;
+  if (!Ty->isVectorTy())
+    return false;
+
+  unsigned BitSize = DL.getTypeSizeInBits(Ty);
+
+  return BitSize > 64 && isPowerOf2_32(BitSize) && BitSize == Increment * 8;
 }
 
 /// isLegalICmpImmediate - Return true if the specified immediate is legal
