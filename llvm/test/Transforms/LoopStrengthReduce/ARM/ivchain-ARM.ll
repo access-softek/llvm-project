@@ -207,10 +207,11 @@ for.end:                                          ; preds = %for.body
 ;
 ; A9: testNeon:
 ; A9: %.lr.ph
-; A9: add.w r
+; A9-NOT: add.w r
 ; A9-NOT: lsl.w
 ; A9-NOT: {{ldr|str|adds|add r}}
-; A9: vst1.8 {{.*}} [r{{[0-9]+}}], r{{[0-9]+}}
+; A9: vst1.8 {{.*}} [r{{[0-9]+}}]!
+; A9: add.w r
 ; A9: add.w r
 ; A9-NOT: {{ldr|str|adds|add r}}
 ; A9-NOT: add.w r
