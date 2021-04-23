@@ -44,9 +44,10 @@ define void @test2(<16 x float>* noalias sret(<16 x float>) %agg.result) nounwin
 entry:
 ; CHECK-LABEL: test2:
 ; CHECK: ldr     r[[R1:[0-9]+]], [pc, r[[R1]]]
-; CHECK: add     r[[R2:[0-9]+]], r[[R1]], #32
+; CHECK: mov     r[[R2:[0-9]+]], r[[R1]]
 ; CHECK: vld1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]!
 ; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R2]]:128]
+; CHECK: add     r[[R1]], r[[R1]], #32
 ; CHECK: vld1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]!
 ; CHECK: vld1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
 ; CHECK: mov     r[[R1:[0-9]+]], sp

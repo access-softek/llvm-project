@@ -2505,6 +2505,11 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   EVT VT = N0.getValueType();
   SDLoc DL(N);
 
+  if (reassociationCanBreakPostIndexingPattern(N) ||
+      reassociationCanBreakPostIndexingPattern(N0.getNode()) ||
+      reassociationCanBreakPostIndexingPattern(N1.getNode()))
+    return SDValue();
+
   if (SDValue Combined = visitADDLike(N))
     return Combined;
 

@@ -232,7 +232,8 @@ define <4 x float> @test_global() {
 ;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]
 
 define <4 x float> @test_stack() {
-  %array = alloca [32 x float], align 4
+; Use huge alignment to test that ADD would not be converted to OR
+  %array = alloca [32 x float], align 128
   %arraydecay = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 0
   call void @external_function(float* %arraydecay)
   %X.ptr = bitcast [32 x float]* %array to <4 x float>*
@@ -249,7 +250,7 @@ define <4 x float> @test_stack() {
 }
 
 ; IR-LABEL:  define <4 x float> @test_stack() {
-; IR-NEXT:    %array = alloca [32 x float], align 4
+; IR-NEXT:    %array = alloca [32 x float], align 128
 ; IR-NEXT:    %arraydecay = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 0
 ; IR-NEXT:    call void @external_function(float* %arraydecay)
 ; IR-NEXT:    %X.ptr = bitcast [32 x float]* %array to <4 x float>*
@@ -265,8 +266,8 @@ define <4 x float> @test_stack() {
 
 ;ASM-LABEL: test_stack:
 ;ASM: bl external_function
-;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE:[0-9]+]]]!
-;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]!
+;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE:[0-9]+]]:128]!
+;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]:128]!
 ;ASM: vld1.32 {{{d[0-9]+, d[0-9]+}}}, [r[[BASE]]]
 
 define <2 x double> @test_double(double* %A) {
