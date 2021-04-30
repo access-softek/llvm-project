@@ -17755,8 +17755,10 @@ bool ARMTargetLowering::shouldRetainImmediatePostIncrement(
 
   // If the first DAG optimization pass did not consume this increment,
   // try combining as usual during subsequent optimization passes.
-  if (Level != CombineLevel::BeforeLegalizeTypes)
+  if (Level > CombineLevel::AfterLegalizeVectorOps)
     return false;
+
+//  Ty->dump();
 
   if (!Ty->isVectorTy())
     return false;

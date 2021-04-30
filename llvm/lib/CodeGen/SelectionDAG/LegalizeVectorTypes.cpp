@@ -1107,6 +1107,12 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
   } else {
     MPI = N->getPointerInfo().getWithOffset(IncrementSize);
     // Increment the pointer to the other half.
+    if (IncrementSize % 16 == 0) {
+      for (int i = 0; i < IncrementSize / 16; ++i) {
+        Ptr = DAG.getObjectPtrOffset(DL, Ptr, TypeSize::Fixed(16));
+      }
+      return;
+    }
     Ptr = DAG.getObjectPtrOffset(DL, Ptr, TypeSize::Fixed(IncrementSize));
   }
 }
