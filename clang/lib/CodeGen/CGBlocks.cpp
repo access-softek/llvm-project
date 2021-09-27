@@ -1995,7 +1995,7 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
         // first place.
         if (!needsEHCleanup(captureType.isDestructedType()))
           if (auto *I = cast_or_null<llvm::Instruction>(
-                  dstField.getBasePointer()))
+                  dstField.getPointerIfNotSigned()))
             I->eraseFromParent();
       }
       break;
