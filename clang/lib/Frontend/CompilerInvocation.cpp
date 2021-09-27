@@ -3180,6 +3180,18 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
+static void GeneratePointerAuthArgs(LangOptions &Opts,
+                                    SmallVectorImpl<const char *> &Args,
+                                    CompilerInvocation::StringAllocator SA) {
+  if (Opts.PointerAuthIntrinsics)
+    GenerateArg(Args, OPT_fptrauth_intrinsics, SA);
+}
+
+static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
+                                 DiagnosticsEngine &Diags) {
+  Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
+}
+
 /// Check if input file kind and language standard are compatible.
 static bool IsInputCompatibleWithStandard(InputKind IK,
                                           const LangStandard &S) {
@@ -4410,6 +4422,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  ParsePointerAuthArgs(LangOpts, Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);
@@ -4614,6 +4627,7 @@ void CompilerInvocation::generateCC1CommandLine(
   GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
   GenerateTargetArgs(*TargetOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
+  GeneratePointerAuthArgs(*LangOpts, Args, SA);
   GenerateLangArgs(*LangOpts, Args, SA, T, FrontendOpts.DashX);
   GenerateCodeGenArgs(CodeGenOpts, Args, SA, T, FrontendOpts.OutputFile,
                       &*LangOpts);
