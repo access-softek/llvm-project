@@ -56,7 +56,8 @@ void member_access(S *p) {
 
   // (1b) Check that 'p' actually points to an 'S'.
 
-  // CHECK: %[[VPTR:.*]] = load i64, ptr
+  // CHECK-NEXT: %[[VPTRP:.*]] = load ptr, ptr
+  // CHECK-NEXT: %[[VPTR:.*]] = ptrtoint ptr %[[VPTRP]] to i64
   //
   // hash_16_bytes:
   //
@@ -115,7 +116,8 @@ void member_access(S *p) {
 
   // (3b) Check that 'p' actually points to an 'S'
 
-  // CHECK: load i64, ptr
+  // CHECK: %[[VTPTR:.*]] = load ptr, ptr
+  // CHECK-NEXT: {{%.*}} = ptrtoint ptr %[[VTPTR]] to i64
   // CHECK-NEXT: xor i64 {{-4030275160588942838|1107558922}},
   // [...]
   // CHECK: getelementptr inbounds [128 x i64], ptr @__ubsan_vptr_type_cache, i32 0, i64 %
