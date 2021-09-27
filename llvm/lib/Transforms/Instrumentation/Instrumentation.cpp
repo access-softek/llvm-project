@@ -85,3 +85,4 @@ Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   return C;
 }
 
+// FIXME Update for NewPM?

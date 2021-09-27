@@ -19,6 +19,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Pass.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -149,6 +150,12 @@ struct SanitizerCoverageOptions {
 
   SanitizerCoverageOptions() = default;
 };
+
+
+// SoftPointerAuth - This pass lowers the llvm.ptrauth intrinsics to use
+// runtime function calls instead of relying on support from the
+// backend, toolchain, loader, or hardware.
+ModulePass *createSoftPointerAuthPass();
 
 /// Calculate what to divide by to scale counts.
 ///
