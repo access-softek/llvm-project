@@ -50,6 +50,21 @@
 #include <atomic>
 #endif
 
+#if __has_feature(ptrauth_calls)
+#include <ptrauth.h>
+#endif
+
+
+template<typename T>
+static inline
+T *
+get_vtable(T *vtable) {
+#if __has_feature(ptrauth_calls)
+    vtable = ptrauth_strip(vtable, ptrauth_key_cxx_vtable_pointer);
+#endif
+    return vtable;
+}
+
 static inline
 bool
 is_equal(const std::type_info* x, const std::type_info* y, bool use_strcmp)
@@ -308,6 +323,7 @@ __base_class_type_info::has_unambiguous_public_base(__dynamic_cast_info* info,
         if (__offset_flags & __virtual_mask)
         {
             const char* vtable = *static_cast<const char*const*>(adjustedPtr);
+            vtable = get_vtable(vtable);
             offset_to_base = update_offset_to_base(vtable, offset_to_base);
         }
     }
@@ -642,6 +658,7 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
         *(reinterpret_cast<const __class_type_info* const*>(ptr_to_ti_proxy));
 #else
     void **vtable = *static_cast<void ** const *>(static_ptr);
+    vtable = get_vtable(vtable);
     ptrdiff_t offset_to_derived = reinterpret_cast<ptrdiff_t>(vtable[-2]);
     const void* dynamic_ptr = static_cast<const char*>(static_ptr) + offset_to_derived;
     const __class_type_info* dynamic_type = static_cast<const __class_type_info*>(vtable[-1]);
@@ -1355,6 +1372,7 @@ __base_class_type_info::search_above_dst(__dynamic_cast_info* info,
     if (__offset_flags & __virtual_mask)
     {
         const char* vtable = *static_cast<const char*const*>(current_ptr);
+        vtable = get_vtable(vtable);
         offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
     __base_type->search_above_dst(info, dst_ptr,
@@ -1375,6 +1393,7 @@ __base_class_type_info::search_below_dst(__dynamic_cast_info* info,
     if (__offset_flags & __virtual_mask)
     {
         const char* vtable = *static_cast<const char*const*>(current_ptr);
+        vtable = get_vtable(vtable);
         offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
     __base_type->search_below_dst(info,
