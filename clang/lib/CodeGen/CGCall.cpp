@@ -1036,12 +1036,12 @@ void CodeGenFunction::ExpandTypeFromArgs(QualType Ty, LValue LV,
   auto Exp = getTypeExpansion(Ty, getContext());
   if (auto CAExp = dyn_cast<ConstantArrayExpansion>(Exp.get())) {
     forConstantArrayExpansion(
-        *this, CAExp, LV.getAddress(*this), [&](Address EltAddr) {
+        *this, CAExp, LV.getAddress(), [&](Address EltAddr) {
           LValue LV = MakeAddrLValue(EltAddr, CAExp->EltTy);
           ExpandTypeFromArgs(CAExp->EltTy, LV, AI);
         });
   } else if (auto RExp = dyn_cast<RecordExpansion>(Exp.get())) {
-    Address This = LV.getAddress(*this);
+    Address This = LV.getAddress();
     for (const CXXBaseSpecifier *BS : RExp->Bases) {
       // Perform a single step derived-to-base conversion.
       Address Base =
@@ -1073,7 +1073,7 @@ void CodeGenFunction::ExpandTypeFromArgs(QualType Ty, LValue LV,
       // pointer type they use (see D118744). Once clang uses opaque pointers
       // all LLVM pointer types will be the same and we can remove this check.
       if (Arg->getType()->isPointerTy()) {
-        Address Addr = LV.getAddress(*this);
+        Address Addr = LV.getAddress();
         Arg = Builder.CreateBitCast(Arg, Addr.getElementType());
       }
       EmitStoreOfScalar(Arg, LV);
@@ -1086,7 +1086,7 @@ void CodeGenFunction::ExpandTypeToArgs(
     SmallVectorImpl<llvm::Value *> &IRCallArgs, unsigned &IRCallArgPos) {
   auto Exp = getTypeExpansion(Ty, getContext());
   if (auto CAExp = dyn_cast<ConstantArrayExpansion>(Exp.get())) {
-    Address Addr = Arg.hasLValue() ? Arg.getKnownLValue().getAddress(*this)
+    Address Addr = Arg.hasLValue() ? Arg.getKnownLValue().getAddress()
                                    : Arg.getKnownRValue().getAggregateAddress();
     forConstantArrayExpansion(
         *this, CAExp, Addr, [&](Address EltAddr) {
@@ -1097,7 +1097,7 @@ void CodeGenFunction::ExpandTypeToArgs(
                            IRCallArgPos);
         });
   } else if (auto RExp = dyn_cast<RecordExpansion>(Exp.get())) {
-    Address This = Arg.hasLValue() ? Arg.getKnownLValue().getAddress(*this)
+    Address This = Arg.hasLValue() ? Arg.getKnownLValue().getAddress()
                                    : Arg.getKnownRValue().getAggregateAddress();
     for (const CXXBaseSpecifier *BS : RExp->Bases) {
       // Perform a single step derived-to-base conversion.
@@ -4009,7 +4009,7 @@ static bool isProvablyNonNull(Address Addr, CodeGenFunction &CGF) {
 static void emitWriteback(CodeGenFunction &CGF,
                           const CallArgList::Writeback &writeback) {
   const LValue &srcLV = writeback.Source;
-  Address srcAddr = srcLV.getAddress(CGF);
+  Address srcAddr = srcLV.getAddress();
   assert(!isProvablyNull(srcAddr.getBasePointer()) &&
          "shouldn't have writeback for provably null argument");
 
@@ -4116,7 +4116,7 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
       CRE->getSubExpr()->getType()->castAs<PointerType>()->getPointeeType();
     srcLV = CGF.MakeAddrLValue(srcAddr, srcAddrType);
   }
-  Address srcAddr = srcLV.getAddress(CGF);
+  Address srcAddr = srcLV.getAddress();
 
   // The dest and src types don't necessarily match in LLVM terms
   // because of the crazy ObjC compatibility rules.
@@ -4523,7 +4523,7 @@ RValue CallArg::getRValue(CodeGenFunction &CGF) const {
   CGF.EmitAggregateCopy(Copy, LV, Ty, AggValueSlot::DoesNotOverlap,
                         LV.isVolatile());
   IsUsed = true;
-  return RValue::getAggregate(Copy.getAddress(CGF));
+  return RValue::getAggregate(Copy.getAddress());
 }
 
 void CallArg::copyInto(CodeGenFunction &CGF, Address Addr) const {
@@ -4533,7 +4533,7 @@ void CallArg::copyInto(CodeGenFunction &CGF, Address Addr) const {
   else if (!HasLV && RV.isComplex())
     CGF.EmitStoreOfComplex(RV.getComplexVal(), Dst, /*init=*/true);
   else {
-    auto Addr = HasLV ? LV.getAddress(CGF) : RV.getAggregateAddress();
+    auto Addr = HasLV ? LV.getAddress() : RV.getAggregateAddress();
     LValue SrcLV = CGF.MakeAddrLValue(Addr, Ty);
     // We assume that call args are never copied into subobjects.
     CGF.EmitAggregateCopy(Dst, SrcLV, Ty, AggValueSlot::DoesNotOverlap,
@@ -5035,7 +5035,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       if (I->isAggregate()) {
         RawAddress Addr =
             I->hasLValue()
-                ? I->getKnownLValue().getAddress(*this)
+                ? I->getKnownLValue().getAddress()
                 : I->getKnownRValue().getAggregateAddress();
         llvm::Instruction *Placeholder =
             cast<llvm::Instruction>(Addr.getPointer());
@@ -5104,7 +5104,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // 3. If the argument is byval, but RV is not located in default
         //    or alloca address space.
         Address Addr = I->hasLValue()
-                           ? I->getKnownLValue().getAddress(*this)
+                           ? I->getKnownLValue().getAddress()
                            : I->getKnownRValue().getAggregateAddress();
         CharUnits Align = ArgInfo.getIndirectAlign();
         const llvm::DataLayout *TD = &CGM.getDataLayout();
@@ -5199,7 +5199,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           V = I->getKnownRValue().getScalarVal();
         else
           V = Builder.CreateLoad(
-              I->hasLValue() ? I->getKnownLValue().getAddress(*this)
+              I->hasLValue() ? I->getKnownLValue().getAddress()
                              : I->getKnownRValue().getAggregateAddress());
 
         // Implement swifterror by copying into a new swifterror argument.
@@ -5244,7 +5244,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Src = CreateMemTemp(I->Ty, "coerce");
         I->copyInto(*this, Src);
       } else {
-        Src = I->hasLValue() ? I->getKnownLValue().getAddress(*this)
+        Src = I->hasLValue() ? I->getKnownLValue().getAddress()
                              : I->getKnownRValue().getAggregateAddress();
       }
 
@@ -5313,7 +5313,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       Address addr = Address::invalid();
       RawAddress AllocaAddr = RawAddress::invalid();
       if (I->isAggregate()) {
-        addr = I->hasLValue() ? I->getKnownLValue().getAddress(*this)
+        addr = I->hasLValue() ? I->getKnownLValue().getAddress()
                               : I->getKnownRValue().getAggregateAddress();
 
       } else {

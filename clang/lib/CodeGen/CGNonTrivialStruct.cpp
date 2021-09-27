@@ -719,7 +719,7 @@ struct GenMoveConstructor : GenBinaryFunc<GenMoveConstructor, true> {
     LValue SrcLV = CGF->MakeAddrLValue(Addrs[SrcIdx], QT);
     llvm::Value *SrcVal =
         CGF->EmitLoadOfLValue(SrcLV, SourceLocation()).getScalarVal();
-    CGF->EmitStoreOfScalar(getNullForVariable(SrcLV.getAddress(*CGF)), SrcLV);
+    CGF->EmitStoreOfScalar(getNullForVariable(SrcLV.getAddress()), SrcLV);
     CGF->EmitStoreOfScalar(SrcVal, CGF->MakeAddrLValue(Addrs[DstIdx], QT),
                            /* isInitialization */ true);
   }
@@ -782,7 +782,7 @@ struct GenMoveAssignment : GenBinaryFunc<GenMoveAssignment, true> {
     LValue SrcLV = CGF->MakeAddrLValue(Addrs[SrcIdx], QT);
     llvm::Value *SrcVal =
         CGF->EmitLoadOfLValue(SrcLV, SourceLocation()).getScalarVal();
-    CGF->EmitStoreOfScalar(getNullForVariable(SrcLV.getAddress(*CGF)), SrcLV);
+    CGF->EmitStoreOfScalar(getNullForVariable(SrcLV.getAddress()), SrcLV);
     LValue DstLV = CGF->MakeAddrLValue(Addrs[DstIdx], QT);
     llvm::Value *DstVal =
         CGF->EmitLoadOfLValue(DstLV, SourceLocation()).getScalarVal();
@@ -819,7 +819,7 @@ void CodeGenFunction::destroyNonTrivialCStruct(CodeGenFunction &CGF,
 void CodeGenFunction::defaultInitNonTrivialCStructVar(LValue Dst) {
   GenDefaultInitialize Gen(getContext());
   Address DstPtr =
-      Builder.CreateElementBitCast(Dst.getAddress(*this), CGM.Int8PtrTy);
+      Builder.CreateElementBitCast(Dst.getAddress(), CGM.Int8PtrTy);
   Gen.setCGF(this);
   QualType QT = Dst.getType();
   QT = Dst.isVolatile() ? QT.withVolatile() : QT;
@@ -851,7 +851,7 @@ getSpecialFunction(G &&Gen, StringRef FuncName, QualType QT, bool IsVolatile,
 // Functions to emit calls to the special functions of a non-trivial C struct.
 void CodeGenFunction::callCStructDefaultConstructor(LValue Dst) {
   bool IsVolatile = Dst.isVolatile();
-  Address DstPtr = Dst.getAddress(*this);
+  Address DstPtr = Dst.getAddress();
   QualType QT = Dst.getType();
   GenDefaultInitializeFuncName GenName(DstPtr.getAlignment(), getContext());
   std::string FuncName = GenName.getName(QT, IsVolatile);
@@ -875,7 +875,7 @@ std::string CodeGenFunction::getNonTrivialDestructorStr(QualType QT,
 
 void CodeGenFunction::callCStructDestructor(LValue Dst) {
   bool IsVolatile = Dst.isVolatile();
-  Address DstPtr = Dst.getAddress(*this);
+  Address DstPtr = Dst.getAddress();
   QualType QT = Dst.getType();
   GenDestructorFuncName GenName("__destructor_", DstPtr.getAlignment(),
                                 getContext());
@@ -886,7 +886,7 @@ void CodeGenFunction::callCStructDestructor(LValue Dst) {
 
 void CodeGenFunction::callCStructCopyConstructor(LValue Dst, LValue Src) {
   bool IsVolatile = Dst.isVolatile() || Src.isVolatile();
-  Address DstPtr = Dst.getAddress(*this), SrcPtr = Src.getAddress(*this);
+  Address DstPtr = Dst.getAddress(), SrcPtr = Src.getAddress();
   QualType QT = Dst.getType();
   GenBinaryFuncName<false> GenName("__copy_constructor_", DstPtr.getAlignment(),
                                    SrcPtr.getAlignment(), getContext());
@@ -900,7 +900,7 @@ void CodeGenFunction::callCStructCopyAssignmentOperator(LValue Dst, LValue Src
 
 ) {
   bool IsVolatile = Dst.isVolatile() || Src.isVolatile();
-  Address DstPtr = Dst.getAddress(*this), SrcPtr = Src.getAddress(*this);
+  Address DstPtr = Dst.getAddress(), SrcPtr = Src.getAddress();
   QualType QT = Dst.getType();
   GenBinaryFuncName<false> GenName("__copy_assignment_", DstPtr.getAlignment(),
                                    SrcPtr.getAlignment(), getContext());
@@ -911,7 +911,7 @@ void CodeGenFunction::callCStructCopyAssignmentOperator(LValue Dst, LValue Src
 
 void CodeGenFunction::callCStructMoveConstructor(LValue Dst, LValue Src) {
   bool IsVolatile = Dst.isVolatile() || Src.isVolatile();
-  Address DstPtr = Dst.getAddress(*this), SrcPtr = Src.getAddress(*this);
+  Address DstPtr = Dst.getAddress(), SrcPtr = Src.getAddress();
   QualType QT = Dst.getType();
   GenBinaryFuncName<true> GenName("__move_constructor_", DstPtr.getAlignment(),
                                   SrcPtr.getAlignment(), getContext());
@@ -925,7 +925,7 @@ void CodeGenFunction::callCStructMoveAssignmentOperator(LValue Dst, LValue Src
 
 ) {
   bool IsVolatile = Dst.isVolatile() || Src.isVolatile();
-  Address DstPtr = Dst.getAddress(*this), SrcPtr = Src.getAddress(*this);
+  Address DstPtr = Dst.getAddress(), SrcPtr = Src.getAddress();
   QualType QT = Dst.getType();
   GenBinaryFuncName<true> GenName("__move_assignment_", DstPtr.getAlignment(),
                                   SrcPtr.getAlignment(), getContext());

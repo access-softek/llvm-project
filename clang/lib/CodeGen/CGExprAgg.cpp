@@ -414,7 +414,7 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
   ASTContext &Ctx = CGF.getContext();
   LValue Array = CGF.EmitLValue(E->getSubExpr());
   assert(Array.isSimple() && "initializer_list array not a simple lvalue");
-  Address ArrayPtr = Array.getAddress(CGF);
+  Address ArrayPtr = Array.getAddress();
 
   const ConstantArrayType *ArrayType =
       Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
@@ -733,7 +733,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
                                       CodeGenFunction::TCK_Load);
     // FIXME: Do we also need to handle property references here?
     if (LV.isSimple())
-      CGF.EmitDynamicCast(LV.getAddress(CGF), cast<CXXDynamicCastExpr>(E));
+      CGF.EmitDynamicCast(LV.getAddress(), cast<CXXDynamicCastExpr>(E));
     else
       CGF.CGM.ErrorUnsupported(E, "non-simple lvalue dynamic_cast");
 
@@ -768,7 +768,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
 
     LValue SourceLV = CGF.EmitLValue(E->getSubExpr());
     Address SourceAddress =
-        Builder.CreateElementBitCast(SourceLV.getAddress(CGF), CGF.Int8Ty);
+        Builder.CreateElementBitCast(SourceLV.getAddress(), CGF.Int8Ty);
     Address DestAddress =
         Builder.CreateElementBitCast(Dest.getAddress(), CGF.Int8Ty);
     llvm::Value *SizeVal = llvm::ConstantInt::get(
@@ -1384,7 +1384,7 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
               llvm::Constant::getNullValue(CGF.Int8PtrTy),
               CharUnits::One()); // placeholder
 
-        CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), CurField->getType(),
+        CGF.pushDestroy(EHCleanup, LV.getAddress(), CurField->getType(),
                         CGF.getDestroyer(DtorKind), false);
         Cleanups.push_back(CGF.EHStack.stable_begin());
       }
@@ -1611,7 +1611,7 @@ void AggExprEmitter::EmitNullInitializationToLValue(LValue lv) {
     // There's a potential optimization opportunity in combining
     // memsets; that would be easy for arrays, but relatively
     // difficult for structures with the current code.
-    CGF.EmitNullInitialization(lv.getAddress(CGF), lv.getType());
+    CGF.EmitNullInitialization(lv.getAddress(), lv.getType());
   }
 }
 
@@ -1794,7 +1794,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
           = field->getType().isDestructedType()) {
       assert(LV.isSimple());
       if (CGF.needsEHCleanup(dtorKind)) {
-        CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), field->getType(),
+        CGF.pushDestroy(EHCleanup, LV.getAddress(), field->getType(),
                         CGF.getDestroyer(dtorKind), false);
         addCleanup(CGF.EHStack.stable_begin());
         pushedCleanup = true;
@@ -2108,8 +2108,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                         bool isVolatile) {
   assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
 
-  Address DestPtr = Dest.getAddress(*this);
-  Address SrcPtr = Src.getAddress(*this);
+  Address DestPtr = Dest.getAddress();
+  Address SrcPtr = Src.getAddress();
 
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
