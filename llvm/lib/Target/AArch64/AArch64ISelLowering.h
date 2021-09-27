@@ -58,6 +58,15 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc, operands.
+  AUTH_TC_RETURN,
+
+  // Authenticated variant of CALL_RVMARKER.
+  AUTH_CALL_RVMARKER,
+
   // Essentially like a normal COPY that works on GPRs, but cannot be
   // rematerialised by passes like the simple register coalescer. It's
   // required for SME when lowering calls because we cannot allow frame
@@ -65,6 +74,7 @@ enum NodeType : unsigned {
   // and the bl instruction. The scalable vector length may change across
   // the smstart/smstop boundary.
   OBSCURE_COPY,
+
   SMSTART,
   SMSTOP,
   RESTORE_ZA,
@@ -865,6 +875,10 @@ public:
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
+
+  bool supportPtrAuthBundles() const override {
+    return true;
+  }
 
   /// Enable aggressive FMA fusion on targets that want it.
   bool enableAggressiveFMAFusion(EVT VT) const override;

@@ -275,6 +275,10 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
     IsTailCallReturn = RetOpcode == AArch64::TCRETURNdi ||
                        RetOpcode == AArch64::TCRETURNri ||
                        RetOpcode == AArch64::TCRETURNriBTI;
+
+    IsTailCallReturn |= RetOpcode == AArch64::AUTH_TCRETURN;
+
+    IsTailCallReturn |= RetOpcode == AArch64::AUTH_TCRETURN_BTI;
   }
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
 
