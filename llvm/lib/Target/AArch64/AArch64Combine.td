@@ -182,6 +182,14 @@ def form_truncstore : GICombineRule<
   (apply [{ applyFormTruncstore(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
+def form_auth_load_matchdata : GIDefMatchData<"AuthLoadMatchInfo">;
+def form_auth_load : GICombineRule<
+  (defs root:$root, form_auth_load_matchdata:$matchinfo),
+  (match (wip_match_opcode G_LOAD):$root,
+         [{ return matchFormAuthLoad(*${root}, MRI, Helper, ${matchinfo}); }]),
+  (apply [{ applyFormAuthLoad(*${root}, MRI, B, Helper, Observer, ${matchinfo}); }])
+>;
+
 def fold_merge_to_zext : GICombineRule<
   (defs root:$d),
   (match (wip_match_opcode G_MERGE_VALUES):$d,
@@ -218,7 +226,7 @@ def AArch64PostLegalizerLoweringHelper
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
-                        vector_sext_inreg_to_shift]> {
+                        vector_sext_inreg_to_shift,form_auth_load]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 
