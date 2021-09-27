@@ -1389,6 +1389,11 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
             PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
                               BlockDescriptorConstantDiscriminator);
       }
+      Opts.ObjCMethodListFunctionPointers =
+          PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.ObjCMethodListPointer =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            MethodListPointerConstantDiscriminator);
     }
     Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
     Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
