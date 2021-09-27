@@ -1405,6 +1405,8 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
       Opts.CXXVirtualFunctionPointers =
           Opts.CXXVirtualVariadicFunctionPointers =
               PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
+      Opts.CXXMemberFunctionPointers =
+          PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
     }
     Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
     Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
