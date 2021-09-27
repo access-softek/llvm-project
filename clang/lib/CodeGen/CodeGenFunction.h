@@ -182,8 +182,9 @@ template <> struct DominatingValue<Address> {
     DominatingLLVMValue::saved_type BasePtr;
     llvm::Type *ElementType;
     CharUnits Alignment;
-    unsigned PtrAuthKey : 28;
+    unsigned PtrAuthKey : 29;
     PointerAuthenticationMode PtrAuthMode : 2;
+    bool AuthenticatesNullValues : 1;
     DominatingLLVMValue::saved_type PtrAuthDiscriminator;
     DominatingLLVMValue::saved_type Offset;
     llvm::PointerType *EffectiveType;
@@ -205,6 +206,7 @@ template <> struct DominatingValue<Address> {
             value.getElementType(), value.getAlignment(),
             isSigned ? value.getPointerAuthInfo().getKey() : 0,
             value.getPointerAuthInfo().getAuthenticationMode(),
+            value.getPointerAuthInfo().authenticatesNullValues(),
             isSigned ? DominatingLLVMValue::save(
                            CGF, value.getPointerAuthInfo().getDiscriminator())
                      : DominatingLLVMValue::saved_type(),
@@ -216,6 +218,7 @@ template <> struct DominatingValue<Address> {
     if (value.PtrAuthMode != PointerAuthenticationMode::None)
       info = CGPointerAuthInfo{
           value.PtrAuthKey, value.PtrAuthMode,
+          value.AuthenticatesNullValues,
           DominatingLLVMValue::restore(CGF, value.PtrAuthDiscriminator)};
     return Address(DominatingLLVMValue::restore(CGF, value.BasePtr),
         value.ElementType, value.Alignment, info,
@@ -2828,7 +2831,8 @@ public:
   /// null, If the type contains data member pointers, they will be initialized
   /// to -1 in accordance with the Itanium C++ ABI.
   void EmitNullInitialization(Address DestPtr, QualType Ty);
-
+  void EmitNullInitializersForAuthenticatedNullFields(Address storageAddress,
+                                                      QualType Ty);
   /// Emits a call to an LLVM variable-argument intrinsic, either
   /// \c llvm.va_start or \c llvm.va_end.
   /// \param ArgValue A reference to the \c va_list as emitted by either
@@ -4204,6 +4208,27 @@ public:
   void EmitPointerAuthOperandBundle(const CGPointerAuthInfo &info,
                           SmallVectorImpl<llvm::OperandBundleDef> &bundles);
 
+  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
+                                        Address storageAddress);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      llvm::Value *pointer,
+                                      QualType valueType,
+                                      Address storageAddress,
+                                      bool isKnownNonNull);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      const Expr *pointerExpr,
+                                      Address storageAddress);
+  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier qualifier,
+                                        llvm::Value *pointer,
+                                        QualType pointerType,
+                                        Address storageAddress,
+                                        bool isKnownNonNull);
+  void EmitPointerAuthCopy(PointerAuthQualifier qualifier, QualType type,
+                           Address destField, Address srcField);
+
+  std::pair<llvm::Value *, CGPointerAuthInfo>
+  EmitOrigPointerRValue(const Expr *E);
+
   llvm::Value *AuthPointerToPointerCast(llvm::Value *ResultPtr,
                                         QualType SourceType, QualType DestType);
   Address AuthPointerToPointerCast(Address Ptr,
@@ -4217,6 +4242,8 @@ public:
   llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
     return getAsNaturalAddressOf(Addr, PointeeType).getBasePointer();
   }
+
+  bool isPointerKnownNonNull(const Expr *E);
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
