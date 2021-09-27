@@ -713,6 +713,7 @@ enum ModuleArch {
   kModuleArchARMV7K,
   kModuleArchARM64,
   kModuleArchLoongArch64,
+  kModuleArchARM64E,
   kModuleArchRISCV64,
   kModuleArchHexagon
 };
@@ -787,6 +788,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "arm64";
     case kModuleArchLoongArch64:
       return "loongarch64";
+    case kModuleArchARM64E:
+      return "arm64e";
     case kModuleArchRISCV64:
       return "riscv64";
     case kModuleArchHexagon:
