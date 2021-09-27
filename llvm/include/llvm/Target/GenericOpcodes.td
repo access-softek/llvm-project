@@ -112,6 +112,12 @@ def G_CONSTANT_POOL : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_PTRAUTH_GLOBAL_VALUE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$addr, i32imm:$key, type1:$addrdisc, i64imm:$disc);
+  let hasSideEffects = 0;
+}
+
 def G_INTTOPTR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);

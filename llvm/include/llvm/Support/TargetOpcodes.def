@@ -294,6 +294,9 @@ HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
 /// pool.
 HANDLE_TARGET_OPCODE(G_CONSTANT_POOL)
 
+/// Generic reference to global value.
+HANDLE_TARGET_OPCODE(G_PTRAUTH_GLOBAL_VALUE)
+
 /// Generic instruction to extract blocks of bits from the register given
 /// (typically a sub-register COPY after instruction selection).
 HANDLE_TARGET_OPCODE(G_EXTRACT)
