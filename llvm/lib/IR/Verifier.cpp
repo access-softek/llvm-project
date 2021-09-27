@@ -76,6 +76,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
@@ -807,6 +808,14 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
                 Twine("members of ") + GV.getName() + " must be named", V);
         }
       }
+    }
+  }
+
+  if (GV.getSection() == "llvm.ptrauth") {
+    if (auto Err = GlobalPtrAuthInfo::tryAnalyze(&GV).takeError()) {
+      CheckFailed("invalid llvm.ptrauth global: " + toString(std::move(Err)),
+             &GV);
+      return;
     }
   }
 

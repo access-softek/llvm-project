@@ -204,6 +204,8 @@ static void eliminateAliases(GlobalValue *GV) {
 // making it external.
 //
 void llvm::DeleteGlobalInitializer(GlobalVariable *GV) {
+  if (GV->getSection() == "llvm.ptrauth")
+    return;
   eliminateAliases(GV);
   GV->setInitializer(nullptr);
   GV->setComdat(nullptr);

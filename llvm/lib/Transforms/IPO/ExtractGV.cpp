@@ -80,6 +80,9 @@ PreservedAnalyses ExtractGVPass::run(Module &M, ModuleAnalysisManager &) {
         continue;
     }
 
+    if (GV.getSection() == "llvm.ptrauth")
+      continue;
+
     makeVisible(GV, Delete);
 
     if (Delete) {
