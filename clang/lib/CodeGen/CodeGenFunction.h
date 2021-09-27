@@ -182,8 +182,9 @@ template <> struct DominatingValue<Address> {
     DominatingLLVMValue::saved_type BasePtr;
     llvm::Type *ElementType;
     CharUnits Alignment;
-    unsigned PtrAuthKey : 29;
+    unsigned PtrAuthKey : 28;
     PointerAuthenticationMode PtrAuthMode : 2;
+    bool IsIsaPointer : 1;
     bool AuthenticatesNullValues : 1;
     DominatingLLVMValue::saved_type PtrAuthDiscriminator;
     DominatingLLVMValue::saved_type Offset;
@@ -206,6 +207,7 @@ template <> struct DominatingValue<Address> {
             value.getElementType(), value.getAlignment(),
             isSigned ? value.getPointerAuthInfo().getKey() : 0,
             value.getPointerAuthInfo().getAuthenticationMode(),
+            value.getPointerAuthInfo().isIsaPointer(),
             value.getPointerAuthInfo().authenticatesNullValues(),
             isSigned ? DominatingLLVMValue::save(
                            CGF, value.getPointerAuthInfo().getDiscriminator())
@@ -217,7 +219,7 @@ template <> struct DominatingValue<Address> {
     CGPointerAuthInfo info;
     if (value.PtrAuthMode != PointerAuthenticationMode::None)
       info = CGPointerAuthInfo{
-          value.PtrAuthKey, value.PtrAuthMode,
+          value.PtrAuthKey, value.PtrAuthMode, value.IsIsaPointer,
           value.AuthenticatesNullValues,
           DominatingLLVMValue::restore(CGF, value.PtrAuthDiscriminator)};
     return Address(DominatingLLVMValue::restore(CGF, value.BasePtr),
@@ -2177,6 +2179,8 @@ public:
   void generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
                               const ObjCPropertyImplDecl *propImpl,
                               llvm::Constant *AtomicHelperFn);
+
+  llvm::Value *getObjCIsaMask();
 
   //===--------------------------------------------------------------------===//
   //                                  Block Bits
