@@ -2905,6 +2905,9 @@ public:
 
     // Extra discriminator argument of __ptrauth.
     PADAK_ExtraDiscPtrAuth,
+
+    // Type discriminator argument of ptrauth_struct.
+    PADAK_TypeDiscPtrAuthStruct,
   };
 
   bool checkPointerAuthDiscriminatorArg(Expr *arg, PointerAuthDiscArgKind kind,
