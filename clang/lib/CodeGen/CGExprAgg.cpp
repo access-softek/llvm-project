@@ -287,10 +287,10 @@ void AggExprEmitter::withReturnValueSlot(
   // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
   // its lifetime before we have the chance to emit a proper destructor call.
   bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
-                 (RequiresDestruction && !Dest.getAddress().isValid());
+                 (RequiresDestruction && Dest.isIgnored());
 
   Address RetAddr = Address::invalid();
-  Address RetAllocaAddr = Address::invalid();
+  RawAddress RetAllocaAddr = RawAddress::invalid();
 
   EHScopeStack::stable_iterator LifetimeEndBlock;
   llvm::Value *LifetimeSizePtr = nullptr;
@@ -322,7 +322,8 @@ void AggExprEmitter::withReturnValueSlot(
   if (!UseTemp)
     return;
 
-  assert(Dest.isIgnored() || Dest.getPointer() != Src.getAggregatePointer());
+  assert(Dest.isIgnored() ||
+         Dest.getRawPointer(CGF) != Src.getAggregatePointer(E->getType(), CGF));
   EmitFinalDestCopy(E->getType(), Src);
 
   if (!RequiresDestruction && LifetimeStartInst) {
@@ -441,7 +442,7 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
   llvm::Value *Zero = llvm::ConstantInt::get(CGF.PtrDiffTy, 0);
   llvm::Value *IdxStart[] = { Zero, Zero };
   llvm::Value *ArrayStart = Builder.CreateInBoundsGEP(
-      ArrayPtr.getElementType(), ArrayPtr.getPointer(), IdxStart, "arraystart");
+      ArrayPtr.getElementType(), ArrayPtr.getRawPointer(CGF), IdxStart, "arraystart");
   CGF.EmitStoreThroughLValue(RValue::get(ArrayStart), Start);
   ++Field;
 
@@ -458,7 +459,7 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
     // End pointer.
     llvm::Value *IdxEnd[] = { Zero, Size };
     llvm::Value *ArrayEnd = Builder.CreateInBoundsGEP(
-        ArrayPtr.getElementType(), ArrayPtr.getPointer(), IdxEnd, "arrayend");
+        ArrayPtr.getElementType(), ArrayPtr.getRawPointer(CGF), IdxEnd, "arrayend");
     CGF.EmitStoreThroughLValue(RValue::get(ArrayEnd), EndOrLength);
   } else if (Ctx.hasSameType(Field->getType(), Ctx.getSizeType())) {
     // Length.
@@ -510,7 +511,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   llvm::Value *zero = llvm::ConstantInt::get(CGF.SizeTy, 0);
   llvm::Value *indices[] = { zero, zero };
   llvm::Value *begin = Builder.CreateInBoundsGEP(
-      DestPtr.getElementType(), DestPtr.getPointer(), indices,
+      DestPtr.getElementType(), DestPtr.getRawPointer(CGF), indices,
       "arrayinit.begin");
 
   CharUnits elementSize = CGF.getContext().getTypeSizeInChars(elementType);
@@ -1053,7 +1054,7 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
     if (RV.isScalar())
       return {RV.getScalarVal(), nullptr};
     if (RV.isAggregate())
-      return {RV.getAggregatePointer(), nullptr};
+      return {RV.getAggregatePointer(E->getType(), CGF), nullptr};
     assert(RV.isComplex());
     return RV.getComplexVal();
   };
@@ -1804,7 +1805,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     // else, clean it up for -O0 builds and general tidiness.
     if (!pushedCleanup && LV.isSimple())
       if (llvm::GetElementPtrInst *GEP =
-              dyn_cast<llvm::GetElementPtrInst>(LV.getPointer(CGF)))
+              dyn_cast<llvm::GetElementPtrInst>(LV.getRawPointer(CGF)))
         if (GEP->use_empty())
           GEP->eraseFromParent();
   }
@@ -1836,7 +1837,7 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
   llvm::Value *zero = llvm::ConstantInt::get(CGF.SizeTy, 0);
   llvm::Value *indices[] = {zero, zero};
   llvm::Value *begin = Builder.CreateInBoundsGEP(
-      destPtr.getElementType(), destPtr.getPointer(), indices,
+      destPtr.getElementType(), destPtr.getRawPointer(CGF), indices,
       "arrayinit.begin");
 
   // Prepare to special-case multidimensional array initialization: we avoid
