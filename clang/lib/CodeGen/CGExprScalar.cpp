@@ -2183,7 +2183,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
       return EmitLoadOfLValue(DestLV, CE->getExprLoc());
     }
-    return Builder.CreateBitCast(Src, DstTy);
+
+    llvm::Value *Result = Builder.CreateBitCast(Src, DstTy);
+    return CGF.AuthPointerToPointerCast(Result, E->getType(), DestTy);
   }
   case CK_AddressSpaceConversion: {
     Expr::EvalResult Result;
@@ -2340,6 +2342,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       if (DestTy.mayBeDynamicClass())
         IntToPtr = Builder.CreateLaunderInvariantGroup(IntToPtr);
     }
+
+    IntToPtr = CGF.AuthPointerToPointerCast(IntToPtr, E->getType(), DestTy);
     return IntToPtr;
   }
   case CK_PointerToIntegral: {
@@ -2355,6 +2359,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         PtrExpr = Builder.CreateStripInvariantGroup(PtrExpr);
     }
 
+    PtrExpr = CGF.AuthPointerToPointerCast(PtrExpr, E->getType(), DestTy);
     return Builder.CreatePtrToInt(PtrExpr, ConvertType(DestTy));
   }
   case CK_ToVoid: {
@@ -2598,10 +2603,11 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     Builder.SetInsertPoint(opBB);
     atomicPHI = Builder.CreatePHI(value->getType(), 2);
     atomicPHI->addIncoming(value, startBB);
-    value = atomicPHI;
+    value = CGF.EmitPointerAuthAuth(type->getPointeeType(), atomicPHI);
   } else {
     value = EmitLoadOfLValue(LV, E->getExprLoc());
     input = value;
+    value = CGF.EmitPointerAuthAuth(type->getPointeeType(), value);
   }
 
   // Special case of integer increment that we have to check first: bool++.
@@ -2830,6 +2836,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   if (atomicPHI) {
     llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
     llvm::BasicBlock *contBB = CGF.createBasicBlock("atomic_cont", CGF.CurFn);
+    value = CGF.EmitPointerAuthSign(type->getPointeeType(), value);
     auto Pair = CGF.EmitAtomicCompareExchange(
         LV, RValue::get(atomicPHI), RValue::get(value), E->getExprLoc());
     llvm::Value *old = CGF.EmitToMemory(Pair.first.getScalarVal(), type);
@@ -2841,6 +2848,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   }
 
   // Store the updated result through the lvalue.
+  value = CGF.EmitPointerAuthSign(type->getPointeeType(), value);
   if (LV.isBitField())
     CGF.EmitStoreThroughBitfieldLValue(RValue::get(value), LV, &value);
   else
@@ -3624,11 +3632,18 @@ static Value *createGEPForPointerArithmetic(Value *pointer, Value *index,
                                             CodeGenFunction &CGF) {
   llvm::Type *elementTy = CGF.ConvertTypeForMem(ptrTy->getPointeeType());
 
+  CGPointerAuthInfo info = CGF.CGM.getPointerAuthInfoForType(ptrTy);
+  if (info)
+    pointer = CGF.EmitPointerAuthAuth(info, pointer);
+
   if (CGF.getLangOpts().isSignedOverflowDefined())
     pointer = CGF.Builder.CreateGEP(elementTy, pointer, index, "add.ptr");
   else
     pointer = CGF.EmitCheckedInBoundsGEP(elementTy, pointer, index, isSigned,
                                          isSubtraction, loc, "add.ptr");
+
+  if (info)
+    pointer = CGF.EmitPointerAuthSign(info, pointer);
 
   return pointer;
 }

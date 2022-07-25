@@ -3803,7 +3803,8 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   EmitStmt(TheCall);
 
   FinishFunction();
-  HelperFn = llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+  HelperFn = CGM.getFunctionPointer(Fn, FD->getType());
+  HelperFn = llvm::ConstantExpr::getBitCast(HelperFn, VoidPtrTy);
   CGM.setAtomicSetterHelperFnMap(Ty, HelperFn);
   return HelperFn;
 }
@@ -3922,7 +3923,8 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                   AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap));
 
   FinishFunction();
-  HelperFn = llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);
+  HelperFn = CGM.getFunctionPointer(Fn, FD->getType());
+  HelperFn = llvm::ConstantExpr::getBitCast(HelperFn, VoidPtrTy);
   CGM.setAtomicGetterHelperFnMap(Ty, HelperFn);
   return HelperFn;
 }

@@ -322,7 +322,7 @@ void AggExprEmitter::withReturnValueSlot(
   if (!UseTemp)
     return;
 
-  assert(Dest.isIgnored() ||
+  assert(Dest.getAddress().isSigned() || Dest.isIgnored() ||
          Dest.getRawPointer(CGF) != Src.getAggregatePointer(E->getType(), CGF));
   EmitFinalDestCopy(E->getType(), Src);
 
