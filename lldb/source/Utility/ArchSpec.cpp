@@ -155,7 +155,7 @@ static const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_mips64r6el, "mips64r6el"},
 
     // MSP430
-    {eByteOrderLittle, 2, 2, 2, llvm::Triple::msp430, ArchSpec::eCore_msp430, "msp430"},
+    {eByteOrderLittle, 2, 2, 4, llvm::Triple::msp430, ArchSpec::eCore_msp430, "msp430"},
 
     {eByteOrderBig, 4, 4, 4, llvm::Triple::ppc, ArchSpec::eCore_ppc_generic,
      "powerpc"},

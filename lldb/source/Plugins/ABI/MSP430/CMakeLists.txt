@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginABISysV_msp430 PLUGIN
+add_lldb_library(lldbPluginABIMSP430 PLUGIN
   ABISysV_msp430.cpp
 
   LINK_LIBS
