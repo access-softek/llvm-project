@@ -25,6 +25,12 @@
 
 using namespace llvm;
 
+MSP430FrameLowering::MSP430FrameLowering(const MSP430Subtarget &STI)
+  : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), -2,
+                        Align(2)),
+    STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo())
+    {}
+
 bool MSP430FrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -35,6 +41,18 @@ bool MSP430FrameLowering::hasFP(const MachineFunction &MF) const {
 
 bool MSP430FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return !MF.getFrameInfo().hasVarSizedObjects();
+}
+
+void MSP430FrameLowering::BuildCFI(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                const DebugLoc &DL,
+                                const MCCFIInstruction &CFIInst,
+                                MachineInstr::MIFlag Flag) const {
+  MachineFunction &MF = *MBB.getParent();
+  unsigned CFIIndex = MF.addFrameInst(CFIInst);
+  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlag(Flag);
 }
 
 void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
@@ -64,16 +82,24 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
     // Save FP into the appropriate stack slot...
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::PUSH16r))
-      .addReg(MSP430::R4, RegState::Kill);
+      .addReg(MSP430::R4, RegState::Kill)
+      .setMIFlag(MachineInstr::FrameSetup);
 
     // Update FP with the new base value...
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::R4)
-      .addReg(MSP430::SP);
+      .addReg(MSP430::SP)
+      .setMIFlag(MachineInstr::FrameSetup);
 
     // Mark the FramePtr as live-in in every block except the entry.
     for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
       MBBJ.addLiveIn(MSP430::R4);
 
+    // Change the rule for the FramePtr to be an "offset" rule.
+    unsigned DwarfFramePtr = TRI->getDwarfRegNum(MSP430::R4, true);
+    BuildCFI(MBB, MBBI, DL,
+             MCCFIInstruction::createOffset(nullptr, DwarfFramePtr,
+                                            -NumBytes),
+             MachineInstr::FrameSetup);
   } else
     NumBytes = StackSize - MSP430FI->getCalleeSavedFrameSize();
 
@@ -95,9 +121,32 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
     if (NumBytes) {
       MachineInstr *MI =
         BuildMI(MBB, MBBI, DL, TII.get(MSP430::SUB16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(NumBytes);
+        .addReg(MSP430::SP).addImm(NumBytes)
+        .setMIFlag(MachineInstr::FrameSetup);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
+    }
+  }
+
+  // Emit ".cfi_def_cfa_offset NumBytes"
+  BuildCFI(MBB, MBBI, DL,
+           MCCFIInstruction::cfiDefCfaOffset(nullptr, NumBytes),
+           MachineInstr::FrameSetup);
+
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
+  if (!CSI.empty()) {
+    MachineModuleInfo &MMI = MF.getMMI();
+    const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+
+    for (const CalleeSavedInfo &I : CSI) {
+      int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
+      Register Reg = I.getReg();
+      unsigned DReg = MRI->getDwarfRegNum(Reg, true);
+      unsigned CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::createOffset(nullptr, DReg, Offset));
+      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
     }
   }
 }
@@ -131,7 +180,8 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
     NumBytes = FrameSize - CSSize;
 
     // pop FP.
-    BuildMI(MBB, MBBI, DL, TII.get(MSP430::POP16r), MSP430::R4);
+    BuildMI(MBB, MBBI, DL, TII.get(MSP430::POP16r), MSP430::R4)
+      .setMIFlag(MachineInstr::FrameDestroy);
   } else
     NumBytes = StackSize - CSSize;
 
@@ -153,12 +203,15 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MFI.hasVarSizedObjects()) {
     BuildMI(MBB, MBBI, DL,
-            TII.get(MSP430::MOV16rr), MSP430::SP).addReg(MSP430::R4);
+            TII.get(MSP430::MOV16rr), MSP430::SP)
+            .addReg(MSP430::R4)
+            .setMIFlag(MachineInstr::FrameDestroy);
     if (CSSize) {
       MachineInstr *MI =
         BuildMI(MBB, MBBI, DL,
                 TII.get(MSP430::SUB16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(CSSize);
+        .addReg(MSP430::SP).addImm(CSSize)
+        .setMIFlag(MachineInstr::FrameDestroy);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -167,7 +220,8 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
     if (NumBytes) {
       MachineInstr *MI =
         BuildMI(MBB, MBBI, DL, TII.get(MSP430::ADD16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(NumBytes);
+        .addReg(MSP430::SP).addImm(NumBytes)
+        .setMIFlag(MachineInstr::FrameDestroy);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }

@@ -15,15 +15,24 @@
 
 #include "MSP430.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
+
+class MSP430Subtarget;
+class MSP430InstrInfo;
+class MSP430RegisterInfo;
+
 class MSP430FrameLowering : public TargetFrameLowering {
 protected:
 
 public:
-  explicit MSP430FrameLowering()
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), -2,
-                            Align(2)) {}
+  MSP430FrameLowering(const MSP430Subtarget &STI);
+
+  const MSP430Subtarget &STI;
+  const MSP430InstrInfo &TII;
+  const MSP430RegisterInfo *TRI;
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
@@ -48,6 +57,11 @@ public:
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                      RegScavenger *RS = nullptr) const override;
+
+  /// Wraps up getting a CFI index and building a MachineInstr for it.
+  void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                const DebugLoc &DL, const MCCFIInstruction &CFIInst,
+                MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 };
 
 } // End llvm namespace

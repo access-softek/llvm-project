@@ -41,7 +41,7 @@ static RegisterInfo g_register_infos[] =
     { "r1", "sp", 2, 0, eEncodingUint, eFormatAddressInfo, {  1,  1, LLDB_REGNUM_GENERIC_SP,  1,  1 }, nullptr, nullptr },
     { "r2",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  2,  2, LLDB_INVALID_REGNUM,     2,  2 }, nullptr, nullptr },
     { "r3",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  3,  3, LLDB_INVALID_REGNUM,     3,  3 }, nullptr, nullptr },
-    { "r4",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  4,  4, LLDB_INVALID_REGNUM,     4,  4 }, nullptr, nullptr },
+    { "r4",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  4,  4, LLDB_REGNUM_GENERIC_FP,  4,  4 }, nullptr, nullptr },
     { "r5",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  5,  5, LLDB_INVALID_REGNUM,     5,  5 }, nullptr, nullptr },
     { "r6",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  6,  6, LLDB_INVALID_REGNUM,     6,  6 }, nullptr, nullptr },
     { "r7",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  7,  7, LLDB_INVALID_REGNUM,     7,  7 }, nullptr, nullptr },
