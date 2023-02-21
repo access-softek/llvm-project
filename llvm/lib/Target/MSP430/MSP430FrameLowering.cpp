@@ -126,29 +126,28 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
+    // Adjust the previous CFA value by NumBytes
+    BuildCFI(MBB, MBBI, DL,
+             MCCFIInstruction::createAdjustCfaOffset(nullptr, NumBytes),
+             MachineInstr::FrameSetup);
   }
 
-  // Emit ".cfi_def_cfa_offset NumBytes"
-  BuildCFI(MBB, MBBI, DL,
-           MCCFIInstruction::cfiDefCfaOffset(nullptr, NumBytes),
-           MachineInstr::FrameSetup);
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+//  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+//  if (!CSI.empty()) {
+//    MachineModuleInfo &MMI = MF.getMMI();
+//    const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
 
-  if (!CSI.empty()) {
-    MachineModuleInfo &MMI = MF.getMMI();
-    const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-
-    for (const CalleeSavedInfo &I : CSI) {
-      int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      Register Reg = I.getReg();
-      unsigned DReg = MRI->getDwarfRegNum(Reg, true);
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createOffset(nullptr, DReg, Offset));
-      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex);
-    }
-  }
+//    for (const CalleeSavedInfo &I : CSI) {
+//      int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
+//      Register Reg = I.getReg();
+//      unsigned DReg = MRI->getDwarfRegNum(Reg, true);
+//      unsigned CFIIndex = MF.addFrameInst(
+//          MCCFIInstruction::createOffset(nullptr, DReg, Offset));
+//      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+//          .addCFIIndex(CFIIndex);
+//    }
+//  }
 }
 
 void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -224,6 +223,11 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameDestroy);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
+
+      // Adjust the previous CFA value by NumBytes
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createAdjustCfaOffset(nullptr, -NumBytes),
+               MachineInstr::FrameDestroy);
     }
   }
 }

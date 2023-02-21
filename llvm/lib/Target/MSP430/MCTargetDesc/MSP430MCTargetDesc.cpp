@@ -50,19 +50,18 @@ static MCAsmInfo *createMSP430MCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI = new MSP430MCAsmInfo(TT);
 
   // Initialize initial frame state.
-  // Calculate amount of bytes used for return address storing
-  int stackGrowth = -2;
+  int ptr_size = 2;
 
-  // Initial state of the frame pointer is esp+stackGrowth.
+  // Initial state of the frame pointer is sp+ptr_size.
   unsigned StackPtr = MSP430::SP;
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
-      nullptr, MRI.getDwarfRegNum(StackPtr, true), -stackGrowth);
+      nullptr, MRI.getDwarfRegNum(StackPtr, true), ptr_size);
   MAI->addInitialFrameState(Inst);
 
   // Add return address to move list
   unsigned InstPtr = MSP430::PC;
   MCCFIInstruction Inst2 = MCCFIInstruction::createOffset(
-      nullptr, MRI.getDwarfRegNum(InstPtr, true), stackGrowth);
+      nullptr, MRI.getDwarfRegNum(InstPtr, true), -ptr_size);
   MAI->addInitialFrameState(Inst2);
 
   return MAI;

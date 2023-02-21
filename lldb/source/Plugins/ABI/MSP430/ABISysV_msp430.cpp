@@ -35,24 +35,43 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE_ADV(ABISysV_msp430, ABIMSP430)
 
+enum dwarf_regnums {
+  dwarf_pc = 0,
+  dwarf_sp,
+  dwarf_r2,
+  dwarf_r3,
+  dwarf_fp,
+  dwarf_r5,
+  dwarf_r6,
+  dwarf_r7,
+  dwarf_r8,
+  dwarf_r9,
+  dwarf_r10,
+  dwarf_r11,
+  dwarf_r12,
+  dwarf_r13,
+  dwarf_r14,
+  dwarf_r15,
+};
+
 static RegisterInfo g_register_infos[] =
 {
-    { "r0", "pc", 2, 0, eEncodingUint, eFormatAddressInfo, {  0,  0, LLDB_REGNUM_GENERIC_PC,  0,  0 }, nullptr, nullptr },
-    { "r1", "sp", 2, 0, eEncodingUint, eFormatAddressInfo, {  1,  1, LLDB_REGNUM_GENERIC_SP,  1,  1 }, nullptr, nullptr },
-    { "r2",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  2,  2, LLDB_INVALID_REGNUM,     2,  2 }, nullptr, nullptr },
-    { "r3",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  3,  3, LLDB_INVALID_REGNUM,     3,  3 }, nullptr, nullptr },
-    { "r4",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  4,  4, LLDB_REGNUM_GENERIC_FP,  4,  4 }, nullptr, nullptr },
-    { "r5",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  5,  5, LLDB_INVALID_REGNUM,     5,  5 }, nullptr, nullptr },
-    { "r6",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  6,  6, LLDB_INVALID_REGNUM,     6,  6 }, nullptr, nullptr },
-    { "r7",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  7,  7, LLDB_INVALID_REGNUM,     7,  7 }, nullptr, nullptr },
-    { "r8",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  8,  8, LLDB_INVALID_REGNUM,     8,  8 }, nullptr, nullptr },
-    { "r9",   "", 2, 0, eEncodingUint, eFormatAddressInfo, {  9,  9, LLDB_INVALID_REGNUM,     9,  9 }, nullptr, nullptr },
-    { "r10",  "", 2, 0, eEncodingUint, eFormatAddressInfo, { 10, 10, LLDB_INVALID_REGNUM,    10, 10 }, nullptr, nullptr },
-    { "r11",  "", 2, 0, eEncodingUint, eFormatAddressInfo, { 11, 11, LLDB_INVALID_REGNUM,    11, 11 }, nullptr, nullptr },
-    { "r12",  "", 2, 0, eEncodingUint, eFormatAddressInfo, { 12, 12, LLDB_INVALID_REGNUM,    12, 12 }, nullptr, nullptr },
-    { "r13",  "", 2, 0, eEncodingUint, eFormatAddressInfo, { 13, 13, LLDB_INVALID_REGNUM,    13, 13 }, nullptr, nullptr },
-    { "r14",  "", 2, 0, eEncodingUint, eFormatAddressInfo, { 14, 14, LLDB_INVALID_REGNUM,    14, 14 }, nullptr, nullptr },
-    { "r15",  "", 2, 0, eEncodingUint, eFormatAddressInfo, { 15, 15, LLDB_INVALID_REGNUM,    15, 15 }, nullptr, nullptr }
+    { "r0", "pc", 2, 0, eEncodingUint, eFormatHex, { dwarf_pc,  dwarf_pc,  LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r1", "sp", 2, 0, eEncodingUint, eFormatHex, { dwarf_sp,  dwarf_sp,  LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r2",   "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r2,  dwarf_r2,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r3",   "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r3,  dwarf_r3,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r4", "fp", 2, 0, eEncodingUint, eFormatHex, { dwarf_fp,  dwarf_fp,  LLDB_REGNUM_GENERIC_FP, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r5",   "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r5,  dwarf_r5,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r6",   "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r6,  dwarf_r6,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r7",   "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r7,  dwarf_r7,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r8",   "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r8,  dwarf_r8,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r9",   "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r9,  dwarf_r9,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r10",  "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r10, dwarf_r10, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r11",  "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r11, dwarf_r11, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r12",  "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r12, dwarf_r12, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r13",  "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r13, dwarf_r13, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r14",  "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r14, dwarf_r14, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr },
+    { "r15",  "", 2, 0, eEncodingUint, eFormatHex, { dwarf_r15, dwarf_r15, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr }
 };
 
 static const uint32_t k_num_register_infos = sizeof(g_register_infos)/sizeof(RegisterInfo);
@@ -150,19 +169,17 @@ bool
 ABISysV_msp430::CreateFunctionEntryUnwindPlan ( UnwindPlan &unwind_plan )
 {
     unwind_plan.Clear();
-    unwind_plan.SetRegisterKind(eRegisterKindGeneric);
+    unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-    uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
-    uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
+    uint32_t sp_reg_num = dwarf_sp;
+    uint32_t pc_reg_num = dwarf_pc;
 
     UnwindPlan::RowSP row(new UnwindPlan::Row);
-
-    row->GetCFAValue().SetIsRegisterPlusOffset (LLDB_REGNUM_GENERIC_SP, 0);
-
+    row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
     row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, 2, true);
     row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+
     unwind_plan.AppendRow(row);
-    
     unwind_plan.SetSourceName("msp430 at-func-entry default");
     unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
     return true;
@@ -172,17 +189,17 @@ bool
 ABISysV_msp430::CreateDefaultUnwindPlan ( UnwindPlan &unwind_plan )
 {
     unwind_plan.Clear();
-    unwind_plan.SetRegisterKind(eRegisterKindGeneric);
+    unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-    uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
-    uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
+    uint32_t fp_reg_num = dwarf_fp;
+    uint32_t sp_reg_num = dwarf_sp;
+    uint32_t pc_reg_num = dwarf_pc;
 
     UnwindPlan::RowSP row(new UnwindPlan::Row);
-
-    row->GetCFAValue().SetIsRegisterPlusOffset (LLDB_REGNUM_GENERIC_SP, 0);
-
+    row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
     row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, 2, true);
     row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+    row->SetRegisterLocationToUnspecified(fp_reg_num, true);
 
     unwind_plan.AppendRow(row);
     unwind_plan.SetSourceName("msp430 default unwind plan");
