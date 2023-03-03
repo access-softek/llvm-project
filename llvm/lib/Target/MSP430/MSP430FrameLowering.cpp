@@ -85,21 +85,34 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
       .addReg(MSP430::R4, RegState::Kill)
       .setMIFlag(MachineInstr::FrameSetup);
 
-    // Update FP with the new base value...
-    BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::R4)
-      .addReg(MSP430::SP)
-      .setMIFlag(MachineInstr::FrameSetup);
-
-    // Mark the FramePtr as live-in in every block except the entry.
-    for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
-      MBBJ.addLiveIn(MSP430::R4);
+    // Mark the place where FP was saved.
+    // Define the current CFA rule to use the provided offset.
+    BuildCFI(MBB, MBBI, DL,
+             MCCFIInstruction::cfiDefCfaOffset(nullptr, 2 * 2),
+             MachineInstr::FrameSetup);
 
     // Change the rule for the FramePtr to be an "offset" rule.
     unsigned DwarfFramePtr = TRI->getDwarfRegNum(MSP430::R4, true);
     BuildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createOffset(nullptr, DwarfFramePtr,
-                                            -NumBytes),
+                                            -2 * 2),
              MachineInstr::FrameSetup);
+
+    // Update FP with the new base value...
+    BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::R4)
+      .addReg(MSP430::SP)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+    // Mark effective beginning of when frame pointer becomes valid.
+    // Define the current CFA to use the FP register.
+    BuildCFI(
+        MBB, MBBI, DL,
+        MCCFIInstruction::createDefCfaRegister(nullptr, DwarfFramePtr),
+        MachineInstr::FrameSetup);
+
+    // Mark the FramePtr as live-in in every block except the entry.
+    for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
+      MBBJ.addLiveIn(MSP430::R4);
   } else
     NumBytes = StackSize - MSP430FI->getCalleeSavedFrameSize();
 
@@ -126,10 +139,14 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
-    // Adjust the previous CFA value by NumBytes
-    BuildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::createAdjustCfaOffset(nullptr, NumBytes),
-             MachineInstr::FrameSetup);
+    if (!hasFP(MF))
+    {
+      // Adjust the previous CFA value by NumBytes if CFA was not redefined by FP
+      unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::cfiDefCfa(nullptr, DwarfStackPtr, NumBytes + 2),
+               MachineInstr::FrameSetup);
+    }
   }
 
 
@@ -224,10 +241,14 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
 
-      // Adjust the previous CFA value by NumBytes
-      BuildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::createAdjustCfaOffset(nullptr, -NumBytes),
-               MachineInstr::FrameDestroy);
+      if (!hasFP(MF))
+      {
+        // Restore the initial CFA value if it was defined by SP
+        unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
+        BuildCFI(MBB, MBBI, DL,
+                 MCCFIInstruction::cfiDefCfa(nullptr, DwarfStackPtr, 2),
+                 MachineInstr::FrameDestroy);
+      }
     }
   }
 }

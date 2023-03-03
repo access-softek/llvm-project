@@ -16,7 +16,9 @@ using namespace llvm;
 void MSP430MCAsmInfo::anchor() { }
 
 MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT) {
-  CodePointerSize = 2;
+  // For the purpose of compatibility with MSP430-GCC binaries, the 16-bit pointer
+  // will be stored in 32-bit fields within DWARF information.
+  CodePointerSize = 4;
   CalleeSaveStackSlotSize = 2;
 
   CommentString = ";";
