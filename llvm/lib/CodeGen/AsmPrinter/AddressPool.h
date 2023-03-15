@@ -16,7 +16,6 @@ namespace llvm {
 class AsmPrinter;
 class MCSection;
 class MCSymbol;
-class TargetMachine;
 
 // Collection of addresses for this unit and assorted labels.
 // A Symbol->unsigned mapping of addresses used by indirect

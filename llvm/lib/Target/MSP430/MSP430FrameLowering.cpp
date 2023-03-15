@@ -139,8 +139,7 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
-    if (!hasFP(MF))
-    {
+    if (!hasFP(MF)) {
       // Adjust the previous CFA value by NumBytes if CFA was not redefined by FP
       unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
       BuildCFI(MBB, MBBI, DL,
@@ -148,8 +147,6 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
                MachineInstr::FrameSetup);
     }
   }
-
-
 //  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 //  if (!CSI.empty()) {
 //    MachineModuleInfo &MMI = MF.getMMI();
@@ -241,8 +238,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
 
-      if (!hasFP(MF))
-      {
+      if (!hasFP(MF)) {
         // Restore the initial CFA value if it was defined by SP
         unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
         BuildCFI(MBB, MBBI, DL,

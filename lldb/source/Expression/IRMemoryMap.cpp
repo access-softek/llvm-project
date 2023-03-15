@@ -96,9 +96,19 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // regions, walk forward through memory until a region is found that has
   // adequate space for our allocation.
   if (process_is_alive) {
-    const uint64_t end_of_memory = process_sp->GetAddressByteSize() == 8
-                                       ? 0xffffffffffffffffull
-                                       : 0xffffffffull;
+    uint64_t end_of_memory;
+    uint32_t address_byte_size = process_sp->GetAddressByteSize();
+    switch (address_byte_size) {
+    case 2:
+      end_of_memory = 0xffffull;
+      break;
+    case 4:
+      end_of_memory = 0xffffffffull;
+      break;
+    default:
+      end_of_memory = 0xffffffffffffffffull;
+      break;
+    }
 
     lldbassert(process_sp->GetAddressByteSize() == 4 ||
                end_of_memory != 0xffffffffull);
@@ -137,18 +147,18 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // We've tried our algorithm, and it didn't work.  Now we have to reset back
   // to the end of the allocations we've already reported, or use a 'sensible'
   // default if this is our first allocation.
-
   if (m_allocations.empty()) {
     uint32_t address_byte_size = GetAddressByteSize();
     if (address_byte_size != UINT32_MAX) {
       switch (address_byte_size) {
-      case 8:
-        ret = 0xdead0fff00000000ull;
+      case 2:
+        ret = 0x8000ull;
         break;
       case 4:
         ret = 0xee000000ull;
         break;
       default:
+        ret = 0xdead0fff00000000ull;
         break;
       }
     }
@@ -156,7 +166,8 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
     auto back = m_allocations.rbegin();
     lldb::addr_t addr = back->first;
     size_t alloc_size = back->second.m_size;
-    ret = llvm::alignTo(addr + alloc_size, 4096);
+    auto align = GetAddressByteSize() == 2? 512 : 4096;
+    ret = llvm::alignTo(addr + alloc_size, align);
   }
 
   return ret;
