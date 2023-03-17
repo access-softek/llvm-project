@@ -57,6 +57,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    clr r13
 ; CHECK-NEXT:    add #20, r1
 ; CHECK-NEXT:    pop r4
+; CHECK-NEXT:    .cfi_def_cfa r1, 2
 ; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -130,6 +131,7 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    clr r13
 ; CHECK-NEXT:    add #20, r1
 ; CHECK-NEXT:    pop r4
+; CHECK-NEXT:    .cfi_def_cfa r1, 2
 ; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4

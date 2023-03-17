@@ -175,8 +175,8 @@ ABISysV_msp430::CreateFunctionEntryUnwindPlan ( UnwindPlan &unwind_plan )
     uint32_t pc_reg_num = dwarf_pc;
 
     UnwindPlan::RowSP row(new UnwindPlan::Row);
-    row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
-    row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, 2, true);
+    row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 2);
+    row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -2, true);
     row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
     unwind_plan.AppendRow(row);
@@ -196,8 +196,8 @@ ABISysV_msp430::CreateDefaultUnwindPlan ( UnwindPlan &unwind_plan )
     uint32_t pc_reg_num = dwarf_pc;
 
     UnwindPlan::RowSP row(new UnwindPlan::Row);
-    row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
-    row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, 2, true);
+    row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 2);
+    row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -2, true);
     row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
     row->SetRegisterLocationToUnspecified(fp_reg_num, true);
 

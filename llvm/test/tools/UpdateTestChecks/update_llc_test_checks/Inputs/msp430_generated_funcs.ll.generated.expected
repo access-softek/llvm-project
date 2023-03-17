@@ -116,6 +116,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    clr r13
 ; CHECK-NEXT:    add #20, r1
 ; CHECK-NEXT:    pop r4
+; CHECK-NEXT:    .cfi_def_cfa r1, 2
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LABEL: main:
@@ -153,4 +154,5 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    clr r13
 ; CHECK-NEXT:    add #20, r1
 ; CHECK-NEXT:    pop r4
+; CHECK-NEXT:    .cfi_def_cfa r1, 2
 ; CHECK-NEXT:    ret

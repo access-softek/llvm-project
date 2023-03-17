@@ -55,6 +55,33 @@ void MSP430FrameLowering::BuildCFI(MachineBasicBlock &MBB,
       .setMIFlag(Flag);
 }
 
+void MSP430FrameLowering::emitCalleeSavedFrameMoves(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, bool IsPrologue) const {
+  MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineModuleInfo &MMI = MF.getMMI();
+  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+
+  // Add callee saved registers to move list.
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
+  // Calculate offsets.
+  for (const CalleeSavedInfo &I : CSI) {
+    int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
+    Register Reg = I.getReg();
+    unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
+
+    if (IsPrologue) {
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
+    } else {
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createRestore(nullptr, DwarfReg));
+    }
+  }
+}
+
 void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
@@ -68,6 +95,7 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
   // Get the number of bytes to allocate from the FrameInfo.
   uint64_t StackSize = MFI.getStackSize();
+  int stackGrowth = -2;
 
   uint64_t NumBytes = 0;
   if (hasFP(MF)) {
@@ -88,15 +116,15 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
     // Mark the place where FP was saved.
     // Define the current CFA rule to use the provided offset.
     BuildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::cfiDefCfaOffset(nullptr, 2 * 2),
+             MCCFIInstruction::cfiDefCfaOffset(nullptr, -2 * stackGrowth),
              MachineInstr::FrameSetup);
 
     // Change the rule for the FramePtr to be an "offset" rule.
     unsigned DwarfFramePtr = TRI->getDwarfRegNum(MSP430::R4, true);
-    BuildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::createOffset(nullptr, DwarfFramePtr,
-                                            -2 * 2),
-             MachineInstr::FrameSetup);
+    BuildCFI(
+        MBB, MBBI, DL,
+        MCCFIInstruction::createOffset(nullptr, DwarfFramePtr, 2 * stackGrowth),
+        MachineInstr::FrameSetup);
 
     // Update FP with the new base value...
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::R4)
@@ -117,8 +145,21 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
     NumBytes = StackSize - MSP430FI->getCalleeSavedFrameSize();
 
   // Skip the callee-saved push instructions.
-  while (MBBI != MBB.end() && (MBBI->getOpcode() == MSP430::PUSH16r))
+  int StackOffset = 2 * stackGrowth;
+  while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup) &&
+         (MBBI->getOpcode() == MSP430::PUSH16r)) {
     ++MBBI;
+
+    if (!hasFP(MF)) {
+      // Mark callee-saved push instruction.
+      // Define the current CFA rule to use the provided offset.
+      assert(StackSize);
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::cfiDefCfaOffset(nullptr, -StackOffset),
+               MachineInstr::FrameSetup);
+      StackOffset += stackGrowth;
+    }
+  }
 
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
@@ -140,28 +181,15 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
       MI->getOperand(3).setIsDead();
     }
     if (!hasFP(MF)) {
-      // Adjust the previous CFA value by NumBytes if CFA was not redefined by FP
-      unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
-      BuildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::cfiDefCfa(nullptr, DwarfStackPtr, NumBytes + 2),
-               MachineInstr::FrameSetup);
+      // Adjust the previous CFA value if CFA was not redefined by FP
+      BuildCFI(
+          MBB, MBBI, DL,
+          MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize - stackGrowth),
+          MachineInstr::FrameSetup);
     }
   }
-//  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-//  if (!CSI.empty()) {
-//    MachineModuleInfo &MMI = MF.getMMI();
-//    const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
 
-//    for (const CalleeSavedInfo &I : CSI) {
-//      int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-//      Register Reg = I.getReg();
-//      unsigned DReg = MRI->getDwarfRegNum(Reg, true);
-//      unsigned CFIIndex = MF.addFrameInst(
-//          MCCFIInstruction::createOffset(nullptr, DReg, Offset));
-//      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-//          .addCFIIndex(CFIIndex);
-//    }
-//  }
+  emitCalleeSavedFrameMoves(MBB, MBBI, DL, true);
 }
 
 void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -187,6 +215,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned CSSize = MSP430FI->getCalleeSavedFrameSize();
   uint64_t NumBytes = 0;
 
+  MachineBasicBlock::iterator AfterPop = MBBI;
   if (hasFP(MF)) {
     // Calculate required stack adjustment
     uint64_t FrameSize = StackSize - 2;
@@ -195,17 +224,34 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
     // pop FP.
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::POP16r), MSP430::R4)
       .setMIFlag(MachineInstr::FrameDestroy);
+    unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
+    BuildCFI(MBB, MBBI, DL,
+             MCCFIInstruction::cfiDefCfa(nullptr, DwarfStackPtr, 2),
+             MachineInstr::FrameDestroy);
+    --MBBI;
+    if (!MBB.succ_empty() && !MBB.isReturnBlock()) {
+      unsigned DwarfFramePtr = TRI->getDwarfRegNum(MSP430::R4, true);
+      BuildCFI(MBB, AfterPop, DL,
+               MCCFIInstruction::createRestore(nullptr, DwarfFramePtr),
+               MachineInstr::FrameDestroy);
+      --MBBI;
+      --AfterPop;
+    }
   } else
     NumBytes = StackSize - CSSize;
 
   // Skip the callee-saved pop instructions.
+  MachineBasicBlock::iterator FirstCSPop = MBBI;
   while (MBBI != MBB.begin()) {
     MachineBasicBlock::iterator PI = std::prev(MBBI);
     unsigned Opc = PI->getOpcode();
-    if (Opc != MSP430::POP16r && !PI->isTerminator())
+    if ((Opc != MSP430::POP16r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+        !PI->isTerminator())
       break;
+    FirstCSPop = PI;
     --MBBI;
   }
+  MBBI = FirstCSPop;
 
   DL = MBBI->getDebugLoc();
 
@@ -239,14 +285,32 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
       MI->getOperand(3).setIsDead();
 
       if (!hasFP(MF)) {
-        // Restore the initial CFA value if it was defined by SP
-        unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
+        // Adjust CFA value if it was defined by SP
         BuildCFI(MBB, MBBI, DL,
-                 MCCFIInstruction::cfiDefCfa(nullptr, DwarfStackPtr, 2),
+                 MCCFIInstruction::cfiDefCfaOffset(nullptr, CSSize + 2),
                  MachineInstr::FrameDestroy);
       }
     }
   }
+
+  if (!hasFP(MF)) {
+    MBBI = FirstCSPop;
+    int64_t Offset = -CSSize - 2;
+    // Mark callee-saved pop instruction.
+    // Define the current CFA rule to use the provided offset.
+    while (MBBI != MBB.end()) {
+      MachineBasicBlock::iterator PI = MBBI;
+      unsigned Opc = PI->getOpcode();
+      ++MBBI;
+      if (Opc == MSP430::POP16r) {
+        Offset += 2;
+        BuildCFI(MBB, MBBI, DL,
+                 MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset),
+                 MachineInstr::FrameDestroy);
+      }
+    }
+  }
+  emitCalleeSavedFrameMoves(MBB, AfterPop, DL, false);
 }
 
 // FIXME: Can we eleminate these in favour of generic code?
@@ -264,12 +328,13 @@ bool MSP430FrameLowering::spillCalleeSavedRegisters(
   MSP430MachineFunctionInfo *MFI = MF.getInfo<MSP430MachineFunctionInfo>();
   MFI->setCalleeSavedFrameSize(CSI.size() * 2);
 
-  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+  for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
     BuildMI(MBB, MI, DL, TII.get(MSP430::PUSH16r))
-      .addReg(Reg, RegState::Kill);
+        .addReg(Reg, RegState::Kill)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
   return true;
 }
@@ -286,8 +351,9 @@ bool MSP430FrameLowering::restoreCalleeSavedRegisters(
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
-  for (const CalleeSavedInfo &I : CSI)
-    BuildMI(MBB, MI, DL, TII.get(MSP430::POP16r), I.getReg());
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI))
+    BuildMI(MBB, MI, DL, TII.get(MSP430::POP16r), I.getReg())
+        .setMIFlag(MachineInstr::FrameDestroy);
 
   return true;
 }
@@ -344,6 +410,12 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
           BuildMI(MF, Old.getDebugLoc(), TII.get(MSP430::SUB16ri), MSP430::SP)
               .addReg(MSP430::SP)
               .addImm(CalleeAmt);
+      if (!hasFP(MF)) {
+        DebugLoc DL = I->getDebugLoc();
+        BuildCFI(MBB, I, DL,
+                 MCCFIInstruction::createAdjustCfaOffset(nullptr, CalleeAmt),
+                 MachineInstr::FrameDestroy);
+      }
       // The SRW implicit def is dead.
       New->getOperand(3).setIsDead();
 
