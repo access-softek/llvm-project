@@ -21,7 +21,7 @@
 ; CHECK: file format elf32-msp430
 
 ; CHECK: .debug_info contents:
-; CHECK: Compile Unit: length = 0x{{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x02 (next unit at 0x{{.*}})
+; CHECK: Compile Unit: length = 0x{{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x{{.*}})
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_producer    ("clang version 14.0.0 (git@...)")
@@ -49,7 +49,7 @@
 
 ; CHECK:       DW_TAG_formal_parameter
 ; CHECK:         DW_AT_location        (indexed (0x0) loclist = 0x{{.*}}:
-; CHECK:            [0x0000, 0x0004): DW_OP_reg12 R12)
+; CHECK:            [0x00000000, 0x00000004): DW_OP_reg12 R12)
 ; CHECK:         DW_AT_name    ("y")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics-v5.c")
 ; CHECK:         DW_AT_decl_line       (5)
@@ -97,13 +97,13 @@
 ; CHECK:     NULL
 
 ; CHECK:      .debug_aranges contents:
-; CHECK-NEXT: Address Range Header: length = 0x{{.*}}, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x02, seg_size = 0x00
-; CHECK-NEXT: [0x0000, 0x0006)
+; CHECK-NEXT: Address Range Header: length = 0x{{.*}}, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x04, seg_size = 0x00
+; CHECK-NEXT: [0x00000000, 0x00000006)
 
 ; CHECK:      .debug_addr contents:
-; CHECK-NEXT: Address table header: length = 0x{{.*}}, format = DWARF32, version = 0x0005, addr_size = 0x02, seg_size = 0x00
+; CHECK-NEXT: Address table header: length = 0x{{.*}}, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00
 ; CHECK-NEXT: Addrs: [
-; CHECK-NEXT: 0x0000
+; CHECK-NEXT: 0x00000000
 ; CHECK-NEXT: ]
 
 ; ModuleID = 'dwarf-basics-v5.c'
