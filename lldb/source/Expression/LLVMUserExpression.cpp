@@ -332,10 +332,10 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
 
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
       Status alloc_error;
-
-      const size_t stack_frame_size = target->GetArchitecture().GetAddressByteSize() == 2
-                                      ? 512
-                                      : 512 * 1024;
+      size_t stack_frame_size = target->GetExprAllocSize();
+      if (stack_frame_size == 0)
+        stack_frame_size = target->GetArchitecture().GetAddressByteSize() == 2 ? 512
+                                                                               : 512 * 1024;
 
       const bool zero_memory = false;
 

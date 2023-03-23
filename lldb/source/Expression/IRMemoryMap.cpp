@@ -95,21 +95,20 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // Now, if it's possible to use the GetMemoryRegionInfo API to detect mapped
   // regions, walk forward through memory until a region is found that has
   // adequate space for our allocation.
+  uint64_t end_of_memory;
+  uint32_t address_byte_size = GetAddressByteSize();
+  switch (address_byte_size) {
+  case 2:
+    end_of_memory = 0xffffull;
+    break;
+  case 4:
+    end_of_memory = 0xffffffffull;
+    break;
+  default:
+    end_of_memory = 0xffffffffffffffffull;
+    break;
+  }
   if (process_is_alive) {
-    uint64_t end_of_memory;
-    uint32_t address_byte_size = process_sp->GetAddressByteSize();
-    switch (address_byte_size) {
-    case 2:
-      end_of_memory = 0xffffull;
-      break;
-    case 4:
-      end_of_memory = 0xffffffffull;
-      break;
-    default:
-      end_of_memory = 0xffffffffffffffffull;
-      break;
-    }
-
     lldbassert(process_sp->GetAddressByteSize() == 4 ||
                end_of_memory != 0xffffffffull);
 
@@ -148,25 +147,35 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // to the end of the allocations we've already reported, or use a 'sensible'
   // default if this is our first allocation.
   if (m_allocations.empty()) {
-    uint32_t address_byte_size = GetAddressByteSize();
-    if (address_byte_size != UINT32_MAX) {
-      switch (address_byte_size) {
-      case 2:
-        ret = 0x8000ull;
-        break;
-      case 4:
-        ret = 0xee000000ull;
-        break;
-      default:
-        ret = 0xdead0fff00000000ull;
-        break;
+    uint64_t alloc_address = target_sp->GetExprAllocAddress();
+    if (alloc_address > 0) {
+      // The address must be within process address space
+      if (alloc_address >= end_of_memory)
+        return LLDB_INVALID_ADDRESS;
+      ret = alloc_address;
+    } else {
+      uint32_t address_byte_size = GetAddressByteSize();
+      if (address_byte_size != UINT32_MAX) {
+        switch (address_byte_size) {
+        case 2:
+          ret = 0x8000ull;
+          break;
+        case 4:
+          ret = 0xee000000ull;
+          break;
+        default:
+          ret = 0xdead0fff00000000ull;
+          break;
+        }
       }
     }
   } else {
     auto back = m_allocations.rbegin();
     lldb::addr_t addr = back->first;
     size_t alloc_size = back->second.m_size;
-    auto align = GetAddressByteSize() == 2? 512 : 4096;
+    uint64_t align = target_sp->GetExprAllocAlign();
+    if (align == 0)
+      align = GetAddressByteSize() == 2? 512 : 4096;
     ret = llvm::alignTo(addr + alloc_size, align);
   }
 
