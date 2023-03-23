@@ -4598,7 +4598,6 @@ uint64_t TargetProperties::GetExprAllocAlign() const {
       nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
-
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(

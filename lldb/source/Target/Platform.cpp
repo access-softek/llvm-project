@@ -1895,9 +1895,8 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     trap_opcode_size = sizeof(g_hex_opcode);
   } break;
 
-  case llvm::Triple::msp430:
-  {
-    static const uint8_t g_msp430_opcode[] = { 0x43, 0x43 };
+  case llvm::Triple::msp430: {
+    static const uint8_t g_msp430_opcode[] = {0x43, 0x43};
     trap_opcode = g_msp430_opcode;
     trap_opcode_size = sizeof(g_msp430_opcode);
   } break;

@@ -14,102 +14,87 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/lldb-private.h"
 
-class ABISysV_msp430 : public lldb_private::RegInfoBasedABI
-{
+class ABISysV_msp430 : public lldb_private::RegInfoBasedABI {
 public:
-    ~ABISysV_msp430() override = default;
+  ~ABISysV_msp430() override = default;
 
-    size_t
-    GetRedZoneSize() const override;
+  size_t GetRedZoneSize() const override;
 
-    bool
-    PrepareTrivialCall(lldb_private::Thread &thread,
-                       lldb::addr_t sp,
-                       lldb::addr_t functionAddress,
-                       lldb::addr_t returnAddress,
-                       llvm::ArrayRef<lldb::addr_t> args) const override;
+  bool PrepareTrivialCall(lldb_private::Thread &thread, lldb::addr_t sp,
+                          lldb::addr_t functionAddress,
+                          lldb::addr_t returnAddress,
+                          llvm::ArrayRef<lldb::addr_t> args) const override;
 
-    bool
-    GetArgumentValues(lldb_private::Thread &thread,
-                       lldb_private::ValueList &values) const override;
-    
-    lldb_private::Status
-    SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                         lldb::ValueObjectSP &new_value) override;
+  bool GetArgumentValues(lldb_private::Thread &thread,
+                         lldb_private::ValueList &values) const override;
 
-    lldb::ValueObjectSP
-    GetReturnValueObjectImpl(lldb_private::Thread &thread,
-                             lldb_private::CompilerType &type) const override;
+  lldb_private::Status
+  SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                       lldb::ValueObjectSP &new_value) override;
 
-    bool
-    CreateFunctionEntryUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
-    
-    bool
-    CreateDefaultUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
-        
-    bool
-    RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  lldb::ValueObjectSP
+  GetReturnValueObjectImpl(lldb_private::Thread &thread,
+                           lldb_private::CompilerType &type) const override;
 
-    bool
-    CallFrameAddressIsValid(lldb::addr_t cfa) override
-    {
-        // Make sure the stack call frame addresses are 2 byte aligned
-        if (cfa & 0x01)
-            return false;   // Not 2 byte aligned
-        if (cfa == 0)
-            return false;   // Zero is not a valid stack address
-        return true;
-    }
-    
-    bool
-    CodeAddressIsValid(lldb::addr_t pc) override
-    {
-        // We have a 64 bit address space, so anything is valid as opcodes
-        // aren't fixed width...
-        return true;
-    }
+  bool
+  CreateFunctionEntryUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
 
-    const lldb_private::RegisterInfo *
-    GetRegisterInfoArray(uint32_t &count) override;
+  bool CreateDefaultUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
 
-    //------------------------------------------------------------------
-    // Static Functions
-    //------------------------------------------------------------------
+  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
-    static void
-    Initialize();
+  bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
+    // Make sure the stack call frame addresses are 2 byte aligned
+    if (cfa & 0x01)
+      return false; // Not 2 byte aligned
+    if (cfa == 0)
+      return false; // Zero is not a valid stack address
+    return true;
+  }
 
-    static void
-    Terminate();
+  bool CodeAddressIsValid(lldb::addr_t pc) override {
+    // We have a 64 bit address space, so anything is valid as opcodes
+    // aren't fixed width...
+    return true;
+  }
 
-//    static lldb::ABISP
-//    CreateInstance(const lldb_private::ArchSpec &arch);
+  const lldb_private::RegisterInfo *
+  GetRegisterInfoArray(uint32_t &count) override;
 
-    static lldb::ABISP
-    CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
 
-    static llvm::StringRef GetPluginNameStatic() { return "sysv-msp430"; }
+  static void Initialize();
 
-    // PluginInterface protocol
+  static void Terminate();
 
-    llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+  //    static lldb::ABISP
+  //    CreateInstance(const lldb_private::ArchSpec &arch);
+
+  static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp,
+                                    const lldb_private::ArchSpec &arch);
+
+  static llvm::StringRef GetPluginNameStatic() { return "sysv-msp430"; }
+
+  // PluginInterface protocol
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
-    void
-    CreateRegisterMapIfNeeded();
+  void CreateRegisterMapIfNeeded();
 
-    lldb::ValueObjectSP
-    GetReturnValueObjectSimple(lldb_private::Thread &thread,
-                               lldb_private::CompilerType &ast_type) const;
+  lldb::ValueObjectSP
+  GetReturnValueObjectSimple(lldb_private::Thread &thread,
+                             lldb_private::CompilerType &ast_type) const;
 
-    bool
-    RegisterIsCalleeSaved (const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-    using lldb_private::RegInfoBasedABI::RegInfoBasedABI;
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_MSP430_ABISYSV_MSP430_H

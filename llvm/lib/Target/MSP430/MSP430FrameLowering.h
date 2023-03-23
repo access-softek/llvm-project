@@ -14,8 +14,8 @@
 #define LLVM_LIB_TARGET_MSP430_MSP430FRAMELOWERING_H
 
 #include "MSP430.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {

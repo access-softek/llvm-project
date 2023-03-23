@@ -45,8 +45,8 @@ static MCRegisterInfo *createMSP430MCRegisterInfo(const Triple &TT) {
 }
 
 static MCAsmInfo *createMSP430MCAsmInfo(const MCRegisterInfo &MRI,
-                                       const Triple &TT,
-                                       const MCTargetOptions &Options) {
+                                        const Triple &TT,
+                                        const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new MSP430MCAsmInfo(TT);
 
   // Initialize initial frame state.

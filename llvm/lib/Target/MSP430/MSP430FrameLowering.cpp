@@ -26,10 +26,9 @@
 using namespace llvm;
 
 MSP430FrameLowering::MSP430FrameLowering(const MSP430Subtarget &STI)
-  : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), -2,
-                        Align(2)),
-    STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo())
-    {}
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), -2,
+                          Align(2)),
+      STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
 bool MSP430FrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -44,10 +43,10 @@ bool MSP430FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const 
 }
 
 void MSP430FrameLowering::BuildCFI(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI,
-                                const DebugLoc &DL,
-                                const MCCFIInstruction &CFIInst,
-                                MachineInstr::MIFlag Flag) const {
+                                   MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL,
+                                   const MCCFIInstruction &CFIInst,
+                                   MachineInstr::MIFlag Flag) const {
   MachineFunction &MF = *MBB.getParent();
   unsigned CFIIndex = MF.addFrameInst(CFIInst);
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -110,8 +109,8 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
     // Save FP into the appropriate stack slot...
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::PUSH16r))
-      .addReg(MSP430::R4, RegState::Kill)
-      .setMIFlag(MachineInstr::FrameSetup);
+        .addReg(MSP430::R4, RegState::Kill)
+        .setMIFlag(MachineInstr::FrameSetup);
 
     // Mark the place where FP was saved.
     // Define the current CFA rule to use the provided offset.
@@ -128,15 +127,14 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
     // Update FP with the new base value...
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::R4)
-      .addReg(MSP430::SP)
-      .setMIFlag(MachineInstr::FrameSetup);
+        .addReg(MSP430::SP)
+        .setMIFlag(MachineInstr::FrameSetup);
 
     // Mark effective beginning of when frame pointer becomes valid.
     // Define the current CFA to use the FP register.
-    BuildCFI(
-        MBB, MBBI, DL,
-        MCCFIInstruction::createDefCfaRegister(nullptr, DwarfFramePtr),
-        MachineInstr::FrameSetup);
+    BuildCFI(MBB, MBBI, DL,
+             MCCFIInstruction::createDefCfaRegister(nullptr, DwarfFramePtr),
+             MachineInstr::FrameSetup);
 
     // Mark the FramePtr as live-in in every block except the entry.
     for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
@@ -174,9 +172,10 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (NumBytes) {
       MachineInstr *MI =
-        BuildMI(MBB, MBBI, DL, TII.get(MSP430::SUB16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(NumBytes)
-        .setMIFlag(MachineInstr::FrameSetup);
+          BuildMI(MBB, MBBI, DL, TII.get(MSP430::SUB16ri), MSP430::SP)
+              .addReg(MSP430::SP)
+              .addImm(NumBytes)
+              .setMIFlag(MachineInstr::FrameSetup);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -223,7 +222,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
     // pop FP.
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::POP16r), MSP430::R4)
-      .setMIFlag(MachineInstr::FrameDestroy);
+        .setMIFlag(MachineInstr::FrameDestroy);
     unsigned DwarfStackPtr = TRI->getDwarfRegNum(MSP430::SP, true);
     BuildCFI(MBB, MBBI, DL,
              MCCFIInstruction::cfiDefCfa(nullptr, DwarfStackPtr, 2),
@@ -261,16 +260,15 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
   //  mergeSPUpdatesUp(MBB, MBBI, StackPtr, &NumBytes);
 
   if (MFI.hasVarSizedObjects()) {
-    BuildMI(MBB, MBBI, DL,
-            TII.get(MSP430::MOV16rr), MSP430::SP)
-            .addReg(MSP430::R4)
-            .setMIFlag(MachineInstr::FrameDestroy);
+    BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::SP)
+        .addReg(MSP430::R4)
+        .setMIFlag(MachineInstr::FrameDestroy);
     if (CSSize) {
       MachineInstr *MI =
-        BuildMI(MBB, MBBI, DL,
-                TII.get(MSP430::SUB16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(CSSize)
-        .setMIFlag(MachineInstr::FrameDestroy);
+          BuildMI(MBB, MBBI, DL, TII.get(MSP430::SUB16ri), MSP430::SP)
+              .addReg(MSP430::SP)
+              .addImm(CSSize)
+              .setMIFlag(MachineInstr::FrameDestroy);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
     }
@@ -278,9 +276,10 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
     // adjust stack pointer back: SP += numbytes
     if (NumBytes) {
       MachineInstr *MI =
-        BuildMI(MBB, MBBI, DL, TII.get(MSP430::ADD16ri), MSP430::SP)
-        .addReg(MSP430::SP).addImm(NumBytes)
-        .setMIFlag(MachineInstr::FrameDestroy);
+          BuildMI(MBB, MBBI, DL, TII.get(MSP430::ADD16ri), MSP430::SP)
+              .addReg(MSP430::SP)
+              .addImm(NumBytes)
+              .setMIFlag(MachineInstr::FrameDestroy);
       // The SRW implicit def is dead.
       MI->getOperand(3).setIsDead();
 

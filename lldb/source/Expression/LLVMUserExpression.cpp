@@ -334,8 +334,9 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
       Status alloc_error;
       size_t stack_frame_size = target->GetExprAllocSize();
       if (stack_frame_size == 0)
-        stack_frame_size = target->GetArchitecture().GetAddressByteSize() == 2 ? 512
-                                                                               : 512 * 1024;
+        stack_frame_size = target->GetArchitecture().GetAddressByteSize() == 2
+                               ? 512
+                               : 512 * 1024;
 
       const bool zero_memory = false;
 

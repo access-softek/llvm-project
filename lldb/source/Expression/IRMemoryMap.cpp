@@ -175,7 +175,7 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
     size_t alloc_size = back->second.m_size;
     uint64_t align = target_sp->GetExprAllocAlign();
     if (align == 0)
-      align = GetAddressByteSize() == 2? 512 : 4096;
+      align = GetAddressByteSize() == 2 ? 512 : 4096;
     ret = llvm::alignTo(addr + alloc_size, align);
   }
 
