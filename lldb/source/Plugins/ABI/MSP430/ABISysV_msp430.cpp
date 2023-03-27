@@ -228,16 +228,6 @@ ABISysV_msp430::GetRegisterInfoArray(uint32_t &count) {
   return g_register_infos;
 }
 
-/*
-    http://en.wikipedia.org/wiki/Red_zone_%28computing%29
-
-    In computing, a red zone is a fixed size area in memory beyond the stack
-   pointer that has not been "allocated". This region of memory is not to be
-   modified by interrupt/exception/signal handlers. This allows the space to be
-   used for temporary data without the extra overhead of modifying the stack
-   pointer. The x86-64 ABI mandates a 128 byte red zone.[1] The OpenRISC
-   toolchain assumes a 128 byte red zone though it is not documented.
-*/
 size_t ABISysV_msp430::GetRedZoneSize() const { return 0; }
 
 //------------------------------------------------------------------
@@ -268,8 +258,7 @@ bool ABISysV_msp430::GetArgumentValues(Thread &thread,
 
 Status ABISysV_msp430::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                             lldb::ValueObjectSP &new_value_sp) {
-  Status error;
-  return error;
+  return Status();
 }
 
 ValueObjectSP ABISysV_msp430::GetReturnValueObjectSimple(
