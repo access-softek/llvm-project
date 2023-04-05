@@ -41,7 +41,7 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_msp430() {
   ConstString reg_set{"general purpose registers"};
 
   std::vector<DynamicRegisterInfo::Register> registers{
-      R16(r0),  R16(r1),  R16(r2),  R16(r3), R16(r4),  R16(r5),
+      R16(pc),  R16(sp),  R16(r2),  R16(r3), R16(fp),  R16(r5),
       R16(r6),  R16(r7),  R16(r8),  R16(r9), R16(r10), R16(r11),
       R16(r12), R16(r13), R16(r14), R16(r15)};
 
