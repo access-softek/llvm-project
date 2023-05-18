@@ -139,7 +139,7 @@ Address CodeGenFunction::LoadCXXThisAddress() {
   }
 
   llvm::Type *Ty = ConvertType(MD->getThisType()->getPointeeType());
-  return Address(LoadCXXThis(), Ty, CXXThisAlignment, KnownNonNull);
+  return Address(LoadCXXThis(), Ty, CXXThisAlignment);
 }
 
 /// Emit the address of a field using a member data pointer.
@@ -392,7 +392,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     llvm::PHINode *PHI = Builder.CreatePHI(BasePtrTy, 2, "cast.result");
     PHI->addIncoming(Value.getPointer(), notNullBB);
     PHI->addIncoming(llvm::Constant::getNullValue(BasePtrTy), origBB);
-    Value = Value.withPointer(PHI, NotKnownNonNull);
+    Value = Value.withPointer(PHI);
   }
 
   return Value;

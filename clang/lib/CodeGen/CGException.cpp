@@ -1842,7 +1842,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
   llvm::Value *ChildVar =
       Builder.CreateBitCast(RecoverCall, ParentVar.getType());
   ChildVar->setName(ParentVar.getName());
-  return ParentVar.withPointer(ChildVar, KnownNonNull);
+  return ParentVar.withPointer(ChildVar);
 }
 
 void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
