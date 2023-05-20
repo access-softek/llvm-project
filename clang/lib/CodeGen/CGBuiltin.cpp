@@ -198,7 +198,7 @@ static llvm::Value *CheckAtomicAlignment(CodeGenFunction &CGF,
     DiagnosticsEngine &Diags = CGF.CGM.getDiags();
     Diags.Report(E->getBeginLoc(), diag::warn_sync_op_misaligned);
   }
-  return Ptr.getPointer();
+  return Ptr.getRawPointer(CGF);
 }
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
@@ -19978,7 +19978,7 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
 
     llvm::Value *PredOut = Builder.CreateExtractValue(Result, 1);
-    Builder.CreateAlignedStore(Q2V(PredOut), PredAddr.getPointer(),
+    Builder.CreateAlignedStore(Q2V(PredOut), PredAddr.getRawPointer(*this),
         PredAddr.getAlignment());
     return Builder.CreateExtractValue(Result, 0);
   }

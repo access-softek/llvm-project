@@ -4641,7 +4641,7 @@ CodeGenFunction::AddObjCARCExceptionMetadata(llvm::Instruction *Inst) {
 llvm::CallInst *
 CodeGenFunction::EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                          const llvm::Twine &name) {
-  return EmitNounwindRuntimeCall(callee, ArrayRef<llvm::Value *>(None), name);
+  return EmitNounwindRuntimeCall(callee, ArrayRef<llvm::Value *>(std::nullopt), name);
 }
 
 /// Emits a call to the given nounwind runtime function.

@@ -6039,7 +6039,7 @@ void CGOpenMPRuntime::emitUsesAllocatorsInit(CodeGenFunction &CGF,
   AllocatorTraitsLVal = CGF.MakeAddrLValue(Addr, CGF.getContext().VoidPtrTy,
                                            AllocatorTraitsLVal.getBaseInfo(),
                                            AllocatorTraitsLVal.getTBAAInfo());
-  llvm::Value *Traits = Addr.getPointer();
+  llvm::Value *Traits = Addr.getRawPointer(CGF);
 
   llvm::Value *AllocatorVal =
       CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
@@ -8425,7 +8425,7 @@ public:
       // if the this[:1] expression had appeared in a map clause with a map-type
       // of tofrom.
       // Emit this[:1]
-      CombinedInfo.Pointers.push_back(PartialStruct.Base.getPointer());
+      CombinedInfo.Pointers.push_back(PartialStruct.Base.getRawPointer(CGF));
       QualType Ty = MD->getThisType()->getPointeeType();
       llvm::Value *Size =
           CGF.Builder.CreateIntCast(CGF.getTypeSize(Ty), CGF.Int64Ty,
@@ -8434,7 +8434,7 @@ public:
     } else {
       CombinedInfo.Pointers.push_back(LB);
       // Size is (addr of {highest+1} element) - (addr of lowest element)
-      llvm::Value *HB = HBAddr.getPointer();
+      llvm::Value *HB = HBAddr.getRawPointer(CGF);
       llvm::Value *HAddr = CGF.Builder.CreateConstGEP1_32(
           HBAddr.getElementType(), HB, /*Idx0=*/1);
       llvm::Value *CLAddr = CGF.Builder.CreatePointerCast(LB, CGF.VoidPtrTy);
