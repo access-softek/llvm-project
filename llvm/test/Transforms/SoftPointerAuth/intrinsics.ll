@@ -22,14 +22,12 @@ entry:
 }
 
 ; CHECK: define internal void @test1() {
-; CHECK:      %fnptr_addr = getelementptr inbounds %struct.__block_literal_generic, %struct.__block_literal_generic* %block, i32 0, i32 3
-; CHECK-NEXT: %block_opaque = bitcast %struct.__block_literal_generic* %block to i8*
-; CHECK-NEXT: [[T0:%.*]] = load i8*, i8** %fnptr_addr, align 8
-; CHECK-NEXT: %fnptr = bitcast i8* [[T0]] to void (i8*)*
-; CHECK-NEXT: %discriminator = ptrtoint i8** %fnptr_addr to i64
-; CHECK-NEXT: [[FNPTR_CAST:%.*]] = bitcast void (i8*)* %fnptr to i8*
-; CHECK-NEXT: [[FNPTR_AUTH:%.*]] = call i8* @__ptrauth_auth(i8* [[FNPTR_CAST]], i32 1, i64 %discriminator) [[NOUNWIND:#[0-9]+]]
-; CHECK-NEXT: [[FNPTR_AUTH_CAST:%.*]] = bitcast i8* [[FNPTR_AUTH]] to void (i8*)*
-; CHECK-NEXT: call void [[FNPTR_AUTH_CAST]](i8* %block_opaque){{$}}
+; CHECK:      %fnptr_addr = getelementptr inbounds %struct.__block_literal_generic, ptr %block, i32 0, i32 3
+; CHECK-NEXT: %block_opaque = bitcast ptr %block to ptr
+; CHECK-NEXT: [[T0:%.*]] = load ptr, ptr %fnptr_addr, align 8
+; CHECK-NEXT: %fnptr = bitcast ptr [[T0]] to ptr
+; CHECK-NEXT: %discriminator = ptrtoint ptr %fnptr_addr to i64
+; CHECK-NEXT: [[FNPTR_AUTH:%.*]] = call ptr @__ptrauth_auth(ptr %fnptr, i32 1, i64 %discriminator) [[NOUNWIND:#[0-9]+]]
+; CHECK-NEXT: call void [[FNPTR_AUTH]](ptr %block_opaque){{$}}
 
 ; CHECK: attributes [[NOUNWIND]] = { nounwind }

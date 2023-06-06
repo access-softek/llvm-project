@@ -30,19 +30,16 @@ cleanup:
 }
 
 ; CHECK:       @prototype.signed = private constant
-; CHECK:       [[GLOBAL:@.*]] = private constant { i8*, i32, i64, i64 } { i8* bitcast (i8* (i8*, i1)* [[RESUME:@.*]] to i8*), i32 2, i64 0, i64 12867 }, section "llvm.ptrauth"
+; CHECK:       [[GLOBAL:@.*]] = private constant { ptr, i32, i64, i64 } { ptr [[RESUME:@.*]], i32 2, i64 0, i64 12867 }, section "llvm.ptrauth"
 
-; CHECK-LABEL: define i8* @f(i8* %buffer, i32 %n)
+; CHECK-LABEL: define ptr @f(ptr %buffer, i32 %n)
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %buffer to [[FRAME_T:%.*]]*
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[T0]], i32 0, i32 0
-; CHECK-NEXT:    store i32 %n, i32* [[T1]]
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds [[FRAME_T:%.*]], ptr %buffer, i32 0, i32 0
+; CHECK-NEXT:    store i32 %n, ptr [[T1]]
 ; CHECK-NEXT:    call void @print(i32 %n)
-; CHECK-NEXT:    [[RES:%.*]] = bitcast i8* (i8*, i1)* bitcast ({ i8*, i32, i64, i64 }* [[GLOBAL]] to i8* (i8*, i1)*) to i8*
-; CHECK-NEXT:    ret i8* [[RES]]
+; CHECK-NEXT:    ret ptr [[GLOBAL]]
 
-; CHECK:      define internal i8* [[RESUME]](i8* noalias nonnull align 4 dereferenceable(8) %0, i1 zeroext %1) {
-; CHECK:         bitcast ({ i8*, i32, i64, i64 }* [[GLOBAL]] to
+; CHECK:      define internal ptr [[RESUME]](ptr noalias noundef nonnull align 4 dereferenceable(8) %0, i1 zeroext %1) {
 
 @g.prototype.signed = private constant { i8*, i32, i64, i64 } { i8* bitcast (i8* (i8*, i1)* @prototype to i8*), i32 2, i64 1, i64 8723 }, section "llvm.ptrauth"
 
@@ -67,31 +64,28 @@ cleanup:
   unreachable
 }
 
-; CHECK-LABEL: define i8* @g(i8* %buffer, i32 %n)
+; CHECK-LABEL: define ptr @g(ptr %buffer, i32 %n)
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %buffer to [[FRAME_T:%.*]]*
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[T0]], i32 0, i32 0
-; CHECK-NEXT:    store i32 %n, i32* [[T1]]
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr inbounds [[FRAME_T:%.*]], ptr %buffer, i32 0, i32 0
+; CHECK-NEXT:    store i32 %n, ptr [[T1]]
 ; CHECK-NEXT:    call void @print(i32 %n)
-; CHECK-NEXT:    [[T0:%.*]] = ptrtoint i8* %buffer to i64
+; CHECK-NEXT:    [[T0:%.*]] = ptrtoint ptr %buffer to i64
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T0]], i64 8723)
-; CHECK-NEXT:    [[T2:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i8* (i8*, i1)* [[RESUME:@.*]] to i64), i32 2, i64 [[T1]])
-; CHECK-NEXT:    [[T3:%.*]] = inttoptr i64 [[T2]] to i8* (i8*, i1)*
-; CHECK-NEXT:    [[T4:%.*]] = bitcast i8* (i8*, i1)* [[T3]] to i8*
-; CHECK-NEXT:    ret i8* [[T4]]
+; CHECK-NEXT:    [[T2:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr [[RESUME:@.*]] to i64), i32 2, i64 [[T1]])
+; CHECK-NEXT:    [[T3:%.*]] = inttoptr i64 [[T2]] to ptr
+; CHECK-NEXT:    ret ptr [[T3]]
 
-; CHECK:      define internal i8* [[RESUME]](i8* noalias nonnull align 4 dereferenceable(8) %0, i1 zeroext %1) {
+; CHECK:      define internal ptr [[RESUME]](ptr noalias noundef nonnull align 4 dereferenceable(8) %0, i1 zeroext %1) {
 
 ; CHECK: common.ret:
-; CHECK: [[RETVAL:%.*]] = phi i8* [ [[T4:%.*]], %resume ], [ null,
-; CHECK: ret i8* [[RETVAL]]
+; CHECK: [[RETVAL:%.*]] = phi ptr [ [[T4:%.*]], %resume ], [ null,
+; CHECK: ret ptr [[RETVAL]]
 
 ; CHECK:         call void @print(i32 %inc)
-; CHECK-NEXT:    [[T0:%.*]] = ptrtoint i8* %0 to i64
+; CHECK-NEXT:    [[T0:%.*]] = ptrtoint ptr %0 to i64
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T0]], i64 8723)
-; CHECK-NEXT:    [[T2:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i8* (i8*, i1)* [[RESUME]] to i64), i32 2, i64 [[T1]])
-; CHECK-NEXT:    [[T3:%.*]] = inttoptr i64 [[T2]] to i8* (i8*, i1)*
-; CHECK-NEXT:    [[T4]] = bitcast i8* (i8*, i1)* [[T3]] to i8*
+; CHECK-NEXT:    [[T2:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr [[RESUME]] to i64), i32 2, i64 [[T1]])
+; CHECK-NEXT:    [[T3:%.*]] = inttoptr i64 [[T2]] to ptr
 
 declare noalias i8* @malloc(i64) #5
 declare void @free(i8* nocapture) #5

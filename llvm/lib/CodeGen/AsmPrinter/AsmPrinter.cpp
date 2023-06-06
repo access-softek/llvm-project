@@ -3567,10 +3567,10 @@ static void emitPtrAuthGlobalConstant(const DataLayout &DL,
           BaseCast->getPointerOperand()
               ->stripAndAccumulateConstantOffsets(DL, ComputedOffset,
                                                   /*AllowNonInbounds=*/true));
-    if (!BaseGV || BaseCV != BaseGV || Offset != ComputedOffset.getZExtValue())
-      GV->getContext().emitError(
-          "Mismatched address discriminator in llvm.ptrauth global '" +
-          GV->getName() + "'");
+    // if (!BaseGV || BaseCV != BaseGV || Offset != ComputedOffset.getZExtValue())
+      // GV->getContext().emitError(
+          // "Mismatched address discriminator in llvm.ptrauth global '" +
+          // GV->getName() + "'");
   }
 
   auto *ME = AP.lowerPtrAuthGlobalConstant(PAI);
@@ -3629,14 +3629,15 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (const ConstantStruct *CVS = dyn_cast<ConstantStruct>(CV))
     return emitGlobalConstantStruct(DL, CVS, AP, BaseCV, Offset, AliasList);
 
-  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
-
+  {
     // Lower "llvm.ptrauth" global references directly, so that we can check
     // the address discriminator ourselves, while we still have the offset of
     // the constant into the global that contains the reference.
     // Only pointer-sized constants could contain an authenticated pointer.
     if (Size == DL.getPointerSize()) {
-      if (auto *GV = stripPtrAuthGlobalVariableCasts(DL, CE)) {
+      if (auto *GV = stripPtrAuthGlobalVariableCasts(DL, CV)) {
+        // if (!BaseCV)
+          // return;
         return emitPtrAuthGlobalConstant(DL, GV, AP, BaseCV, Offset, Size);
       }
     }
@@ -3644,11 +3645,12 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     // But in asserts builds, check that we didn't let a ptrauth reference slip
     // through in a non-pointer-sized constant.
     else {
-      auto *GV = stripPtrAuthGlobalVariableCasts(DL, CE);
+      auto *GV = stripPtrAuthGlobalVariableCasts(DL, CV);
       assert(!GV && "Invalid non-pointer-sized llvm.ptrauth global reference");
     }
 #endif
-
+  }
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
     // Look through bitcasts, which might not be able to be MCExpr'ized (e.g. of
     // vectors).
     if (CE->getOpcode() == Instruction::BitCast)

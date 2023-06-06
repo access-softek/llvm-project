@@ -283,18 +283,18 @@ define i8* @test_intrinsic_addr_disc(i8* %arg0) {
 define i8* @test_intrinsic_blend_addr_disc_cross_bb(i8* %arg0, i8* %arg1, i1 %arg2) {
 ; CHECK-LABEL: test_intrinsic_blend_addr_disc_cross_bb:
 ; CHECK:       ; %bb.0: ; %common.ret
-; CHECK-NEXT:    movk x0, #23, lsl #48
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:  Lloh18:
-; CHECK-NEXT:    adrp x9, _g2@GOTPAGE
+; CHECK-NEXT:    adrp x8, _g2@GOTPAGE
 ; CHECK-NEXT:  Lloh19:
-; CHECK-NEXT:    ldr x9, [x9, _g2@GOTPAGEOFF]
+; CHECK-NEXT:    ldr x8, [x8, _g2@GOTPAGEOFF]
 ; CHECK-NEXT:  Lloh20:
-; CHECK-NEXT:    adrp x10, _g@GOTPAGE
+; CHECK-NEXT:    adrp x9, _g@GOTPAGE
 ; CHECK-NEXT:  Lloh21:
-; CHECK-NEXT:    ldr x10, [x10, _g@GOTPAGEOFF]
-; CHECK-NEXT:    tst w8, #0x1
-; CHECK-NEXT:    csel x8, x10, x9, ne
+; CHECK-NEXT:    ldr x9, [x9, _g@GOTPAGEOFF]
+; CHECK-NEXT:    movk x0, #23, lsl #48
+; CHECK-NEXT:    and w10, w2, #0x1
+; CHECK-NEXT:    tst w10, #0x1
+; CHECK-NEXT:    csel x8, x9, x8, ne
 ; CHECK-NEXT:    pacda x8, x0
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret

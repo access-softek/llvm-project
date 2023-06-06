@@ -48,7 +48,7 @@ Expected<GlobalPtrAuthInfo> GlobalPtrAuthInfo::tryAnalyze(const Value *V) {
   //   { i8*, i32, i64, i64 }
   if (!Ty->isLayoutIdentical(
         StructType::get(Ctx, {P0I8Ty, I32Ty, I64Ty, I64Ty})))
-    return Invalid("global doesn't have type '{ i8*, i32, i64, i64 }'");
+    return Invalid("global doesn't have type '{ ptr, i32, i64, i64 }'");
 
   auto *Key = dyn_cast<ConstantInt>(Init->getOperand(1));
   if (!Key)
