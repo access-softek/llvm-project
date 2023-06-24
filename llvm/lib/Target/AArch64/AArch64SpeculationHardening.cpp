@@ -126,6 +126,10 @@ static cl::opt<bool> HardenLoads("aarch64-slh-loads", cl::Hidden,
                                  cl::desc("Sanitize loads from memory."),
                                  cl::init(true));
 
+static cl::opt<bool> HardenAuth("aarch64-harden-auth", cl::Hidden,
+                                cl::desc("Sanitize PAC checks."),
+                                cl::init(false));
+
 namespace {
 
 class AArch64SpeculationHardening : public MachineFunctionPass {
@@ -146,6 +150,9 @@ public:
   }
 
 private:
+  typedef SmallVector<std::pair<MachineInstr *, unsigned>, 4>
+      TemporaryRegisters;
+
   unsigned MisspeculatingTaintReg;
   unsigned MisspeculatingTaintReg32Bit;
   bool UseControlFlowSpeculationBarrier;
@@ -157,6 +164,11 @@ private:
   bool instrumentSuccessors(MachineBasicBlock &MBB);
   bool instrumentCallsAndReturns(MachineBasicBlock &MBB,
                              bool &UsesFullSpeculationBarrier);
+  unsigned getAuthenticatedRegister(const MachineInstr &MI,
+                                    AArch64PACKey::ID &Key) const;
+  bool computePAuthTemporaryRegisters(MachineBasicBlock &MBB,
+                                      TemporaryRegisters &TmpRegs);
+  void hardenAuthInstruction(MachineInstr &MI, unsigned TempReg);
   bool endsWithCondControlFlow(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                                MachineBasicBlock *&FBB,
                                AArch64CC::CondCode &CondCode) const;
@@ -190,6 +202,50 @@ char AArch64SpeculationHardening::ID = 0;
 
 INITIALIZE_PASS(AArch64SpeculationHardening, "aarch64-speculation-hardening",
                 AARCH64_SPECULATION_HARDENING_NAME, false, false)
+
+unsigned AArch64SpeculationHardening::getAuthenticatedRegister(
+    const MachineInstr &MI, AArch64PACKey::ID &Key) const {
+  switch (MI.getOpcode()) {
+  default:
+    // TODO more opcodes (check list filtered by HasPAuth)
+    break;
+  case AArch64::AUTDA:
+  case AArch64::AUTDZA:
+    Key = AArch64PACKey::DA;
+    return MI.getOperand(0).getReg();
+  case AArch64::AUTDB:
+  case AArch64::AUTDZB:
+    Key = AArch64PACKey::DB;
+    return MI.getOperand(0).getReg();
+  case AArch64::AUTIA:
+  case AArch64::AUTIZA:
+    Key = AArch64PACKey::IA;
+    return MI.getOperand(0).getReg();
+  case AArch64::AUTIB:
+  case AArch64::AUTIZB:
+    Key = AArch64PACKey::IB;
+    return MI.getOperand(0).getReg();
+  case AArch64::BLRAA:
+  case AArch64::BLRAAZ:
+  case AArch64::BLRAB:
+  case AArch64::BLRABZ:
+  case AArch64::BRAA:
+  case AArch64::BRAAZ:
+  case AArch64::BRAB:
+  case AArch64::BRABZ:
+  case AArch64::ERETAA:
+  case AArch64::ERETAB:
+  case AArch64::RETAA:
+  case AArch64::RETAB:
+  case AArch64::LDRAAindexed:
+  case AArch64::LDRAAwriteback:
+  case AArch64::LDRABindexed:
+  case AArch64::LDRABwriteback:
+    report_fatal_error("Combined authentication instruction should not be "
+                       "emitted in this mode");
+  }
+  return AArch64::NoRegister;
+}
 
 bool AArch64SpeculationHardening::endsWithCondControlFlow(
     MachineBasicBlock &MBB, MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
@@ -245,6 +301,38 @@ void AArch64SpeculationHardening::insertTrackingCode(
     SplitEdgeBB.addLiveIn(MisspeculatingTaintReg);
   }
 }
+
+bool AArch64SpeculationHardening::computePAuthTemporaryRegisters(
+    MachineBasicBlock &MBB, TemporaryRegisters &TmpRegs) {
+  if (!HardenAuth)
+    return true;
+
+  RegScavenger RS;
+  RS.enterBasicBlockEnd(MBB);
+  RS.setRegUsed(MisspeculatingTaintReg);
+
+  BitVector UnusedRegs(TRI->getNumRegs());
+  for (MachineBasicBlock::iterator I = MBB.end(); I != MBB.begin();) {
+    MachineInstr &MI = *--I;
+    AArch64PACKey::ID Key;
+    if (!getAuthenticatedRegister(MI, Key))
+      continue;
+
+    // Compute the union of registers available after the instruction
+    RS.backward(I);
+    UnusedRegs = RS.getRegsAvailable(&AArch64::GPR64commonRegClass);
+    // ... and before it.
+    RS.backward();
+    UnusedRegs &= RS.getRegsAvailable(&AArch64::GPR64commonRegClass);
+
+    if (!UnusedRegs.any())
+      return false;
+    Register TmpReg = UnusedRegs.find_first();
+    TmpRegs.emplace_back(&MI, TmpReg);
+  }
+  return true;
+}
+
 bool AArch64SpeculationHardening::instrumentSuccessors(
     MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "Instrument control flow tracking on MBB: " << MBB);
@@ -346,14 +434,14 @@ bool AArch64SpeculationHardening::instrumentCallsAndReturns(
     InstructionsAndTemps.push_back({&MI, TmpReg});
   }
 
-  if (TmpRegisterNotAvailableEverywhere) {
+  UsesFullSpeculationBarrier |= TmpRegisterNotAvailableEverywhere;
+  if (UsesFullSpeculationBarrier) {
     // When a temporary register is not available everywhere in this basic
     // basic block where a propagate-taint-to-sp operation is needed, just
     // emit a full speculation barrier at the start of this basic block, which
     // renders the taint/speculation tracking in this basic block unnecessary.
     insertFullSpeculationBarrier(MBB, MBB.begin(),
                                  (MBB.begin())->getDebugLoc());
-    UsesFullSpeculationBarrier = true;
     Modified = true;
   } else {
     for (auto MI_Reg : InstructionsAndTemps) {
@@ -653,6 +741,47 @@ bool AArch64SpeculationHardening::expandSpeculationSafeValue(
   return false;
 }
 
+void AArch64SpeculationHardening::hardenAuthInstruction(MachineInstr &MI,
+                                                        unsigned TmpReg) {
+  AArch64PACKey::ID Key;
+  unsigned AuthenticatedAddressReg = getAuthenticatedRegister(MI, Key);
+
+  auto *MBB = MI.getParent();
+  auto *NextMI = MI.getNextNode();
+  auto &DL = MI.getDebugLoc();
+
+  // mov  tmp, signed
+  // [original: auted := auth(signed)]
+  // xpac tmp
+  // and  auted, auted, mask
+  // bic  tmp, tmp, mask
+  // or auted, auted, tmp
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::ORRXrs))
+      .addDef(TmpReg)
+      .addUse(AArch64::XZR)
+      .addUse(AuthenticatedAddressReg)
+      .addImm(0);
+
+  BuildMI(*MBB, NextMI, DL, TII->get(getXPACOpcodeForKey(Key)))
+      .addDef(TmpReg)
+      .addUse(TmpReg, RegState::Kill);
+  BuildMI(*MBB, NextMI, DL, TII->get(AArch64::ANDXrs))
+      .addDef(AuthenticatedAddressReg)
+      .addUse(AuthenticatedAddressReg, RegState::Kill)
+      .addUse(MisspeculatingTaintReg)
+      .addImm(0);
+  BuildMI(*MBB, NextMI, DL, TII->get(AArch64::BICXrs))
+      .addDef(TmpReg)
+      .addUse(TmpReg, RegState::Kill)
+      .addUse(MisspeculatingTaintReg)
+      .addImm(0);
+  BuildMI(*MBB, NextMI, DL, TII->get(AArch64::ORRXrs))
+      .addDef(AuthenticatedAddressReg)
+      .addUse(AuthenticatedAddressReg, RegState::Kill)
+      .addUse(TmpReg, RegState::Kill)
+      .addImm(0);
+}
+
 bool AArch64SpeculationHardening::insertCSDB(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator MBBI,
                                              DebugLoc DL) {
@@ -764,11 +893,20 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
     if (MisspeculatingTaintReg)
       MBB.addLiveIn(MisspeculatingTaintReg);
 
+    TemporaryRegisters PACTempRegs;
     bool UsesFullSpeculationBarrier = false;
     Modified |= instrumentSuccessors(MBB);
+    if (!computePAuthTemporaryRegisters(MBB, PACTempRegs))
+      UsesFullSpeculationBarrier = true;
     Modified |= instrumentCallsAndReturns(MBB, UsesFullSpeculationBarrier);
     Modified |=
         lowerSpeculationSafeValuePseudos(MBB, UsesFullSpeculationBarrier);
+
+    if (HardenAuth && !UsesFullSpeculationBarrier && !PACTempRegs.empty()) {
+      Modified = true;
+      for (auto It : PACTempRegs)
+        hardenAuthInstruction(*It.first, It.second);
+    }
   }
 
   return Modified;

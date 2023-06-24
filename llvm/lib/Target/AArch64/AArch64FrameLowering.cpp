@@ -1907,6 +1907,7 @@ static void InsertReturnAddressAuth(MachineFunction &MF, MachineBasicBlock &MBB,
   // instructions, namely RETA{A,B}, that can be used instead. In this case the
   // DW_CFA_AARCH64_negate_ra_state can't be emitted.
   if (Subtarget.hasPAuth() &&
+      !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening) &&
       !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack) &&
       MBBI != MBB.end() && MBBI->getOpcode() == AArch64::RET_ReallyLR &&
       !NeedsWinCFI) {
