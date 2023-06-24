@@ -258,6 +258,12 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
     cl::desc("Emit homogeneous prologue and epilogue for the size "
              "optimization (default = off)"));
 
+cl::opt<bool> EnableLightweightPACMANMitigation(
+    "light-lr-pacman-mitigation",
+    cl::desc(
+        "Enable lightweight mitigation against PACMAN targeting LR signing"),
+    cl::init(false));
+
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
 /// Returns how much of the incoming argument stack area (in bytes) we should
@@ -1888,6 +1894,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
+static bool emitLightweightPACMANMitigation(MachineFunction &MF) {
+  return EnableLightweightPACMANMitigation;
+}
+
 static void InsertReturnAddressAuth(MachineFunction &MF, MachineBasicBlock &MBB,
                                     bool NeedsWinCFI, bool *HasWinCFI) {
   const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
@@ -1900,6 +1910,26 @@ static void InsertReturnAddressAuth(MachineFunction &MF, MachineBasicBlock &MBB,
   DebugLoc DL;
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
+
+  if (emitLightweightPACMANMitigation(MF)) {
+    const unsigned TmpReg = AArch64::X9; // Arbitrary caller-saved register
+
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs))
+        .setMIFlags(MachineInstr::FrameDestroy)
+        .addDef(TmpReg)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::LR)
+        .addImm(0);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::XPACI))
+        .setMIFlags(MachineInstr::FrameDestroy)
+        .addDef(TmpReg)
+        .addUse(TmpReg);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+        .setMIFlags(MachineInstr::FrameDestroy)
+        .addDef(TmpReg)
+        .addUse(TmpReg)
+        .addImm(0);
+  }
 
   // The AUTIASP instruction assembles to a hint instruction before v8.3a so
   // this instruction can safely used for any v8a architecture.

@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=aarch64              < %s | FileCheck --check-prefixes=CHECK,COMPAT %s
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
+; RUN: llc -mtriple=aarch64 -light-lr-pacman-mitigation -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A,HARDEN %s
 
 ; CHECK-LABEL: leaf:
 ; CHECK-NOT:     .cfi_negate_ra_state
@@ -34,6 +35,9 @@ define i32 @leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; V83A:          paciasp
 ; V83A-NEXT:     .cfi_negate_ra_state
 ;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT:        ret
@@ -50,6 +54,9 @@ define i32 @leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; CHECK:         str x30, [sp, #-16]!
 ;
 ; CHECK:         ldr x30, [sp], #16
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT:        ret
@@ -69,6 +76,9 @@ declare i32 @foo(i32)
 ; CHECK:         str x30, [sp, #-16]!
 ;
 ; CHECK:         ldr x30, [sp], #16
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT:        ret
@@ -86,6 +96,9 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; CHECK:         str x30, [sp, #-16]!
 ;
 ; CHECK:         ldr x30, [sp], #16
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT:        ret
@@ -105,6 +118,10 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
 ; CHECK-LABEL: leaf_sign_all_v83:
 ; CHECK:         paciasp
 ; CHECK-NEXT:    .cfi_negate_ra_state
+;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; CHECK-NOT:     ret
 ; CHECK:         retaa
 ; CHECK-NOT:     ret
@@ -122,6 +139,9 @@ declare fastcc i64 @bar(i64)
 ; CHECK:         str x30, [sp, #-16]!
 ;
 ; CHECK:         ldr x30, [sp], #16
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; V83A:          autiasp
@@ -139,6 +159,9 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; V83A:          paciasp
 ; V83A-NEXT:     .cfi_negate_ra_state
 ;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT:        ret
@@ -153,6 +176,9 @@ define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return
 ; V83A:          pacibsp
 ; V83A-NEXT:     .cfi_negate_ra_state
 ;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #31
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT:        ret
@@ -164,6 +190,10 @@ define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return
 ; CHECK-LABEL: leaf_sign_all_v83_b_key:
 ; CHECK:         pacibsp
 ; CHECK-NEXT:    .cfi_negate_ra_state
+;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; CHECK-NOT:     ret
 ; CHECK:         retab
 ; CHECK-NOT:     ret
@@ -179,6 +209,9 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "sign-return-address"="all" "target-
 ; V83A:          paciasp
 ; V83A-NEXT:     .cfi_negate_ra_state
 ;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #29
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT-NEXT:   ret
@@ -195,6 +228,9 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; V83A:          pacibsp
 ; V83A-NEXT:     .cfi_negate_ra_state
 ;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; COMPAT:        hint #31
 ; COMPAT-NEXT:   .cfi_negate_ra_state
 ; COMPAT-NEXT:   ret
@@ -208,6 +244,10 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; CHECK-NOT:     bti
 ; CHECK:         pacibsp
 ; CHECK-NEXT:    .cfi_negate_ra_state
+;
+; HARDEN:        mov x9, x30
+; HARDEN-NEXT:   xpaci x9
+; HARDEN-NEXT:   ldr x9, [x9]
 ; CHECK-NOT:     ret
 ; CHECK:         retab
 ; CHECK-NOT:     ret
