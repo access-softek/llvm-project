@@ -33,8 +33,13 @@
 //   reservation mechanisms with very high probability because:
 //   . The AArch64 ABI doesn't guarantee X16 to be retained across any call.
 //   . The only way to request X16 to be used as a programmer is through
-//     inline assembly. In the rare case a function explicitly demands to
-//     use X16/W16, this pass falls back to hardening against speculation
+//     inline assembly.
+//   . There is a special case when X16 is likely to be used by the compiler,
+//     namely code built with Pointer Authentication enabled.
+//   . If for any reason a function explicitly demands to use X16/W16, this
+//     pass tries to find another register from the GPR64common register class
+//     that is not touched by the function.
+//   . If that fails, the pass falls back to hardening against speculation
 //     by inserting a DSB SYS/ISB barrier pair which will prevent control
 //     flow speculation.
 // - It is easy to insert mask operations at this late stage as we have
@@ -104,6 +109,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
@@ -147,6 +153,7 @@ private:
   BitVector RegsAlreadyMasked;
 
   bool functionUsesHardeningRegister(MachineFunction &MF) const;
+  bool chooseHardeningRegister(MachineFunction &MF);
   bool instrumentSuccessors(MachineBasicBlock &MBB);
   bool instrumentCallsAndReturns(MachineBasicBlock &MBB,
                              bool &UsesFullSpeculationBarrier);
@@ -235,6 +242,7 @@ void AArch64SpeculationHardening::insertTrackingCode(
         .addUse(AArch64::XZR)
         .addImm(CondCode);
     SplitEdgeBB.addLiveIn(AArch64::NZCV);
+    SplitEdgeBB.addLiveIn(MisspeculatingTaintReg);
   }
 }
 bool AArch64SpeculationHardening::instrumentSuccessors(
@@ -309,6 +317,7 @@ bool AArch64SpeculationHardening::instrumentCallsAndReturns(
 
   RegScavenger RS;
   RS.enterBasicBlockEnd(MBB);
+  RS.setRegUsed(MisspeculatingTaintReg);
 
   for (MachineBasicBlock::iterator I = MBB.end(); I != MBB.begin(); ) {
     MachineInstr &MI = *--I;
@@ -427,6 +436,58 @@ bool AArch64SpeculationHardening::functionUsesHardeningRegister(
         return true;
     }
   }
+  return false;
+}
+
+static Register getTheOnlySubRegister(const TargetRegisterInfo *TRI,
+                                      Register Reg) {
+  MCSubRegIterator SubIt(Reg, TRI, /*IncludeSelf=*/false);
+  assert(SubIt.isValid() && "Subregister expected");
+  Register SubReg = *SubIt;
+  ++SubIt;
+  assert(!SubIt.isValid() && "Only a single subregister expected");
+  return SubReg;
+}
+
+bool AArch64SpeculationHardening::chooseHardeningRegister(MachineFunction &MF) {
+  BitVector RegsUsedByFunction(TRI->getNumRegs());
+
+  // Collect all registers used by the function,
+  // both Uses and Defs for simplicity.
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      // treat function calls specially, as the hardening register does not
+      // need to remain live across function calls.
+      if (MI.isCall())
+        continue;
+
+      for (auto &Op : MI.operands())
+        if (Op.isReg())
+          RegsUsedByFunction.set(Op.getReg());
+    }
+  }
+
+  for (auto XReg : AArch64::GPR64commonRegClass) {
+    auto WReg = getTheOnlySubRegister(TRI, XReg);
+    if (RegsUsedByFunction[XReg] || RegsUsedByFunction[WReg])
+      continue;
+
+    // There are super-registers overlapping Xn, such as X0_X1 -
+    // check them, too.
+    MCSuperRegIterator SuperIt(XReg, TRI, /*IncludeSelf=*/false);
+    for (; SuperIt.isValid(); ++SuperIt)
+      if (RegsUsedByFunction[*SuperIt])
+        break;
+    if (SuperIt.isValid())
+      continue; // A super-register is used by the function.
+
+    MisspeculatingTaintReg = XReg;
+    MisspeculatingTaintReg32Bit = WReg;
+    return true;
+  }
+
+  MisspeculatingTaintReg = AArch64::NoRegister;
+  MisspeculatingTaintReg32Bit = AArch64::NoRegister;
   return false;
 }
 
@@ -659,13 +720,18 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     return false;
 
-  MisspeculatingTaintReg = AArch64::X16;
-  MisspeculatingTaintReg32Bit = AArch64::W16;
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   RegsNeedingCSDBBeforeUse.resize(TRI->getNumRegs());
   RegsAlreadyMasked.resize(TRI->getNumRegs());
-  UseControlFlowSpeculationBarrier = functionUsesHardeningRegister(MF);
+
+  // Use X16/W16 register for masking by default. If cannot, try to choose
+  // another register before falling back to barriers.
+  MisspeculatingTaintReg = AArch64::X16;
+  MisspeculatingTaintReg32Bit = AArch64::W16;
+  UseControlFlowSpeculationBarrier = false;
+  if (functionUsesHardeningRegister(MF))
+    UseControlFlowSpeculationBarrier = !chooseHardeningRegister(MF);
 
   bool Modified = false;
 
@@ -695,6 +761,9 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
 
   // 3. Add instrumentation code to every basic block.
   for (auto &MBB : MF) {
+    if (MisspeculatingTaintReg)
+      MBB.addLiveIn(MisspeculatingTaintReg);
+
     bool UsesFullSpeculationBarrier = false;
     Modified |= instrumentSuccessors(MBB);
     Modified |= instrumentCallsAndReturns(MBB, UsesFullSpeculationBarrier);

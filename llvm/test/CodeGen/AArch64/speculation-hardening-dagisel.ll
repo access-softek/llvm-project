@@ -23,13 +23,12 @@ entry:
 ; NOSLH-NOT: dsb sy
 ; NOSLH-NOT: isb
 if.then:
-  %0 = tail call i64 asm "hint #12", "={x17},{x16},0"(i64 %b, i64 %a)
+  %0 = tail call i64 asm "hint #12", "={x17},{x16},0,~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"(i64 %b, i64 %a)
 ; CHECK: bl g
 ; SLH: dsb sy
 ; SLH: isb
 ; NOSLH-NOT: dsb sy
 ; NOSLH-NOT: isb
-; CHECK: ret
   %call = tail call i64 @g(i64 %a, i64 %b) #3
   %add = add i64 %call, %0
   br label %cleanup
@@ -60,10 +59,9 @@ if.then:
 ; SLH: isb
 ; NOSLH-NOT: dsb sy
 ; NOSLH-NOT: isb
-; CHECK: mov w16, w0
-  tail call void asm sideeffect "mov w16, ${0:w}", "r,~{w16}"(i32 %a)
+; CHECK: mov w16,
+  tail call void asm sideeffect "mov w16, ${0:w}", "r,~{w16},~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"(i32 %a)
   br label %if.end
-; SLH: ret
 
 if.end:
   %add = add nsw i32 %b, %a

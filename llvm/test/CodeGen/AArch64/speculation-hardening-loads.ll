@@ -85,12 +85,37 @@ entry:
 ; CHECK-NEXT: ret
 }
 
+define i64 @choose_taint_register(i64 %a, i64 %b, ptr %p) speculative_load_hardening {
+entry:
+  %0 = tail call i64 asm "hint #12", "={x17},{x16},0"(i64 %b, i64 %a)
+  %X = load i64, ptr %p, align 8
+  %ret = add i64 %X, %0
+  ret i64 %ret
+; CHECK-LABEL: choose_taint_register
+; CHECK:      ldr     x8, [x2]
+; CHECK-NEXT: cmp     sp, #0
+; Another register is chosen instead of x16 (x3 here)
+; CHECK-NEXT: csetm   x3, ne
+; CHECK-NEXT: mov     x17, x0
+; CHECK-NEXT: mov     x16, x1
+; CHECK-NEXT: //APP
+; CHECK-NEXT: hint    #12
+; CHECK-NEXT: //NO_APP
+; CHECK-NEXT: and     x8, x8, x3
+; CHECK-NEXT: csdb
+; CHECK-NEXT: mov     x1, sp
+; CHECK-NEXT: add     x0, x8, x17
+; CHECK-NEXT: and     x1, x1, x3
+; CHECK-NEXT: mov     sp, x1
+; CHECK-NEXT: ret
+}
+
 define i64 @no_masking_with_full_control_flow_barriers(i64 %a, i64 %b, ptr %p) speculative_load_hardening {
 ; CHECK-LABEL: no_masking_with_full_control_flow_barriers
 ; CHECK: dsb sy
 ; CHECK: isb
 entry:
-  %0 = tail call i64 asm "hint #12", "={x17},{x16},0"(i64 %b, i64 %a)
+  %0 = tail call i64 asm "hint #12", "={x17},{x16},0,~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"(i64 %b, i64 %a)
   %X = load i64, ptr %p, align 8
   %ret = add i64 %X, %0
 ; CHECK-NOT: csdb
