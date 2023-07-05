@@ -147,7 +147,8 @@ private:
   BitVector RegsAlreadyMasked;
 
   bool functionUsesHardeningRegister(MachineFunction &MF) const;
-  bool instrumentControlFlow(MachineBasicBlock &MBB,
+  bool instrumentSuccessors(MachineBasicBlock &MBB);
+  bool instrumentCallsAndReturns(MachineBasicBlock &MBB,
                              bool &UsesFullSpeculationBarrier);
   bool endsWithCondControlFlow(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                                MachineBasicBlock *&FBB,
@@ -236,9 +237,8 @@ void AArch64SpeculationHardening::insertTrackingCode(
     SplitEdgeBB.addLiveIn(AArch64::NZCV);
   }
 }
-
-bool AArch64SpeculationHardening::instrumentControlFlow(
-    MachineBasicBlock &MBB, bool &UsesFullSpeculationBarrier) {
+bool AArch64SpeculationHardening::instrumentSuccessors(
+    MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "Instrument control flow tracking on MBB: " << MBB);
 
   bool Modified = false;
@@ -273,12 +273,34 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
     Modified = true;
   }
 
+  return Modified;
+}
+
+bool AArch64SpeculationHardening::instrumentCallsAndReturns(
+    MachineBasicBlock &MBB, bool &UsesFullSpeculationBarrier) {
+  bool Modified = false;
+
+  // Always handle possible mis-speculation coming into this function
+  // when returning from calls. Note that tail calls use terminator
+  // instructions that are *both* call and return - ignore them.
+  SmallVector<MachineInstr *, 4> Calls;
+  for (auto &MI : MBB)
+    if (MI.isCall() && !MI.isReturn())
+      Calls.push_back(&MI);
+  for (auto *Call : Calls) {
+    MachineBasicBlock::iterator MBBI = Call;
+    insertSPToRegTaintPropagation(MBB, std::next(MBBI));
+    Modified = true;
+  }
+
+  if (UseControlFlowSpeculationBarrier)
+    return Modified;
+
   // Perform correct code generation around function calls and before returns.
   // The below variables record the return/terminator instructions and the call
   // instructions respectively; including which register is available as a
   // temporary register just before the recorded instructions.
-  SmallVector<std::pair<MachineInstr *, unsigned>, 4> ReturnInstructions;
-  SmallVector<std::pair<MachineInstr *, unsigned>, 4> CallInstructions;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstructionsAndTemps;
   // if a temporary register is not available for at least one of the
   // instructions for which we need to transfer taint to the stack pointer, we
   // need to insert a full speculation barrier.
@@ -296,10 +318,8 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
     // The RegScavenger represents registers available *after* the MI
     // instruction pointed to by RS.getCurrentPosition().
     // We need to have a register that is available *before* the MI is executed.
-    if (I == MBB.begin())
-      RS.enterBasicBlock(MBB);
-    else
-      RS.backward(std::prev(I));
+    RS.backward(I);
+    RS.backward();
     // FIXME: The below just finds *a* unused register. Maybe code could be
     // optimized more if this looks for the register that isn't used for the
     // longest time around this place, to enable more scheduling freedom. Not
@@ -313,10 +333,8 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
                dbgs() << "to be available at MI " << MI);
     if (TmpReg == 0)
       TmpRegisterNotAvailableEverywhere = true;
-    if (MI.isReturn())
-      ReturnInstructions.push_back({&MI, TmpReg});
-    else if (MI.isCall())
-      CallInstructions.push_back({&MI, TmpReg});
+
+    InstructionsAndTemps.push_back({&MI, TmpReg});
   }
 
   if (TmpRegisterNotAvailableEverywhere) {
@@ -329,27 +347,13 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
     UsesFullSpeculationBarrier = true;
     Modified = true;
   } else {
-    for (auto MI_Reg : ReturnInstructions) {
+    for (auto MI_Reg : InstructionsAndTemps) {
       assert(MI_Reg.second != 0);
       LLVM_DEBUG(
           dbgs()
           << " About to insert Reg to SP taint propagation with temp register "
           << printReg(MI_Reg.second, TRI)
           << " on instruction: " << *MI_Reg.first);
-      insertRegToSPTaintPropagation(MBB, MI_Reg.first, MI_Reg.second);
-      Modified = true;
-    }
-
-    for (auto MI_Reg : CallInstructions) {
-      assert(MI_Reg.second != 0);
-      LLVM_DEBUG(dbgs() << " About to insert Reg to SP and back taint "
-                           "propagation with temp register "
-                        << printReg(MI_Reg.second, TRI)
-                        << " around instruction: " << *MI_Reg.first);
-      // Just after the call:
-      insertSPToRegTaintPropagation(
-          MBB, std::next((MachineBasicBlock::iterator)MI_Reg.first));
-      // Just before the call:
       insertRegToSPTaintPropagation(MBB, MI_Reg.first, MI_Reg.second);
       Modified = true;
     }
@@ -683,14 +687,17 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
   EntryBlocks.push_back(&MF.front());
   for (const LandingPadInfo &LPI : MF.getLandingPads())
     EntryBlocks.push_back(LPI.LandingPadBlock);
-  for (auto *Entry : EntryBlocks)
+  for (auto *Entry : EntryBlocks) {
     insertSPToRegTaintPropagation(
         *Entry, Entry->SkipPHIsLabelsAndDebug(Entry->begin()));
+    Modified = true;
+  }
 
   // 3. Add instrumentation code to every basic block.
   for (auto &MBB : MF) {
     bool UsesFullSpeculationBarrier = false;
-    Modified |= instrumentControlFlow(MBB, UsesFullSpeculationBarrier);
+    Modified |= instrumentSuccessors(MBB);
+    Modified |= instrumentCallsAndReturns(MBB, UsesFullSpeculationBarrier);
     Modified |=
         lowerSpeculationSafeValuePseudos(MBB, UsesFullSpeculationBarrier);
   }
