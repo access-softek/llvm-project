@@ -9698,21 +9698,13 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
     ReturnAddress = DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
   }
 
-  // If we're doing LR signing, we need to fixup ReturnAddress: strip it.
-  if (MF.getFunction().hasFnAttribute("ptrauth-returns"))
-    return SDValue(
-        DAG.getMachineNode(AArch64::XPACIuntied, DL, VT, ReturnAddress), 0);
-  // If not, on Darwin, we know we will never seen a frame with a signed LR.
-  else if (Subtarget->isTargetDarwin())
-    return ReturnAddress;
-
   // The XPACLRI instruction assembles to a hint-space instruction before
   // Armv8.3-A therefore this instruction can be safely used for any pre
   // Armv8.3-A architectures. On Armv8.3-A and onwards XPACI is available so use
   // that instead.
   SDNode *St;
   if (Subtarget->hasPAuth()) {
-    St = DAG.getMachineNode(AArch64::XPACI, DL, VT, ReturnAddress);
+    St = DAG.getMachineNode(AArch64::XPACIuntied, DL, VT, ReturnAddress);
   } else {
     // XPACLRI operates on LR therefore we must move the operand accordingly.
     SDValue Chain =
