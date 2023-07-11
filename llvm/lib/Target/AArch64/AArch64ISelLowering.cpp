@@ -9683,13 +9683,10 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
-  SDValue FrameAddr;
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   SDValue ReturnAddress;
   if (Depth) {
-    SDNodeFlags Flags;
-    Flags.setNoUnsignedWrap(true);
-    FrameAddr = LowerFRAMEADDR(Op, DAG);
+    SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(8, DL, getPointerTy(DAG.getDataLayout()));
     ReturnAddress = DAG.getLoad(
         VT, DL, DAG.getEntryNode(),

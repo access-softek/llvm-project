@@ -1406,7 +1406,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::XPACIuntied: {
      const MachineOperand &LHS = MI.getOperand(0);
      const MachineOperand &RHS = MI.getOperand(1);
-     // If the registrs are the same, just lower to the "tied" version.
+     // If the registers are the same, just lower to the "tied" version.
      // $x0 = XPACIuntied $x0 -> $x0 = XPACI $x0.
      if (LHS.getReg() == RHS.getReg()) {
        MachineInstrBuilder DefMIB =
