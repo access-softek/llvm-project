@@ -33,7 +33,7 @@ define i32 @test_alloca() #0 {
 define i32 @test_realign_alloca() #0 {
 ; CHECK-LABEL: test_realign_alloca:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub x9, sp, #112
@@ -44,7 +44,7 @@ define i32 @test_realign_alloca() #0 {
 ; CHECK-NEXT:    mov w0, #0
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    retab
+; CHECK-NEXT:    retaa
   %p = alloca i8, i32 32, align 128
   call void asm sideeffect "", "r"(i8* %p)
   ret i32 0
@@ -76,7 +76,7 @@ define i32 @test_var_alloca(i32 %s) #0 {
 define i32 @test_noframe_saved(i32* %p) #0 {
 ; CHECK-LABEL: test_noframe_saved:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    stp x28, x27, [sp, #-96]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #32] ; 16-byte Folded Spill
@@ -93,7 +93,7 @@ define i32 @test_noframe_saved(i32* %p) #0 {
 ; CHECK-NEXT:    ldp x24, x23, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x28, x27, [sp], #96 ; 16-byte Folded Reload
-; CHECK-NEXT:    retab
+; CHECK-NEXT:    retaa
   %v = load i32, i32* %p
   call void asm sideeffect "", "~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"()
   ret i32 %v
@@ -119,7 +119,7 @@ define i8* @test_returnaddress_0() #0 {
 define i8* @test_returnaddress_1() #0 {
 ; CHECK-LABEL: test_returnaddress_1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    ldr x8, [x29]
@@ -127,7 +127,7 @@ define i8* @test_returnaddress_1() #0 {
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    xpaci x0
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    retab
+; CHECK-NEXT:    retaa
   %r = call i8* @llvm.returnaddress(i32 1)
   ret i8* %r
 }
@@ -149,11 +149,11 @@ define void @test_noframe_alloca() #0 {
 define void @test_call() #0 {
 ; CHECK-LABEL: test_call:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    retab
+; CHECK-NEXT:    retaa
   call i32 @bar()
   ret void
 }
@@ -161,13 +161,13 @@ define void @test_call() #0 {
 define void @test_call_alloca() #0 {
 ; CHECK-LABEL: test_call_alloca:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    retab
+; CHECK-NEXT:    retaa
   alloca i8
   call i32 @bar()
   ret void
@@ -178,11 +178,11 @@ define void @test_call_shrinkwrapping(i1 %c) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    tbz w0, #0, LBB12_2
 ; CHECK-NEXT:  ; %bb.1: ; %tbb
-; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    autibsp
+; CHECK-NEXT:    autiasp
 ; CHECK-NEXT:  LBB12_2: ; %fbb
 ; CHECK-NEXT:    ret
   br i1 %c, label %tbb, label %fbb
@@ -196,11 +196,11 @@ fbb:
 define i32 @test_tailcall() #0 {
 ; CHECK-LABEL: test_tailcall:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    autibsp
+; CHECK-NEXT:    autiasp
 ; CHECK-NEXT:    b _bar
   call i32 @bar()
   %c = tail call i32 @bar()
