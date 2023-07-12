@@ -2,6 +2,9 @@
 ; RUN: llc < %s -mtriple arm64e-apple-darwin -verify-machineinstrs -disable-post-ra -global-isel=0 -o - %s | FileCheck %s
 ; RUN: llc < %s -mtriple arm64e-apple-darwin -verify-machineinstrs -disable-post-ra -global-isel=1 -global-isel-abort=1 -o - %s | FileCheck %s
 
+!0 = !{i32 8, !"sign-return-address", i32 1}
+!llvm.module.flags = !{!0}
+
 define i32 @test() #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0:

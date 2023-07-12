@@ -25,14 +25,16 @@ entry:
 ;; CHECK-NOP-NEXT: ldr x30, [x[[T0]], #8]
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-V83-NEXT: ldr x[[LD0:[0-9]+]], [x[[T0]], #8]
-;; CHECK-V83-NEXT: xpaci x[[LD0]]
+;; CHECK-V83-NEXT: mov x1, x[[LD0]]
+;; CHECK-V83-NEXT: xpaci x1
 ;; CHECK:          bl g2
 ;; CHECK:          ldr x[[T1:[0-9]+]], [x29]
 ;; CHECK-NEXT:     ldr x[[T1]], [x[[T1]]]
 ;; CHECK-NOP-NEXT: ldr x30, [x[[T1]], #8]
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-NOP-NEXT: mov x0, x30
-;; CHECK-V83-NEXT: ldr x0, [x[[T1]], #8]
+;; CHECK-V83-NEXT: ldr x[[LD0:[0-9]+]], [x[[T1]], #8]
+;; CHECK-V83-NEXT: mov x0, x[[LD0]]
 ;; CHECK-V83-NEXT: xpaci x0
 
 define ptr @f1() #0 {
@@ -51,7 +53,8 @@ entry:
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-V83-DAG:  str x30, [sp, #[[OFF:[0-9]+]]
 ;; CHECK-V83:      ldr x[[T1:[0-9]+]], [x[[T0]], #8]
-;; CHECK-V83-NEXT: xpaci x[[T1]]
+;; CHECK-V83-NEXT: mov x0, x[[T1]]
+;; CHECK-V83-NEXT: xpaci x0
 
 ;; CHECK:          bl g1
 ;; CHECK:          ldr x[[T2:[0-9]+]], [x29]
@@ -59,14 +62,16 @@ entry:
 ;; CHECK-NOP-NEXT: ldr x30, [x[[T2]], #8]
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-V83-NEXT: ldr x[[T3:[0-9]+]], [x[[T2]], #8]
-;; CHECK-V83-NEXT: xpaci x[[T3]]
+;; CHECK-V83-NEXT: mov x1, x[[T3]]
+;; CHECK-V83-NEXT: xpaci x1
 ;; CHECK:          bl g2
 
 ;; CHECK-NOP:      ldr x30, [sp, #[[OFF]]]
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-NOP-NEXT: mov x0, x30
 
-;; CHECK-V83:      ldr x0, [sp, #[[OFF]]]
+;; CHECK-V83:      ldr x[[T4:[0-9]+]], [sp, #[[OFF]]]
+;; CHECK-V83-NEXT: mov x0, x[[T4]]
 ;; CHECK-V83-NEXT: xpaci x0
 ;; CHECK-NOT:      x0
 ;; CHECK:          ret
@@ -83,7 +88,8 @@ entry:
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-NOP-NEXT: mov x0, x30
 
-;; CHECK-V83:      ldr x0, [sp,
+;; CHECK-V83:      ldr x[[T0:[0-9]+]], [sp,
+;; CHECK-V83-NEXT: mov x0, x[[T0]]
 ;; CHECK-V83-NEXT: xpaci x0
 ;; CHECK-NOT:      x0
 ;; CHECK:          ret
