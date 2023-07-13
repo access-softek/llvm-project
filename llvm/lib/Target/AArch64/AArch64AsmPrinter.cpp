@@ -69,6 +69,10 @@ using namespace llvm;
 
 namespace {
 
+cl::opt<bool> CheckLRAuthOnTailCalls("aarch64-auth-check-lr-tc",
+                                     cl::desc("Check LR authentication on tail calls"),
+                                     cl::init(true));
+
 class AArch64AsmPrinter : public AsmPrinter {
   AArch64MCInstLower MCInstLowering;
   FaultMaps FM;
@@ -1374,21 +1378,13 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
 }
 
 // We need to verify the return address authenticated correctly or we create a
-// signing oracle when the callee simply PACIBSPs it.
+// signing oracle when the callee simply PACIASPs it.
 void AArch64AsmPrinter::authLRBeforeTailCall(const MachineFunction &MF,
                                              unsigned ScratchReg) {
-  const Function &Fn = MF.getFunction();
-  if (!Fn.hasFnAttribute("ptrauth-auth-traps") || !Fn.hasFnAttribute("ptrauth-returns"))
+  if (!MF.getInfo<AArch64FunctionInfo>()->shouldSignReturnAddress(MF))
     return;
 
-  // If there's no stack frame then there's no AUTIBSP, and so no reason to
-  // check for the particular form of invalid LR that produces.
-  if (!MF.getInfo<AArch64FunctionInfo>()->hasStackFrame())
-    return;
-
-  // We know TBI is disabled for instruction keys on Darwin, so bits 62 and 61
-  // or LR will be different if and only if authentication failed.
-  if (!STI->isTargetMachO() || STI->hasFPAC())
+  if (!CheckLRAuthOnTailCalls)
     return;
 
   // We want:
@@ -1411,7 +1407,7 @@ void AArch64AsmPrinter::authLRBeforeTailCall(const MachineFunction &MF,
   MCInst TBZ;
   TBZ.setOpcode(AArch64::TBZX);
   TBZ.addOperand(MCOperand::createReg(ScratchReg));
-  TBZ.addOperand(MCOperand::createImm(62));
+  TBZ.addOperand(MCOperand::createImm(62)); // FIXME Support TBI.
   TBZ.addOperand(MCOperand::createExpr(GoodSig));
   EmitToStreamer(*OutStreamer, TBZ);
 
