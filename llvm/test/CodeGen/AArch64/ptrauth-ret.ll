@@ -204,6 +204,11 @@ define i32 @test_tailcall() #0 {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    autiasp
+; CHECK-NEXT:    eor x16, x30, x30, lsl #1
+; CHECK-NEXT:    tbz x16, #62, Ltmp0
+; CHECK-NEXT:    brk #0xc471
+; CHECK-NEXT:  Ltmp0:
+
 ; CHECK-NEXT:    b _bar
   call i32 @bar()
   %c = tail call i32 @bar()
