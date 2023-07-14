@@ -9720,7 +9720,13 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
   // that instead.
   SDNode *St;
   if (Subtarget->hasPAuth()) {
-    St = DAG.getMachineNode(AArch64::XPACI, DL, VT, ReturnAddress);
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    Register TmpReg = MRI.createVirtualRegister(&AArch64::GPR64noipRegClass);
+
+    SDValue Chain =
+        DAG.getCopyToReg(DAG.getEntryNode(), DL, TmpReg, ReturnAddress);
+    SDValue ReturnAddressCopy = DAG.getCopyFromReg(Chain, DL, TmpReg, VT);
+    St = DAG.getMachineNode(AArch64::XPACI, DL, VT, ReturnAddressCopy);
   } else {
     // XPACLRI operates on LR therefore we must move the operand accordingly.
     SDValue Chain =

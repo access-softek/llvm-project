@@ -6016,7 +6016,10 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
       }
 
       if (STI.hasPAuth()) {
-        MIB.buildInstr(AArch64::XPACI, {DstReg}, {MFReturnAddr});
+        Register TmpReg =
+            MRI.createVirtualRegister(&AArch64::GPR64noipRegClass);
+        MIB.buildCopy(TmpReg, MFReturnAddr);
+        MIB.buildInstr(AArch64::XPACI, {DstReg}, {TmpReg});
       } else {
         MIB.buildCopy({Register(AArch64::LR)}, {MFReturnAddr});
         MIB.buildInstr(AArch64::XPACLRI);
