@@ -6001,6 +6001,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
   case Intrinsic::returnaddress: {
     MachineFunction &MF = *I.getParent()->getParent();
     MachineFrameInfo &MFI = MF.getFrameInfo();
+    const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
 
     unsigned Depth = I.getOperand(2).getImm();
     Register DstReg = I.getOperand(0).getReg();
@@ -6015,7 +6016,10 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
             MF, TII, AArch64::LR, AArch64::GPR64RegClass, I.getDebugLoc());
       }
 
-      if (STI.hasPAuth()) {
+      if (STI.isTargetDarwin() &&
+          !MFnI.shouldSignReturnAddress(/*SpillsLR=*/true)) {
+        MIB.buildCopy({DstReg}, {MFReturnAddr});
+      } else if (STI.hasPAuth()) {
         Register TmpReg =
             MRI.createVirtualRegister(&AArch64::GPR64noipRegClass);
         MIB.buildCopy(TmpReg, MFReturnAddr);
@@ -6045,7 +6049,10 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     else {
       MFI.setReturnAddressIsTaken(true);
 
-      if (STI.hasPAuth()) {
+      if (STI.isTargetDarwin() &&
+          !MFnI.shouldSignReturnAddress(/*SpillsLR=*/true)) {
+        MIB.buildInstr(AArch64::LDRXui, {DstReg}, {FrameAddr}).addImm(1);
+      } else if (STI.hasPAuth()) {
         Register TmpReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
         MIB.buildInstr(AArch64::LDRXui, {TmpReg}, {FrameAddr}).addImm(1);
         MIB.buildInstr(AArch64::XPACI, {DstReg}, {TmpReg});

@@ -9694,6 +9694,7 @@ SDValue AArch64TargetLowering::LowerADDROFRETURNADDR(SDValue Op,
 SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
@@ -9713,6 +9714,10 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
     Register Reg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
     ReturnAddress = DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
   }
+
+  if (Subtarget->isTargetDarwin() &&
+      !MFnI.shouldSignReturnAddress(/*SpillsLR=*/true))
+    return ReturnAddress;
 
   // The XPACLRI instruction assembles to a hint-space instruction before
   // Armv8.3-A therefore this instruction can be safely used for any pre
