@@ -41,6 +41,7 @@ struct ParsedBranchProtection {
   StringRef Scope;
   StringRef Key;
   bool BranchTargetEnforcement;
+  bool HasPauthABI;
 };
 
 bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
