@@ -1581,6 +1581,74 @@ void AddUnalignedAccessWarning(ArgStringList &CmdArgs) {
 }
 }
 
+// See DarwinClang::addClangTargetOptions()
+static void handlePAuthABIOption(const ArgList &DriverArgs,
+                                 ArgStringList &CC1Args,
+                                 const Driver &D) {
+  // The ptrauth ABI version is 0 by default, but can be overridden.
+  static const constexpr unsigned DefaultPtrauthABIVersion = 0;
+
+  unsigned PtrAuthABIVersion = DefaultPtrauthABIVersion;
+  const Arg *A = DriverArgs.getLastArg(options::OPT_fptrauth_abi_version_EQ,
+                                        options::OPT_fno_ptrauth_abi_version);
+  bool HasVersionArg =
+      A && A->getOption().matches(options::OPT_fptrauth_abi_version_EQ);
+  if (HasVersionArg) {
+    unsigned PtrAuthABIVersionArg;
+    if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
+      D.Diag(diag::err_drv_invalid_value)
+        << A->getAsString(DriverArgs) << A->getValue();
+    else
+      PtrAuthABIVersion = PtrAuthABIVersionArg;
+  }
+
+  // Pass the ABI version to -cc1, regardless of its value, if the user asked
+  // for it or if the user didn't explicitly disable it.
+  if (HasVersionArg ||
+      !DriverArgs.hasArg(options::OPT_fno_ptrauth_abi_version)) {
+    CC1Args.push_back(DriverArgs.MakeArgString(
+        "-fptrauth-abi-version=" + llvm::utostr(PtrAuthABIVersion)));
+  }
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                          options::OPT_fno_ptrauth_returns))
+    CC1Args.push_back("-fptrauth-returns");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                          options::OPT_fno_ptrauth_intrinsics))
+    CC1Args.push_back("-fptrauth-intrinsics");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                          options::OPT_fno_ptrauth_calls))
+    CC1Args.push_back("-fptrauth-calls");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                          options::OPT_fno_ptrauth_auth_traps))
+    CC1Args.push_back("-fptrauth-auth-traps");
+
+#if 1
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_block_descriptor_pointers,
+          options::OPT_fno_ptrauth_block_descriptor_pointers))
+    CC1Args.push_back("-fptrauth-block-descriptor-pointers");
+
+  if (!DriverArgs.hasArg(
+      options::OPT_fptrauth_vtable_pointer_address_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+
+  if (!DriverArgs.hasArg(
+      options::OPT_fptrauth_vtable_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+  if (!DriverArgs.hasArg(
+      options::OPT_fptrauth_function_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_function_pointer_type_discrimination))
+    CC1Args.push_back("-fptrauth-function-pointer-type-discrimination");
+#endif
+}
+
 static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs, bool isAArch64) {
   const Arg *A = isAArch64
@@ -1615,9 +1683,14 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (!isAArch64 && PBP.Key == "b_key")
       D.Diag(diag::warn_unsupported_branch_protection)
           << "b-key" << A->getAsString(Args);
+    if (!isAArch64 && PBP.HasPauthABI)
+      D.Diag(diag::warn_unsupported_branch_protection)
+          << "pauthabi" << A->getAsString(Args);
     Scope = PBP.Scope;
     Key = PBP.Key;
     IndirectBranches = PBP.BranchTargetEnforcement;
+    if (isAArch64 && PBP.HasPauthABI)
+      handlePAuthABIOption(Args, CmdArgs, D);
   }
 
   CmdArgs.push_back(
