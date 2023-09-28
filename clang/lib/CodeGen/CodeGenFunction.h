@@ -203,7 +203,7 @@ template <> struct DominatingValue<Address> {
   }
   static saved_type save(CodeGenFunction &CGF, type value) {
     bool isSigned = value.getPointerAuthInfo().isSigned();
-    return {DominatingLLVMValue::save(CGF, value.getBasePointer()),
+    return saved_type{DominatingLLVMValue::save(CGF, value.getBasePointer()),
             value.getElementType(), value.getAlignment(),
             isSigned ? value.getPointerAuthInfo().getKey() : 0,
             value.getPointerAuthInfo().getAuthenticationMode(),
