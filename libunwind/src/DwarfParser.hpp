@@ -387,16 +387,22 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
             .getEncodedP(p, cieContentEnd, cieInfo->personalityEncoding,
                          /*datarelBase=*/0, &resultAddr);
 #if __has_feature(ptrauth_calls)
-              // The GOT for the personality function was signed address authenticated.
-              // Resign is as a regular function pointer.
-              if (cieInfo->personality) {
-                  void* signedPtr = ptrauth_auth_and_resign((void*)cieInfo->personality,
-                                                            ptrauth_key_function_pointer,
-                                                            resultAddr,
-                                                            ptrauth_key_function_pointer,
-                                                            0);
-                  cieInfo->personality = (__typeof(cieInfo->personality))signedPtr;
-              }
+        if (cieInfo->personality) {
+#ifdef __APPLE__
+          // The GOT for the personality function was signed address
+          // authenticated. Resign is as a regular function pointer.
+          void* signedPtr = ptrauth_auth_and_resign((void*)cieInfo->personality,
+                                                     ptrauth_key_function_pointer,
+                                                     resultAddr,
+                                                     ptrauth_key_function_pointer,
+                                                     0);
+#else
+          void* signedPtr = ptrauth_sign_unauthenticated((void*)cieInfo->personality,
+                                                    ptrauth_key_function_pointer,
+                                                    0);
+#endif
+          cieInfo->personality = (__typeof(cieInfo->personality))signedPtr;
+        }
 #endif
         break;
       case 'L':
