@@ -1886,7 +1886,7 @@ public:
   void      normalizeNewLinkRegister(reg_t& linkRegister, unw_word_t procInfoFlags) {
     (void)linkRegister;
     (void)procInfoFlags;
-#if __has_feature(ptrauth_calls)
+#if __has_feature(ptrauth_calls) && defined(__APPLE__)
     if (procInfoFlags == ProcInfoFlags_IsARM64Image) {
       // If the current frame is arm64e then the LR should have been signed by
       // the SP.  In this case, we'll just leave it as is.  For other frames,

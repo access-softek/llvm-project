@@ -14,7 +14,7 @@
 #include "config.h"
 #include "libunwind_ext.h"
 
-#if __has_feature(ptrauth_calls)
+#if __has_feature(ptrauth_calls) && defined(__APPLE__)
 #include <libc_private.h>
 #endif
 
@@ -141,17 +141,28 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
 #if __has_feature(ptrauth_calls)
     // If we are in an arm64e frame, then the PC should have been signed with the sp
     {
-        const mach_header_64 *mh = (const mach_header_64 *)info.extra;
-        // Note, if we don't have mh, we assume this was created by unw_init_local inside
-        // libunwind.dylib itself, and we know we are arm64e.
-        pint_t pc = (pint_t)co->getReg(UNW_REG_IP);
-        if ((mh->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64_E) {
-            if (ptrauth_auth_and_resign((void*)pc, ptrauth_key_return_address, sp,
-                                        ptrauth_key_return_address, sp) != (void*)pc) {
-                abort_report_np("Bad unwind through arm64e (0x%llX, 0x%llX)->0x%llX\n",
-                                pc, sp, (pint_t)ptrauth_auth_data((void*)pc, ptrauth_key_return_address, sp));
-            }
+      pint_t pc = (pint_t)co->getReg(UNW_REG_IP);
+#ifdef __APPLE__
+      const mach_header_64 *mh = (const mach_header_64 *)info.extra;
+      // Note, if we don't have mh, we assume this was created by unw_init_local inside
+      // libunwind.dylib itself, and we know we are arm64e.
+      if ((mh->cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64_E) {
+#else
+      // FIXME: we should probably look at PAUTH ABI tag note section
+      bool isAuthElf = true;
+      if (isAuthElf) {
+#endif
+        if (ptrauth_auth_and_resign((void*)pc, ptrauth_key_return_address, sp,
+                                    ptrauth_key_return_address, sp) != (void*)pc) {
+#ifdef __APPLE__
+          abort_report_np("Bad unwind through arm64e (0x%llX, 0x%llX)->0x%llX\n",
+                          pc, sp, (pint_t)ptrauth_auth_data((void*)pc, ptrauth_key_return_address, sp));
+#else
+          // FIXME: we probably want to handle it somehow specially
+          return UNW_EINVALIDIP;
+#endif
         }
+      }
     }
 #endif
 
