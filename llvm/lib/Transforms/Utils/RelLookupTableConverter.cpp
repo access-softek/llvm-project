@@ -81,6 +81,9 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
     if (!GlovalVarOp || !GlovalVarOp->isConstant())
       return false;
 
+    if (GlovalVarOp->getSection() == "llvm.ptrauth")
+      return false;
+
     if (!GlovalVarOp->hasLocalLinkage() ||
         !GlovalVarOp->isDSOLocal() ||
         !GlovalVarOp->isImplicitDSOLocal())

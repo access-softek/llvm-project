@@ -2295,7 +2295,8 @@ bool AsmPrinter::doFinalization(Module &M) {
     for (const auto &GO : M.global_objects()) {
       if (!GO.hasExternalWeakLinkage())
         continue;
-      OutStreamer->emitSymbolAttribute(getSymbol(&GO), MCSA_WeakReference);
+      if (GO.getSection() != "llvm.ptrauth")
+        OutStreamer->emitSymbolAttribute(getSymbol(&GO), MCSA_WeakReference);
     }
     if (shouldEmitWeakSwiftAsyncExtendedFramePointerFlags()) {
       auto SymbolName = "swift_async_extendedFramePointerFlags";
@@ -2369,7 +2370,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     for (const GlobalValue &GV : M.global_values()) {
       if (!GV.use_empty() && !GV.isThreadLocal() &&
           !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
-          !GV.hasAtLeastLocalUnnamedAddr())
+          !GV.hasAtLeastLocalUnnamedAddr() && GV.getSection() != "llvm.ptrauth")
         OutStreamer->emitAddrsigSym(getSymbol(&GV));
     }
   }
