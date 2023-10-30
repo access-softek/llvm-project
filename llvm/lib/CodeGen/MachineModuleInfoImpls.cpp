@@ -42,16 +42,29 @@ MachineModuleInfoImpl::SymbolListTy MachineModuleInfoImpl::getSortedStubs(
   return List;
 }
 
-MachineModuleInfoMachO::AuthStubListTy
-MachineModuleInfoMachO::getAuthGVStubList() {
-  AuthStubListTy List(AuthPtrStubs.begin(), AuthPtrStubs.end());
+template <typename MachineModuleInfoTarget>
+static typename MachineModuleInfoTarget::AuthStubListTy getAuthGVStubListHelper(
+    DenseMap<MCSymbol *, typename MachineModuleInfoTarget::AuthStubInfo>
+        &AuthPtrStubs) {
+  typename MachineModuleInfoTarget::AuthStubListTy List(AuthPtrStubs.begin(),
+                                                        AuthPtrStubs.end());
 
   if (!List.empty())
     std::sort(List.begin(), List.end(),
-              [](const AuthStubPairTy &LHS, const AuthStubPairTy &RHS) {
-              return LHS.first->getName() < RHS.first->getName();
+              [](const typename MachineModuleInfoTarget::AuthStubPairTy &LHS,
+                 const typename MachineModuleInfoTarget::AuthStubPairTy &RHS) {
+                return LHS.first->getName() < RHS.first->getName();
               });
 
   AuthPtrStubs.clear();
   return List;
+}
+
+MachineModuleInfoMachO::AuthStubListTy
+MachineModuleInfoMachO::getAuthGVStubList() {
+  return getAuthGVStubListHelper<MachineModuleInfoMachO>(AuthPtrStubs);
+}
+
+MachineModuleInfoELF::AuthStubListTy MachineModuleInfoELF::getAuthGVStubList() {
+  return getAuthGVStubListHelper<MachineModuleInfoELF>(AuthPtrStubs);
 }

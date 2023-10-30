@@ -860,9 +860,10 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   }
 }
 
-static void
-emitAuthenticatedPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
-                         const MachineModuleInfoMachO::AuthStubInfo &StubInfo) {
+template <typename MachineModuleInfoTarget>
+static void emitAuthenticatedPointer(
+    MCStreamer &OutStreamer, MCSymbol *StubLabel,
+    const typename MachineModuleInfoTarget::AuthStubInfo &StubInfo) {
   // L_foo$addend$auth_ptr$ib$23:
   OutStreamer.emitLabel(StubLabel);
   OutStreamer.emitValue(StubInfo.AuthPtrRef, /*size=*/8);
@@ -888,7 +889,8 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
       emitAlignment(Align(8));
 
       for (auto &Stub : Stubs)
-        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
+        emitAuthenticatedPointer<MachineModuleInfoMachO>(
+            *OutStreamer, Stub.first, Stub.second);
 
       OutStreamer->addBlankLine();
     }
@@ -901,9 +903,27 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   }
 
+  if (TT.isOSBinFormatELF()) {
+    // Output authenticated pointers as indirect symbols, if we have any.
+    MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
+
+    auto Stubs = MMIELF.getAuthGVStubList();
+
+    if (!Stubs.empty()) {
+      const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+      OutStreamer->switchSection(TLOF.getDataSection());
+      emitAlignment(Align(8));
+
+      for (auto &Stub : Stubs)
+        emitAuthenticatedPointer<MachineModuleInfoELF>(*OutStreamer, Stub.first,
+                                                       Stub.second);
+
+      OutStreamer->addBlankLine();
+    }
+  }
+
   // Emit stack and fault map information.
   FM.serializeToFaultMapSection();
-
 }
 
 void AArch64AsmPrinter::emitLOHs() {
@@ -1877,8 +1897,8 @@ AArch64AsmPrinter::lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
 
     std::string Buf;
     raw_string_ostream OS(Buf);
-    OS << "Couldn't resolve target base/addend of llvm.ptrauth global '"
-      << *BaseGVB << "'";
+    OS << "couldn't resolve target base/addend of llvm.ptrauth global '"
+       << *BaseGVB << "'";
     BaseGV->getContext().emitError(OS.str());
   }
 
@@ -1892,16 +1912,20 @@ AArch64AsmPrinter::lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
         Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
 
   uint64_t KeyID = PAI.getKey()->getZExtValue();
-  if (!isUInt<2>(KeyID))
+  if (KeyID > AArch64PACKey::LAST)
     BaseGV->getContext().emitError(
-        "Invalid AArch64 PAC Key ID '" + utostr(KeyID) + "' in llvm.ptrauth global '" +
+        "AArch64 PAC key ID '" + Twine(KeyID) + "' out of range [0, " +
+        Twine(static_cast<int>(AArch64PACKey::LAST)) +
+        "] in llvm.ptrauth "
+        "global '" +
         BaseGV->getName() + "'");
 
   uint64_t Disc = PAI.getDiscriminator()->getZExtValue();
   if (!isUInt<16>(Disc))
-    BaseGV->getContext().emitError("Invalid AArch64 Discriminator '" +
-                                   utostr(Disc) + "' in llvm.ptrauth global '" +
-                                   BaseGV->getName() + "'");
+    BaseGV->getContext().emitError(
+        "AArch64 PAC discriminator '" + Twine(Disc) +
+        "' out of range [0, 0xFFFF] in llvm.ptrauth global '" +
+        BaseGV->getName() + "'");
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),

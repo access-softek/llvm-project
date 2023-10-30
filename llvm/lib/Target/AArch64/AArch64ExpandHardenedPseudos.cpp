@@ -191,12 +191,22 @@ bool AArch64ExpandHardenedPseudos::expandPtrAuthPseudo(MachineInstr &MI) {
     // Where the $auth_ptr$ symbol is the stub slot containing the signed pointer
     // to _symbol.
     // We defined the stub ourselves, so we don't need a GOT access.
-    assert(TM.getTargetTriple().isOSBinFormatMachO() &&
-           "ptrauth chkstk_darwin only implemented on mach-o");
-    auto *TLOF =
-      static_cast<AArch64_MachoTargetObjectFile *>(TM.getObjFileLowering());
-    MCSymbol *AuthPtrStubSym =
-        TLOF->getAuthPtrSlotSymbol(TM, &MMI, GASym, Offset, Key, Disc);
+
+    MCSymbol *AuthPtrStubSym;
+    if (TM.getTargetTriple().isOSBinFormatMachO()) {
+      auto *TLOF =
+          static_cast<AArch64_MachoTargetObjectFile *>(TM.getObjFileLowering());
+      AuthPtrStubSym =
+          TLOF->getAuthPtrSlotSymbol(TM, &MMI, GASym, Offset, Key, Disc);
+    } else if (TM.getTargetTriple().isOSBinFormatELF()) {
+      auto *TLOF =
+          static_cast<AArch64_ELFTargetObjectFile *>(TM.getObjFileLowering());
+      AuthPtrStubSym =
+          TLOF->getAuthPtrSlotSymbol(TM, &MMI, GASym, Offset, Key, Disc);
+    } else {
+      llvm_unreachable(
+          "ptrauth static materialization only implemented on mach-o and elf");
+    }
 
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), DstReg)
       .addSym(AuthPtrStubSym, AArch64II::MO_PAGE);
@@ -278,30 +288,33 @@ bool AArch64ExpandHardenedPseudos::expandPtrAuthPseudo(MachineInstr &MI) {
     }
   }
 
+  auto *SignMBB = &MBB;
+  auto SignMBBI = MBBI;
+
   unsigned DiscReg = AddrDisc;
   if (Disc) {
     assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
 
     if (AddrDisc != AArch64::XZR) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
-        .addReg(AArch64::XZR)
-        .addReg(AddrDisc)
-        .addImm(0);
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), AArch64::X17)
-        .addReg(AArch64::X17)
-        .addImm(Disc)
-        .addImm(/*shift=*/48);
+      BuildMI(*SignMBB, SignMBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+          .addReg(AArch64::XZR)
+          .addReg(AddrDisc)
+          .addImm(0);
+      BuildMI(*SignMBB, SignMBBI, DL, TII->get(AArch64::MOVKXi), AArch64::X17)
+          .addReg(AArch64::X17)
+          .addImm(Disc)
+          .addImm(/*shift=*/48);
     } else {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVZXi), AArch64::X17)
-        .addImm(Disc)
-        .addImm(/*shift=*/0);
+      BuildMI(*SignMBB, SignMBBI, DL, TII->get(AArch64::MOVZXi), AArch64::X17)
+          .addImm(Disc)
+          .addImm(/*shift=*/0);
     }
     DiscReg = AArch64::X17;
   }
 
   unsigned PACOpc = getPACOpcodeForKey(Key, DiscReg == AArch64::XZR);
-  auto MIB = BuildMI(MBB, MBBI, DL, TII->get(PACOpc), AArch64::X16)
-      .addReg(AArch64::X16);
+  auto MIB = BuildMI(*SignMBB, SignMBBI, DL, TII->get(PACOpc), AArch64::X16)
+                 .addReg(AArch64::X16);
   if (DiscReg != AArch64::XZR)
     MIB.addReg(DiscReg);
 
@@ -448,8 +461,12 @@ bool AArch64ExpandHardenedPseudos::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
   for (auto &MBB : MF) {
     for (auto MBBI = MBB.instr_begin(), MBBE = MBB.instr_end(); MBBI != MBBE; ) {
-      auto &MI = *MBBI++;
-      if (expandMI(MI)) {
+      auto &MI = *MBBI;
+      bool IsExpanded = expandMI(MI);
+      // Previous expandMI invocation might split the current basic block, so we
+      // increment the instruction iterator after that.
+      ++MBBI;
+      if (IsExpanded) {
         MI.eraseFromBundle();
         Modified |= true;
       }

@@ -6690,7 +6690,9 @@ bool AArch64InstructionSelector::selectPtrAuthGlobalValue(
   //   Note that we disallow extern_weak refs to avoid null checks later.
   //   We also require this for offsets >=32, because of the shared cache.
   if (!NeedsGOTLoad ||
-      (AArch64PtrAuthGlobalDynamicMat && !GV->hasExternalWeakLinkage()) ||
+      (AArch64PtrAuthGlobalDynamicMat &&
+       !((STI.isTargetMachO() || STI.isTargetELF()) &&
+         GV->hasExternalWeakLinkage())) ||
       !isUInt<5>(Offset)) {
     MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
     MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});

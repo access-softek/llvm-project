@@ -172,7 +172,10 @@ void AArch64AuthMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (WrapSubExprInParens)
     OS << ')';
 
-  OS << "@AUTH(" << AArch64PACKeyIDToString(Key) << ',' << Discriminator;
+  OS << "@AUTH("
+     << (Key > AArch64PACKey::LAST ? "<key out of range>"
+                                   : AArch64PACKeyIDToString(Key))
+     << ',' << Discriminator;
   if (hasAddressDiversity())
     OS << ",addr";
   OS << ')';

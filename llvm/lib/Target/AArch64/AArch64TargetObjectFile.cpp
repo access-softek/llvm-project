@@ -84,13 +84,12 @@ void AArch64_MachoTargetObjectFile::getNameWithPrefix(
   getMangler().getNameWithPrefix(OutName, GV, /* CannotUsePrivateLabel */ true);
 }
 
-MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
-    const TargetMachine &TM, MachineModuleInfo *MMI, MCSymbol *RawSym,
-    int64_t RawSymOffset, AArch64PACKey::ID Key, uint16_t Discriminator) const {
+template <typename MachineModuleInfoTarget>
+static MCSymbol *getAuthPtrSlotSymbolHelper(
+    MCContext &Ctx, const TargetMachine &TM, MachineModuleInfo *MMI,
+    MachineModuleInfoTarget &TargetMMI, MCSymbol *RawSym, int64_t RawSymOffset,
+    AArch64PACKey::ID Key, uint16_t Discriminator) {
   const DataLayout &DL = MMI->getModule()->getDataLayout();
-  MachineModuleInfoMachO &MachOMMI =
-    MMI->getObjFileInfo<MachineModuleInfoMachO>();
-  MCContext &Ctx = getContext();
 
   // Mangle the offset into the stub name.  Avoid '-' in symbols and extra logic
   // by using the uint64_t representation for negative numbers.
@@ -105,8 +104,8 @@ MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
   MCSymbol *StubSym = Ctx.getOrCreateSymbol(DL.getLinkerPrivateGlobalPrefix() +
                                             RawSym->getName() + Suffix);
 
-  MachineModuleInfoMachO::AuthStubInfo &StubInfo =
-      MachOMMI.getAuthPtrStubEntry(StubSym);
+  typename MachineModuleInfoTarget::AuthStubInfo &StubInfo =
+      TargetMMI.getAuthPtrStubEntry(StubSym);
 
   if (StubInfo.AuthPtrRef)
     return StubSym;
@@ -126,9 +125,12 @@ MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
   return StubSym;
 }
 
-MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
-    const TargetMachine &TM, MachineModuleInfo *MMI,
-    const GlobalPtrAuthInfo &PAI) const {
+template <typename MachineModuleInfoTarget>
+static MCSymbol *getAuthPtrSlotSymbolHelper(MCContext &Ctx,
+                                            const TargetMachine &TM,
+                                            MachineModuleInfo *MMI,
+                                            MachineModuleInfoTarget &TargetMMI,
+                                            const GlobalPtrAuthInfo &PAI) {
   const DataLayout &DL = MMI->getModule()->getDataLayout();
 
   // Figure out the base symbol and the addend, if any.
@@ -136,35 +138,51 @@ MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
   const Value *BaseGV = PAI.getPointer()->stripAndAccumulateConstantOffsets(
       DL, Offset, /*AllowNonInbounds=*/true);
 
-  auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
-
-  // If we can't understand the referenced ConstantExpr, there's nothing
-  // else we can do: emit an error.
-  if (!BaseGVB) {
-    BaseGVB = PAI.getGV();
-
-    std::string Buf;
-    raw_string_ostream OS(Buf);
-    OS << "Couldn't resolve target base/addend of llvm.ptrauth global '"
-      << *BaseGVB << "'";
-    BaseGVB->getContext().emitError(OS.str());
-  }
+  auto *BaseGVB = cast<GlobalValue>(BaseGV);
 
   uint16_t Discriminator = PAI.getDiscriminator()->getZExtValue();
 
-  if (PAI.hasAddressDiversity()) {
-    std::string Buf;
-    raw_string_ostream OS(Buf);
-    OS << "Invalid instruction reference to address-diversified ptrauth global"
-      << *BaseGVB << "'";
-    BaseGVB->getContext().emitError(OS.str());
-  }
+  assert(!PAI.hasAddressDiversity() &&
+         "Invalid instruction reference to address-diversified ptrauth global");
 
   auto *KeyC = PAI.getKey();
   assert(isUInt<2>(KeyC->getZExtValue()) && "Invalid PAC Key ID");
   uint32_t Key = KeyC->getZExtValue();
   int64_t OffsetV = Offset.getSExtValue();
 
-  return getAuthPtrSlotSymbol(TM, MMI, TM.getSymbol(BaseGVB), OffsetV,
-                              AArch64PACKey::ID(Key), Discriminator);
+  return getAuthPtrSlotSymbolHelper(Ctx, TM, MMI, TargetMMI,
+                                    TM.getSymbol(BaseGVB), OffsetV,
+                                    AArch64PACKey::ID(Key), Discriminator);
+}
+
+MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
+    const TargetMachine &TM, MachineModuleInfo *MMI, MCSymbol *RawSym,
+    int64_t RawSymOffset, AArch64PACKey::ID Key, uint16_t Discriminator) const {
+  MachineModuleInfoMachO &MachOMMI =
+      MMI->getObjFileInfo<MachineModuleInfoMachO>();
+  return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, MachOMMI, RawSym,
+                                    RawSymOffset, Key, Discriminator);
+}
+
+MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
+    const TargetMachine &TM, MachineModuleInfo *MMI,
+    const GlobalPtrAuthInfo &PAI) const {
+  MachineModuleInfoMachO &MachOMMI =
+      MMI->getObjFileInfo<MachineModuleInfoMachO>();
+  return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, MachOMMI, PAI);
+}
+
+MCSymbol *AArch64_ELFTargetObjectFile::getAuthPtrSlotSymbol(
+    const TargetMachine &TM, MachineModuleInfo *MMI, MCSymbol *RawSym,
+    int64_t RawSymOffset, AArch64PACKey::ID Key, uint16_t Discriminator) const {
+  MachineModuleInfoELF &ELFMMI = MMI->getObjFileInfo<MachineModuleInfoELF>();
+  return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, ELFMMI, RawSym,
+                                    RawSymOffset, Key, Discriminator);
+}
+
+MCSymbol *AArch64_ELFTargetObjectFile::getAuthPtrSlotSymbol(
+    const TargetMachine &TM, MachineModuleInfo *MMI,
+    const GlobalPtrAuthInfo &PAI) const {
+  MachineModuleInfoELF &ELFMMI = MMI->getObjFileInfo<MachineModuleInfoELF>();
+  return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, ELFMMI, PAI);
 }
