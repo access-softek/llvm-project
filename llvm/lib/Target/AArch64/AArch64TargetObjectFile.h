@@ -24,6 +24,15 @@ public:
   AArch64_ELFTargetObjectFile() {
     PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
   }
+
+  MCSymbol *getAuthPtrSlotSymbol(const TargetMachine &TM,
+                                 MachineModuleInfo *MMI, MCSymbol *RawSym,
+                                 int64_t RawSymOffset, AArch64PACKey::ID Key,
+                                 uint16_t Discriminator) const;
+
+  MCSymbol *getAuthPtrSlotSymbol(const TargetMachine &TM,
+                                 MachineModuleInfo *MMI,
+                                 const GlobalPtrAuthInfo &PAI) const;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.

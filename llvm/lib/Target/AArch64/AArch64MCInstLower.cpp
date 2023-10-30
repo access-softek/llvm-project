@@ -39,13 +39,19 @@ AArch64MCInstLower::AArch64MCInstLower(MCContext &ctx, AsmPrinter &printer)
     : Ctx(ctx), Printer(printer) {}
 
 static MCSymbol *getAuthGVStub(const GlobalVariable *GVB, AsmPrinter &Printer) {
-  assert(Printer.TM.getTargetTriple().isOSBinFormatMachO() &&
-         "auth_ptr stubs only implemented on macho");
-  auto &TLOF = static_cast<const AArch64_MachoTargetObjectFile &>(
-      Printer.getObjFileLowering());
-
-  return TLOF.getAuthPtrSlotSymbol(Printer.TM, Printer.MMI,
-                                   *GlobalPtrAuthInfo::analyze(GVB));
+  if (Printer.TM.getTargetTriple().isOSBinFormatMachO()) {
+    auto &TLOF = static_cast<const AArch64_MachoTargetObjectFile &>(
+        Printer.getObjFileLowering());
+    return TLOF.getAuthPtrSlotSymbol(Printer.TM, Printer.MMI,
+                                     *GlobalPtrAuthInfo::analyze(GVB));
+  } else if (Printer.TM.getTargetTriple().isOSBinFormatELF()) {
+    auto &TLOF = static_cast<const AArch64_ELFTargetObjectFile &>(
+        Printer.getObjFileLowering());
+    return TLOF.getAuthPtrSlotSymbol(Printer.TM, Printer.MMI,
+                                     *GlobalPtrAuthInfo::analyze(GVB));
+  } else {
+    llvm_unreachable("auth_ptr stubs only implemented on macho and elf");
+  }
 }
 
 MCSymbol *

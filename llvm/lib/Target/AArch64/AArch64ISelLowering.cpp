@@ -8601,6 +8601,8 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressViaGOT(
     SDValue TGA, SDLoc DL, EVT VT, AArch64PACKey::ID KeyC,
     SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) const {
+  assert((Subtarget->isTargetMachO() || Subtarget->isTargetELF()) &&
+         "LOADauthptrgot is only supported for MachO and ELF");
 
   auto *TGN = cast<GlobalAddressSDNode>(TGA.getNode());
   const GlobalValue *GV = TGN->getGlobal();
@@ -8672,7 +8674,7 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
   SDLoc DL(Op);
 
   // Both key allocation and the wrapper usage support are target-specific.
-  if (!Subtarget->isTargetMachO())
+  if (!Subtarget->isTargetMachO() && !Subtarget->isTargetELF())
     llvm_unreachable("Unimplemented ptrauth global lowering");
 
   uint64_t PtrOffsetC = 0;
@@ -8697,12 +8699,14 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
   assert(PtrN->getTargetFlags() == 0 && "Unsupported tflags on ptrauth global");
 
   // None of our lowerings support an offset larger than 32-bit.
+  // TODO: rela elf supports 64-bit?
   if (!isUInt<32>(PtrOffsetC))
     report_fatal_error("Unsupported >32-bit-wide offset in ptrauth global");
 
   // The shared cache severely constrains the offset, to 5 bits, which prevents
-  // us from using LOADauthptrgot, our only option for extern_weak.
-  if (!isUInt<5>(PtrOffsetC) && PtrGV->hasExternalWeakLinkage())
+  // us from using LOADauthptrgot, our only option for extern_weak on MachO.
+  if (!isUInt<5>(PtrOffsetC) && PtrGV->hasExternalWeakLinkage() &&
+      (Subtarget->isTargetMachO() || Subtarget->isTargetELF()))
     report_fatal_error("Offset in weak ptrauth global reference is too large");
 
   // Blend only works if the integer discriminator is 16-bit wide.
@@ -8718,7 +8722,9 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
 
   // No GOT load needed -> MOVaddrPAC
   if (!NeedsGOTLoad) {
-    assert(!PtrGV->hasExternalWeakLinkage() && "extern_weak should use GOT");
+    assert(!(PtrGV->hasExternalWeakLinkage() &&
+             (Subtarget->isTargetMachO() || Subtarget->isTargetELF())) &&
+           "extern_weak on MachO should use GOT via LOADauthptrgot");
     return SDValue(
         DAG.getMachineNode(AArch64::MOVaddrPAC, DL, MVT::i64,
                            {TPtr, Key, TAddrDiscriminator, Discriminator}),
