@@ -553,6 +553,7 @@ AArch64Subtarget::getPAuthIntrinsicCheckMethod(Intrinsic::ID IntrinsicId,
 
   switch (IntrinsicId) {
   case Intrinsic::ptrauth_auth:
+  case Intrinsic::ptrauth_resign:
     if (!hasPAuth()) {
       // If generating Armv8.2-compatible code, only I-keys can be used in
       // authentication.

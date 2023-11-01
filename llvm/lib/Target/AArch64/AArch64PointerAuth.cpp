@@ -101,6 +101,9 @@ private:
   /// Expands PAUTH_AUTH pseudo instruction.
   void expandPAuthAuth(MachineBasicBlock::iterator MBBI) const;
 
+  /// Expands PAUTH_RESIGN pseudo instruction.
+  void expandPAuthResign(MachineBasicBlock::iterator MBBI) const;
+
   bool checkAuthenticatedLR(MachineBasicBlock::iterator TI) const;
 };
 
@@ -114,6 +117,21 @@ unsigned getHintAUTOpcode(Register Pointer, Register Discriminator,
     return AArch64::AUTIA1716;
   case AArch64PACKey::IB:
     return AArch64::AUTIB1716;
+  default:
+    return 0;
+  }
+}
+
+unsigned getHintPACOpcode(Register Pointer, Register Discriminator,
+                          AArch64PACKey::ID KeyId) {
+  if (Pointer != AArch64::X17 || Discriminator != AArch64::X16)
+    return 0;
+
+  switch (KeyId) {
+  case AArch64PACKey::IA:
+    return AArch64::PACIA1716;
+  case AArch64PACKey::IB:
+    return AArch64::PACIB1716;
   default:
     return 0;
   }
@@ -504,6 +522,17 @@ void AArch64PointerAuth::expandPAuthAuth(
   expandAddressCheck(MBBI, /*KeyIdOpIndex=*/6, Intrinsic::ptrauth_auth);
 }
 
+void AArch64PointerAuth::expandPAuthResign(
+    MachineBasicBlock::iterator MBBI) const {
+  expandAutOrSignWithDiscriminator(MBBI, /*IndexOfRegDiscOp=*/3,
+                                   getHintAUTOpcode, getAUTOpcodeForKey);
+  // The particular check method is determined by the key used for
+  // authentication (key_id_old operand).
+  expandAddressCheck(MBBI, /*IndexOfKeyIdOp=*/6, Intrinsic::ptrauth_resign);
+  expandAutOrSignWithDiscriminator(MBBI, /*IndexOfRegDiscOp=*/7,
+                                   getHintPACOpcode, getPACOpcodeForKey);
+}
+
 bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   const auto *MFnI = MF.getInfo<AArch64FunctionInfo>();
 
@@ -537,6 +566,7 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
       case AArch64::PAUTH_EPILOGUE:
       case AArch64::PAUTH_AUTH:
       case AArch64::PAUTH_BLEND:
+      case AArch64::PAUTH_RESIGN:
         assert(!MI.isBundled());
         PAuthPseudoInstrs.push_back(MI.getIterator());
         break;
@@ -555,6 +585,9 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
       break;
     case AArch64::PAUTH_AUTH:
       expandPAuthAuth(It);
+      break;
+    case AArch64::PAUTH_RESIGN:
+      expandPAuthResign(It);
       break;
     case AArch64::PAUTH_BLEND: {
       Register ResultReg = It->getOperand(0).getReg();

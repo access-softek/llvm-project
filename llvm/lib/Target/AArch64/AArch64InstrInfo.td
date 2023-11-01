@@ -1552,6 +1552,15 @@ def PAUTH_AUTH : Pseudo<(outs GPR64common:$auted, GPR64:$scratch),
                              GPR64:$reg_disc, i32imm:$int_disc,
                              i32imm:$is_blended, i32imm:$key_id), [],
                         "$auted = $signed, $scratch = $reg_disc">, Sched<[]>;
+
+// For convenience, the first 7 operands are in the same order as in PAUTH_AUTH.
+def PAUTH_RESIGN : Pseudo<(outs GPR64common:$resigned, GPR64:$scratch),
+                          (ins GPR64common:$signed,
+                               GPR64:$reg_disc_old, i32imm:$int_disc_old,
+                               i32imm:$is_blended_old, i32imm:$key_id_old,
+                               GPR64:$reg_disc_new, i32imm:$int_disc_new,
+                               i32imm:$is_blended_new, i32imm:$key_id_new), [],
+                          "$resigned = $signed, $scratch = $reg_disc_old">, Sched<[]>;
 }
 
 // These pointer authentication instructions require armv8.3a
@@ -9175,6 +9184,13 @@ def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
 def : Pat<(int_ptrauth_auth GPR64:$signed,
                             timm:$key_id, GPR64:$reg_disc),
           (PAUTH_AUTH GPR64:$signed, GPR64:$reg_disc, 0, 0, timm:$key_id)>;
+
+def : Pat<(int_ptrauth_resign GPR64:$signed,
+                              timm:$key_id_old, GPR64:$reg_disc_old,
+                              timm:$key_id_new, GPR64:$reg_disc_new),
+          (PAUTH_RESIGN GPR64:$signed,
+                        GPR64:$reg_disc_old, 0, 0, timm:$key_id_old,
+                        GPR64:$reg_disc_new, 0, 0, timm:$key_id_new)>;
 
 //-----------------------------------------------------------------------------
 

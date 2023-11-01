@@ -2921,6 +2921,11 @@ AArch64TargetLowering::EmitPAuthInstr(MachineInstr &MI,
     DetectDiscriminator(/*RegDiscOpIndex=*/3);
     AdjustDefinedRegisters(/*TiedRegDiscOpIndex=*/3);
     break;
+  case AArch64::PAUTH_RESIGN:
+    DetectDiscriminator(/*IndexOfRegDiscOp=*/3);
+    DetectDiscriminator(/*IndexOfRegDiscOp=*/7);
+    AdjustDefinedRegisters(/*TiedRegDiscOpIdx=*/3);
+    break;
   }
   return BB;
 }
@@ -2979,6 +2984,7 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return BB;
 
   case AArch64::PAUTH_AUTH:
+  case AArch64::PAUTH_RESIGN:
     return EmitPAuthInstr(MI, BB);
 
   case AArch64::CATCHRET:
