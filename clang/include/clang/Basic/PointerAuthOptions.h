@@ -47,6 +47,10 @@ constexpr uint16_t BlockDescriptorConstantDiscriminator = 0xC0BB;
 /// *_type_info implementations.
 constexpr uint16_t CXXTypeInfoVTableConstantDiscriminator = 0xB1EA;
 
+/// Constant discriminator to be used with function pointers in .init_array and
+/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
+constexpr uint16_t InitFiniPointerConstantDiscriminator = 0xD9D4;
+
 constexpr int PointerAuthKeyNone = -1;
 
 class PointerAuthSchema {
@@ -70,6 +74,7 @@ public:
     ObjCMethodListPointer = 7,
     ObjCIsaPointer = 8,
     BlockDescriptorPointers = 9,
+    InitFiniPointers = 10,
   };
 
   /// Hardware pointer-signing keys in ARM8.3.
@@ -283,6 +288,9 @@ struct PointerAuthOptions {
 
   /// The ABI for Objective-C superclass pointers.
   PointerAuthSchema ObjCSuperPointers;
+
+  /// The ABI for function addresses in .init_array and .fini_array
+  PointerAuthSchema InitFiniPointers;
 };
 
 }  // end namespace clang

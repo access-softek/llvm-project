@@ -1944,37 +1944,81 @@ void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority,
 void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   if (Fns.empty()) return;
 
-  // Ctor function type is void()*.
-  llvm::FunctionType* CtorFTy = llvm::FunctionType::get(VoidTy, false);
-  llvm::Type *CtorPFTy = llvm::PointerType::get(CtorFTy,
-      TheModule.getDataLayout().getProgramAddressSpace());
+  const PointerAuthSchema &InitFiniAuthSchema =
+      getCodeGenOpts().PointerAuth.InitFiniPointers;
+  if (InitFiniAuthSchema) {
+    // Ctor function type is void()*.
+    llvm::FunctionType *CtorFTy = llvm::FunctionType::get(VoidTy, false);
+    llvm::Type *CtorPFTy = llvm::PointerType::get(
+        CtorFTy, TheModule.getDataLayout().getProgramAddressSpace());
 
-  // Get the type of a ctor entry, { i32, void ()*, i8* }.
-  llvm::StructType *CtorStructTy = llvm::StructType::get(
-      Int32Ty, CtorPFTy, VoidPtrTy);
+    llvm::StructType *CtorPauthTy =
+        llvm::StructType::get(CtorPFTy, Int32Ty, Int64Ty, Int64Ty);
+    llvm::Type *CtorPauthPTy = llvm::PointerType::get(
+        CtorPauthTy, TheModule.getDataLayout().getProgramAddressSpace());
 
-  // Construct the constructor and destructor arrays.
-  ConstantInitBuilder builder(*this);
-  auto ctors = builder.beginArray(CtorStructTy);
-  for (const auto &I : Fns) {
-    auto ctor = ctors.beginStruct(CtorStructTy);
-    ctor.addInt(Int32Ty, I.Priority);
-    ctor.add(llvm::ConstantExpr::getBitCast(I.Initializer, CtorPFTy));
-    if (I.AssociatedData)
-      ctor.add(llvm::ConstantExpr::getBitCast(I.AssociatedData, VoidPtrTy));
-    else
-      ctor.addNullPointer(VoidPtrTy);
-    ctor.finishAndAddTo(ctors);
+    // Get the type of a ctor entry, { i32, ptr, i8* }.
+    llvm::StructType *CtorStructTy =
+        llvm::StructType::get(Int32Ty, CtorPauthPTy, VoidPtrTy);
+
+    // Construct the constructor and destructor arrays.
+    ConstantInitBuilder builder(*this);
+    auto ctors = builder.beginArray(CtorStructTy);
+    for (const auto &I : Fns) {
+      auto ctor = ctors.beginStruct(CtorStructTy);
+      ctor.addInt(Int32Ty, I.Priority);
+      assert(!InitFiniAuthSchema.isAddressDiscriminated());
+      llvm::Constant *signedCtorAddr = getConstantSignedPointer(
+          I.Initializer, InitFiniAuthSchema.getKey(), 0,
+          llvm::ConstantInt::get(
+              SizeTy, InitFiniAuthSchema.getConstantDiscrimination()));
+      ctor.add(llvm::ConstantExpr::getBitCast(signedCtorAddr, CtorPauthPTy));
+      if (I.AssociatedData)
+        ctor.add(llvm::ConstantExpr::getBitCast(I.AssociatedData, VoidPtrTy));
+      else
+        ctor.addNullPointer(VoidPtrTy);
+      ctor.finishAndAddTo(ctors);
+    }
+
+    auto list = ctors.finishAndCreateGlobal(
+        GlobalName, getPointerAlign(),
+        /*constant*/ false, llvm::GlobalValue::AppendingLinkage);
+
+    // The LTO linker doesn't seem to like it when we set an alignment
+    // on appending variables.  Take it off as a workaround.
+    list->setAlignment(std::nullopt);
+  } else {
+    // Ctor function type is void()*.
+    llvm::FunctionType *CtorFTy = llvm::FunctionType::get(VoidTy, false);
+    llvm::Type *CtorPFTy = llvm::PointerType::get(
+        CtorFTy, TheModule.getDataLayout().getProgramAddressSpace());
+
+    // Get the type of a ctor entry, { i32, void ()*, i8* }.
+    llvm::StructType *CtorStructTy =
+        llvm::StructType::get(Int32Ty, CtorPFTy, VoidPtrTy);
+
+    // Construct the constructor and destructor arrays.
+    ConstantInitBuilder builder(*this);
+    auto ctors = builder.beginArray(CtorStructTy);
+    for (const auto &I : Fns) {
+      auto ctor = ctors.beginStruct(CtorStructTy);
+      ctor.addInt(Int32Ty, I.Priority);
+      ctor.add(llvm::ConstantExpr::getBitCast(I.Initializer, CtorPFTy));
+      if (I.AssociatedData)
+        ctor.add(llvm::ConstantExpr::getBitCast(I.AssociatedData, VoidPtrTy));
+      else
+        ctor.addNullPointer(VoidPtrTy);
+      ctor.finishAndAddTo(ctors);
+    }
+
+    auto list = ctors.finishAndCreateGlobal(
+        GlobalName, getPointerAlign(),
+        /*constant*/ false, llvm::GlobalValue::AppendingLinkage);
+
+    // The LTO linker doesn't seem to like it when we set an alignment
+    // on appending variables.  Take it off as a workaround.
+    list->setAlignment(std::nullopt);
   }
-
-  auto list =
-    ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
-                                /*constant*/ false,
-                                llvm::GlobalValue::AppendingLinkage);
-
-  // The LTO linker doesn't seem to like it when we set an alignment
-  // on appending variables.  Take it off as a workaround.
-  list->setAlignment(std::nullopt);
 
   Fns.clear();
 }

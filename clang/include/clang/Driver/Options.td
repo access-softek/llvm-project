@@ -3895,6 +3895,8 @@ let Group = f_Group in {
       HelpText<"enable signing block descriptors">;
     def fptrauth_function_pointer_type_discrimination : Flag<["-"], "fptrauth-function-pointer-type-discrimination">,
       HelpText<"Enabling type discrimination on C function pointers">;
+    def fptrauth_init_fini : Flag<["-"], "fptrauth-init-fini">,
+      HelpText<"Enable signing of function pointers in init/fini arrays">;
     def fptrauth_objc_isa : Flag<["-"], "fptrauth-objc-isa">,
       HelpText<"Enable signing and authentication of Objective-C object's 'isa' field">;
     def fptrauth_objc_isa_mode : Joined<["-"], "fptrauth-objc-isa-mode=">,
@@ -3914,6 +3916,7 @@ let Group = f_Group in {
   def fno_ptrauth_objc_isa : Flag<["-"], "fno-ptrauth-objc-isa">;
   def fno_ptrauth_block_descriptor_pointers : Flag<["-"], "fno-ptrauth-block-descriptor-pointers">;
   def fno_ptrauth_function_pointer_type_discrimination : Flag<["-"], "fno-ptrauth-function-pointer-type-discrimination">;
+  def fno_ptrauth_init_fini : Flag<["-"], "fno-ptrauth-init-fini">;
   def fno_branch_target_identification : Flag<["-"], "fno-branch-target-identification">;
 }
 

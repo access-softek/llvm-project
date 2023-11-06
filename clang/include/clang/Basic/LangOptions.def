@@ -170,6 +170,7 @@ ENUM_LANGOPT(PointerAuthCXXTypeInfoVTableDiscrimination,
              PointerAuthCXXTypeInfoVTableDiscr, 2,
              PointerAuthCXXTypeInfoVTableDiscr::Zero,
              "discrimination variant for C++ type info vtable pointers")
+LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
 ENUM_LANGOPT(PointerAuthObjcIsaAuthentication, PointerAuthenticationMode, 2,
              PointerAuthenticationMode::None, "authentication mode for objc isa")
 LANGOPT(PointerAuthObjcIsaMasking, 1, 0, "pre- and post-authentication masking for Objective-C isa pointer")
