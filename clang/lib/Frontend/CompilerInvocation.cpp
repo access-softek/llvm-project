@@ -1491,6 +1491,11 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
             Key::ObjCIsaPointer, true, explicitIsaAuthenticationMode,
             Discrimination::Constant, SuperPointerConstantDiscriminator);
       }
+      if (LangOpts.PointerAuthInitFini) {
+        Opts.InitFiniPointers = PointerAuthSchema(
+            Key::InitFiniPointers, false, Discrimination::Constant,
+            InitFiniPointerConstantDiscriminator);
+      }
     }
     Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
     Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
@@ -1562,6 +1567,11 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
         Opts.ObjCSuperPointers = PointerAuthSchema(
             Key::ASDA, true, explicitIsaAuthenticationMode,
             Discrimination::Constant, SuperPointerConstantDiscriminator);
+      }
+      if (LangOpts.PointerAuthInitFini) {
+        Opts.InitFiniPointers =
+            PointerAuthSchema(Key::ASIA, false, Discrimination::Constant,
+                              InitFiniPointerConstantDiscriminator);
       }
     }
     Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
@@ -3478,6 +3488,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
   }
   if (Opts.PointerAuthObjcIsaMasking)
     GenerateArg(Consumer, OPT_fptrauth_objc_isa_masking);
+  if (Opts.PointerAuthInitFini)
+    GenerateArg(Consumer, OPT_fptrauth_init_fini);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3490,6 +3502,7 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
       Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
   Opts.PointerAuthVTPtrTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
   Opts.SoftPointerAuth = Args.hasArg(OPT_fptrauth_soft);
   Opts.PointerAuthBlockDescriptorPointers =
       Args.hasArg(OPT_fptrauth_block_descriptor_pointers);

@@ -3,7 +3,8 @@
 // RUN: %clang_cc1 %s -E -triple=arm64-- -fptrauth-returns | FileCheck %s --check-prefixes=NOCALLS,NOINTRIN,RETS,NOQUAL,NOFUNC
 // RUN: %clang_cc1 %s -E -triple=arm64-- -fptrauth-intrinsics | FileCheck %s --check-prefixes=NOCALLS,INTRIN,NORETS,QUAL,NOFUNC
 // RUN: %clang_cc1 %s -E -triple=arm64e-apple-ios6.0 -fptrauth-intrinsics -fptrauth-function-pointer-type-discrimination | FileCheck %s --check-prefixes=NOCALLS,INTRIN,NORETS,QUAL,FUNC
-// RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi | FileCheck %s --check-prefixes=VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,CXX_TYPEINFO_VPTR_DISCR_LIBCXX
+// RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi | FileCheck %s --check-prefixes=INITFINI,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,CXX_TYPEINFO_VPTR_DISCR_LIBCXX
+// RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi -fno-ptrauth-init-fini | FileCheck %s --check-prefixes=NOINITFINI
 // RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi -fno-ptrauth-vtable-pointer-address-discrimination | FileCheck %s --check-prefixes=NOVPTR_ADDR_DISCR
 // RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi -fno-ptrauth-vtable-pointer-type-discrimination | FileCheck %s --check-prefixes=NOVPTR_TYPE_DISCR
 // RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi -fptrauth-cxx-type-info-vtable-discrimination=zero | FileCheck %s --check-prefixes=CXX_TYPEINFO_VPTR_DISCR_ZERO
@@ -75,6 +76,14 @@ void has_ptrauth_cxx_type_info_vtable_discr_zero() {}
 #elif __has_feature(ptrauth_vtable_pointer_type_discrimination)
 // CXX_TYPEINFO_VPTR_DISCR_TYPE: has_ptrauth_cxx_type_info_vtable_discr_libcxx
 void has_ptrauth_cxx_type_info_vtable_discr_type() {}
+#endif
+
+#if __has_feature(ptrauth_init_fini)
+// INITFINI: has_ptrauth_init_fini
+void has_ptrauth_init_fini() {}
+#else
+// NOINITFINI: no_ptrauth_init_fini
+void no_ptrauth_init_fini() {}
 #endif
 
 #include <ptrauth.h>
