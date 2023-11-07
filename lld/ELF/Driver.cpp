@@ -2673,10 +2673,30 @@ static void getAarch64PauthInfo() {
     const SmallVector<uint8_t, 0> &d1 = ctx.aarch64PauthAbiTag;
     const SmallVector<uint8_t, 0> &d2 = f->aarch64PauthAbiTag;
     if (d1.empty() != d2.empty()) {
-      Twine Msg = (d1.empty() ? f1 : f2) +
-                  " has no AArch64 PAuth compatibility info while " +
-                  (d1.empty() ? f2 : f1) +
-                  " has one; either all or no input files must have it";
+      // FIXME: using `Twine` here leads to the following issue. Using
+      // `std::string` as a workaround.
+
+      // For some reason, `Twine` error message obtained via concatenation of
+      // string literals and `StringRef`'s (or `std::string`'s - the result was
+      // the same) contained unreadable characters, which caused test failure.
+
+      // The `StringRef`'s containins file names are **not** corrupted: when
+      // printing them separately, they are OK, and calling `.str()` on them
+      // also gives a correct `std::string` object. Moreover, a `Twine`
+      // constructed from a file name only (without concatenation with other
+      // stuff) also contains correct string without unreadable characters.
+
+      // The issue is not related to thread-safety: using a single thread does
+      // not resolve it.
+
+      // The issue is present when both g++ and clang++ are used to compile llvm
+      // and lld. The output is a bit different though, but if the issue is
+      // related to reading corrupt data from somewhere, different output is
+      // what we expect.
+      std::string Msg = (d1.empty() ? f1.str() : f2.str()) +
+                        " has no AArch64 PAuth compatibility info while " +
+                        (d1.empty() ? f2.str() : f1.str()) +
+                        " has one; either all or no input files must have it";
       if (config->zPauthReport == "warning")
         warn(Msg);
       else if (config->zPauthReport == "error")
