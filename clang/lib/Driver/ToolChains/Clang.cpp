@@ -1626,22 +1626,23 @@ static void handlePAuthABIOption(const ArgList &DriverArgs,
                           options::OPT_fno_ptrauth_auth_traps))
     CC1Args.push_back("-fptrauth-auth-traps");
 
-#if 1
   if (!DriverArgs.hasArg(
-          options::OPT_fptrauth_block_descriptor_pointers,
-          options::OPT_fno_ptrauth_block_descriptor_pointers))
-    CC1Args.push_back("-fptrauth-block-descriptor-pointers");
-
-  if (!DriverArgs.hasArg(
-      options::OPT_fptrauth_vtable_pointer_address_discrimination,
-      options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
-    CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
-
-  if (!DriverArgs.hasArg(
-      options::OPT_fptrauth_vtable_pointer_type_discrimination,
-      options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+          options::OPT_fptrauth_vtable_pointer_type_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
     CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
 
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_cxx_type_info_vtable_discrimination_EQ))
+    CC1Args.push_back("-fptrauth-cxx-type-info-vtable-discrimination=libcxx");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtable_pointer_address_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+
+#if 0
+  // Due to implicit casts, code with function pointer type discrimination
+  // enabled might be broken.
   if (!DriverArgs.hasArg(
       options::OPT_fptrauth_function_pointer_type_discrimination,
       options::OPT_fno_ptrauth_function_pointer_type_discrimination))
@@ -7073,6 +7074,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           options::OPT_fno_ptrauth_vtable_pointer_address_discrimination,
           false))
     CmdArgs.push_back("-fptrauth-vtable-pointer-address-discrimination");
+
+  if (Arg *A = Args.getLastArg(
+          options::OPT_fptrauth_cxx_type_info_vtable_discrimination_EQ)) {
+    if (RawTriple.isOSBinFormatELF()) {
+      std::string Str = "-fptrauth-cxx-type-info-vtable-discrimination=";
+      Str += A->getValue();
+      CmdArgs.push_back(Args.MakeArgString(Str));
+    }
+  }
 
   if (Args.hasFlag(options::OPT_fptrauth_vtable_pointer_type_discrimination,
                    options::OPT_fno_ptrauth_vtable_pointer_type_discrimination,

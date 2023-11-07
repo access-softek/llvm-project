@@ -41,6 +41,12 @@ constexpr uint16_t SuperPointerConstantDiscriminator = 0xB5AB;
 /// is ptrauth_string_discriminator("block_descriptor")
 constexpr uint16_t BlockDescriptorConstantDiscriminator = 0xC0BB;
 
+/// Constant discriminator to be used with vtables of type info classes (e.g.
+/// __class_type_info) in case if libc++ is used. The value is a discriminator
+/// matching __shim_type_info class type - a base interface type for its
+/// *_type_info implementations.
+constexpr uint16_t CXXTypeInfoVTableConstantDiscriminator = 0xB1EA;
+
 constexpr int PointerAuthKeyNone = -1;
 
 class PointerAuthSchema {

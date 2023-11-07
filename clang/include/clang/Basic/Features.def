@@ -119,6 +119,9 @@ FEATURE(ptrauth_member_function_pointer_type_discrimination, LangOpts.PointerAut
 FEATURE(ptrauth_function_pointer_type_discrimination, LangOpts.FunctionPointerTypeDiscrimination)
 FEATURE(ptrauth_signed_block_descriptors, LangOpts.PointerAuthBlockDescriptorPointers)
 FEATURE(ptrauth_objc_isa_masking, LangOpts.PointerAuthObjcIsaMasking)
+FEATURE(ptrauth_cxx_type_info_vtable_discr_zero, LangOpts.getPointerAuthCXXTypeInfoVTableDiscrimination() == PointerAuthCXXTypeInfoVTableDiscr::Zero)
+FEATURE(ptrauth_cxx_type_info_vtable_discr_type, LangOpts.getPointerAuthCXXTypeInfoVTableDiscrimination() == PointerAuthCXXTypeInfoVTableDiscr::Type)
+FEATURE(ptrauth_cxx_type_info_vtable_discr_libcxx, LangOpts.getPointerAuthCXXTypeInfoVTableDiscrimination() == PointerAuthCXXTypeInfoVTableDiscr::Libcxx)
 FEATURE(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)

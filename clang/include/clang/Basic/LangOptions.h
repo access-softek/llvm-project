@@ -37,6 +37,8 @@ enum class PointerAuthenticationMode : unsigned {
   SignAndAuth
 };
 
+enum class PointerAuthCXXTypeInfoVTableDiscr : unsigned { Zero, Type, Libcxx };
+
 static constexpr llvm::StringLiteral PointerAuthenticationOptionStrip = "strip";
 static constexpr llvm::StringLiteral PointerAuthenticationOptionSignAndStrip =
     "sign-and-strip";
@@ -47,6 +49,12 @@ static constexpr llvm::StringLiteral PointerAuthenticationOptionIsaPointer =
 static constexpr llvm::StringLiteral
     PointerAuthenticationOptionAuthenticatesNullValues =
         "authenticates-null-values";
+static constexpr llvm::StringLiteral
+    PointerAuthOptionCXXTypeInfoVTableDiscrZero = "zero";
+static constexpr llvm::StringLiteral
+    PointerAuthOptionCXXTypeInfoVTableDiscrType = "type";
+static constexpr llvm::StringLiteral
+    PointerAuthOptionCXXTypeInfoVTableDiscrLibcxx = "libcxx";
 
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
@@ -360,6 +368,8 @@ public:
   };
 
   using PointerAuthenticationMode = ::clang::PointerAuthenticationMode;
+  using PointerAuthCXXTypeInfoVTableDiscr =
+      ::clang::PointerAuthCXXTypeInfoVTableDiscr;
 
   enum class ThreadModelKind {
     /// POSIX Threads.

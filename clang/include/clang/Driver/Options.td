@@ -3901,6 +3901,8 @@ let Group = f_Group in {
       HelpText<"Authentication mode for ObjC isa field. Full auth if unspecified">, Values<"strip,sign-and-strip,sign-and-auth">;
     def fptrauth_objc_isa_masking : Flag<["-"], "fptrauth-objc-isa-masking">,
       HelpText<"pre- and post-authentication masking mode of objective-c isa pointers">;
+    def fptrauth_cxx_type_info_vtable_discrimination_EQ : Joined<["-"], "fptrauth-cxx-type-info-vtable-discrimination=">,
+      HelpText<"Discrimination variant for C++ type info vtable pointers">;
   }
   def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
   def fno_ptrauth_calls : Flag<["-"], "fno-ptrauth-calls">;
