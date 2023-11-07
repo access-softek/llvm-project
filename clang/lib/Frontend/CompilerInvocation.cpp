@@ -1527,8 +1527,25 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
           Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
           LangOpts.PointerAuthVTPtrTypeDiscrimination ? Discrimination::Type
                                                       : Discrimination::None);
-      Opts.CXXTypeInfoVTablePointer =
-          PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+      auto explicitCXXTypeInfoVtableDiscr =
+          LangOpts.getPointerAuthCXXTypeInfoVTableDiscrimination();
+      switch (explicitCXXTypeInfoVtableDiscr) {
+      case PointerAuthCXXTypeInfoVTableDiscr::Zero:
+        Opts.CXXTypeInfoVTablePointer = PointerAuthSchema(
+            Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
+            Discrimination::None);
+        break;
+      case PointerAuthCXXTypeInfoVTableDiscr::Type:
+        Opts.CXXTypeInfoVTablePointer = PointerAuthSchema(
+            Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
+            Discrimination::Type);
+        break;
+      case PointerAuthCXXTypeInfoVTableDiscr::Libcxx:
+        Opts.CXXTypeInfoVTablePointer = PointerAuthSchema(
+            Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
+            Discrimination::Constant, CXXTypeInfoVTableConstantDiscriminator);
+        break;
+      }
       Opts.CXXVTTVTablePointers =
           PointerAuthSchema(Key::ASDA, false, Discrimination::None);
       Opts.CXXVirtualFunctionPointers =
@@ -3425,6 +3442,24 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
 
   {
     StringRef Value;
+    switch (Opts.getPointerAuthCXXTypeInfoVTableDiscrimination()) {
+    case LangOptions::PointerAuthCXXTypeInfoVTableDiscr::Zero:
+      Value = PointerAuthOptionCXXTypeInfoVTableDiscrZero;
+      break;
+    case LangOptions::PointerAuthCXXTypeInfoVTableDiscr::Type:
+      Value = PointerAuthOptionCXXTypeInfoVTableDiscrType;
+      break;
+    case LangOptions::PointerAuthCXXTypeInfoVTableDiscr::Libcxx:
+      Value = PointerAuthOptionCXXTypeInfoVTableDiscrLibcxx;
+      break;
+    }
+    if (!Value.empty())
+      GenerateArg(Consumer, OPT_fptrauth_cxx_type_info_vtable_discrimination_EQ,
+                  Value);
+  }
+
+  {
+    StringRef Value;
     switch (Opts.getPointerAuthObjcIsaAuthentication()) {
     case LangOptions::PointerAuthenticationMode::None:
       break;
@@ -3465,6 +3500,29 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthABIVersion =
       getLastArgIntValue(Args, OPT_fptrauth_abi_version_EQ, 0, Diags);
   Opts.PointerAuthKernelABIVersion = Args.hasArg(OPT_fptrauth_kernel_abi_version);
+
+  if (auto modeArg = Args.getLastArg(
+          OPT_fptrauth_cxx_type_info_vtable_discrimination_EQ)) {
+    StringRef Value = modeArg->getValue();
+    std::optional<PointerAuthCXXTypeInfoVTableDiscr>
+        CXXTypeInfoVTableDiscrimination =
+            llvm::StringSwitch<
+                std::optional<PointerAuthCXXTypeInfoVTableDiscr>>(Value)
+                .Case(PointerAuthOptionCXXTypeInfoVTableDiscrZero,
+                      PointerAuthCXXTypeInfoVTableDiscr::Zero)
+                .Case(PointerAuthOptionCXXTypeInfoVTableDiscrType,
+                      PointerAuthCXXTypeInfoVTableDiscr::Type)
+                .Case(PointerAuthOptionCXXTypeInfoVTableDiscrLibcxx,
+                      PointerAuthCXXTypeInfoVTableDiscr::Libcxx)
+                .Default(std::nullopt);
+    if (!CXXTypeInfoVTableDiscrimination) {
+      Diags.Report(diag::err_drv_unsupported_option_argument)
+          << modeArg->getOption().getName() << modeArg->getValue();
+      return;
+    }
+    Opts.setPointerAuthCXXTypeInfoVTableDiscrimination(
+        *CXXTypeInfoVTableDiscrimination);
+  }
 
   if (auto modeArg = Args.getLastArg(OPT_fptrauth_objc_isa_mode)) {
     StringRef Value = modeArg->getValue();
