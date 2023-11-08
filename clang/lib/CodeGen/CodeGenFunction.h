@@ -203,17 +203,19 @@ template <> struct DominatingValue<Address> {
   }
   static saved_type save(CodeGenFunction &CGF, type value) {
     bool isSigned = value.getPointerAuthInfo().isSigned();
-    return {DominatingLLVMValue::save(CGF, value.getBasePointer()),
-            value.getElementType(), value.getAlignment(),
-            isSigned ? value.getPointerAuthInfo().getKey() : 0,
-            value.getPointerAuthInfo().getAuthenticationMode(),
-            value.getPointerAuthInfo().isIsaPointer(),
-            value.getPointerAuthInfo().authenticatesNullValues(),
-            isSigned ? DominatingLLVMValue::save(
-                           CGF, value.getPointerAuthInfo().getDiscriminator())
-                     : DominatingLLVMValue::saved_type(),
-            DominatingLLVMValue::save(CGF, value.getOffset()),
-            value.getType()};
+    return saved_type{
+        DominatingLLVMValue::save(CGF, value.getBasePointer()),
+        value.getElementType(),
+        value.getAlignment(),
+        isSigned ? value.getPointerAuthInfo().getKey() : 0,
+        value.getPointerAuthInfo().getAuthenticationMode(),
+        value.getPointerAuthInfo().isIsaPointer(),
+        value.getPointerAuthInfo().authenticatesNullValues(),
+        isSigned ? DominatingLLVMValue::save(
+                       CGF, value.getPointerAuthInfo().getDiscriminator())
+                 : DominatingLLVMValue::saved_type(),
+        DominatingLLVMValue::save(CGF, value.getOffset()),
+        value.getType()};
   }
   static type restore(CodeGenFunction &CGF, saved_type value) {
     CGPointerAuthInfo info;
