@@ -226,13 +226,13 @@ S0 *test_pointer_arithmetic2(S0 *a) {
 // CHECK: %[[A1_ADDR:.*]] = alloca ptr, align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A0_ADDR]], align 8
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[A1_ADDR]], align 8
-// CHECK: %[[V4:.*]] = ptrtoint ptr %[[V0]] to i64
-// CHECK: %[[V5:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V4]], i32 1, i64 100)
-// CHECK: %[[V6:.*]] = inttoptr i64 %[[V5]] to ptr
-// CHECK: %[[V7:.*]] = ptrtoint ptr %[[V1]] to i64
+// CHECK: %[[V3:.*]] = ptrtoint ptr %[[V2:.*]] to i64
+// CHECK: %[[V4:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V3]], i32 1, i64 100)
+// CHECK: %[[V5:.*]] = inttoptr i64 %[[V4]] to ptr
+// CHECK: %[[V7:.*]] = ptrtoint ptr %[[V6:.*]] to i64
 // CHECK: %[[V8:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V7]], i32 1, i64 100)
 // CHECK: %[[V9:.*]] = inttoptr i64 %[[V8]] to ptr
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[V6]], ptr align 4 %[[V9]], i64 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[V10:.*]], ptr align 4 %[[V11:.*]], i64 8, i1 false)
 
 void test_dereference0(S0 *a0, S0 *a1) {
   *a0 = *a1;
