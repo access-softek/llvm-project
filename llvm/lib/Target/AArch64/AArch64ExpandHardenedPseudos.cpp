@@ -171,6 +171,9 @@ bool AArch64ExpandHardenedPseudos::expandPtrAuthPseudo(MachineInstr &MI) {
   if (MI.getOpcode() == AArch64::LOADauthptrgot) {
     LLVM_DEBUG(dbgs() << "Expanding: " << MI << "\n");
 
+    if (!STI.hasPAuth())
+      report_fatal_error("pac instructions require ptrauth target feature");
+
     const TargetMachine &TM = MF.getTarget();
     MachineModuleInfo &MMI = MF.getMMI();
 
@@ -222,6 +225,9 @@ bool AArch64ExpandHardenedPseudos::expandPtrAuthPseudo(MachineInstr &MI) {
     return false;
 
   LLVM_DEBUG(dbgs() << "Expanding: " << MI << "\n");
+
+  if (!STI.hasPAuth())
+    report_fatal_error("pac instructions require ptrauth target feature");
 
   const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
   MachineOperand GAOp = MI.getOperand(0);
