@@ -70,3 +70,17 @@ define i32 @foo() {
 }
 
 attributes #0 = { "ptrauth-returns" "target-cpu"="generic" }
+
+;--- auth-call.ll
+
+; RUN: not --crash llc -mtriple aarch64-elf auth-call.ll 2>&1 | \
+; RUN:   FileCheck auth-call.ll
+
+; CHECK: LLVM ERROR: Cannot select:{{.*}}AArch64ISD::AUTH_CALL
+
+define void @bar(ptr %foo) #0 {
+  call void %foo() [ "ptrauth"(i32 0, i64 0) ]
+  ret void
+}
+
+attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
