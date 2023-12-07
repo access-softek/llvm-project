@@ -3,7 +3,7 @@
 
 ;--- MOVaddrPAC.ll
 
-; RUN: not --crash llc -debug -mtriple aarch64-elf MOVaddrPAC.ll 2>&1 | \
+; RUN: not --crash llc -debug-only=aarch64-expand-hardened-pseudos -mtriple aarch64-elf MOVaddrPAC.ll 2>&1 | \
 ; RUN:   FileCheck MOVaddrPAC.ll
 
 ; CHECK: Expanding: MOVaddrPAC @foo
@@ -23,7 +23,7 @@ attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
 
 ;--- LOADgotPAC.ll
 
-; RUN: not --crash llc -debug -mtriple aarch64-elf LOADgotPAC.ll 2>&1 | \
+; RUN: not --crash llc -debug-only=aarch64-expand-hardened-pseudos -mtriple aarch64-elf LOADgotPAC.ll 2>&1 | \
 ; RUN:   FileCheck LOADgotPAC.ll
 
 ; CHECK: Expanding: LOADgotPAC @foo
@@ -41,7 +41,7 @@ attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
 
 ;--- LOADauthptrgot.ll
 
-; RUN: not --crash llc -debug -mtriple aarch64-elf LOADauthptrgot.ll 2>&1 | \
+; RUN: not --crash llc -debug-only=aarch64-expand-hardened-pseudos -mtriple aarch64-elf LOADauthptrgot.ll 2>&1 | \
 ; RUN:   FileCheck LOADauthptrgot.ll
 
 ; CHECK: Expanding: {{.*}}LOADauthptrgot @g_weak
