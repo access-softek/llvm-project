@@ -52,3 +52,21 @@ define i8* @foo() #0 {
 @g_weak.ptrauth = private constant { i8*, i32, i64, i64 } { i8* bitcast (i32* @g_weak to i8*), i32 0, i64 0, i64 0 }, section "llvm.ptrauth"
 
 attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
+
+;--- ptrauth-returns.ll
+
+; RUN: not --crash llc -mtriple aarch64-elf ptrauth-returns.ll 2>&1 | \
+; RUN:   FileCheck ptrauth-returns.ll
+
+; CHECK: LLVM ERROR: aarch64 LR authentication requires ptrauth
+
+define i32 @bar() #0 {
+  ret i32 42
+}
+
+define i32 @foo() {
+  %tmp = call i32 @bar()
+  ret i32 %tmp
+}
+
+attributes #0 = { "ptrauth-returns" "target-cpu"="generic" }

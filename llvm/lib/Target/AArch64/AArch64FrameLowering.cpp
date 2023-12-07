@@ -1511,7 +1511,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // If we're saving LR, sign it first.
   if (shouldAuthenticateLR(MF)) {
     if (LLVM_UNLIKELY(!Subtarget.hasPAuth()))
-      report_fatal_error("arm64e LR authentication requires ptrauth");
+      report_fatal_error(
+          StringRef(Subtarget.isTargetMachO() ? "arm64e" : "aarch64") +
+          " LR authentication requires ptrauth");
     for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
       if (Info.getReg() != AArch64::LR)
         continue;
@@ -2051,7 +2053,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   auto InsertAuthLROnExit = make_scope_exit([&]() {
     if (shouldAuthenticateLR(MF)) {
       if (LLVM_UNLIKELY(!Subtarget.hasPAuth()))
-        report_fatal_error("arm64e LR authentication requires ptrauth");
+        report_fatal_error(
+            StringRef(Subtarget.isTargetMachO() ? "arm64e" : "aarch64") +
+            " LR authentication requires ptrauth");
       for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
         if (Info.getReg() != AArch64::LR)
           continue;
