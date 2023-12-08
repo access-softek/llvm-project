@@ -50,12 +50,11 @@ attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
 ; CHECK-NEXT: {{^$}}
 ; CHECK-NEXT: LLVM ERROR: pac instructions require ptrauth target feature
 
-define i8* @foo() #0 {
-  %tmp = bitcast { i8*, i32, i64, i64 }* @g_weak.ptrauth to i8*
-  ret i8* %tmp
+define ptr @foo() #0 {
+  ret ptr @g_weak.ptrauth
 }
 
 @g_weak = extern_weak global i32
-@g_weak.ptrauth = private constant { i8*, i32, i64, i64 } { i8* bitcast (i32* @g_weak to i8*), i32 0, i64 0, i64 0 }, section "llvm.ptrauth"
+@g_weak.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @g_weak, i32 0, i64 0, i64 0 }, section "llvm.ptrauth"
 
 attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }

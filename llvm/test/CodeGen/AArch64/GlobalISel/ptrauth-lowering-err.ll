@@ -43,13 +43,12 @@ attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
 
 ; CHECK: LLVM ERROR: pac instructions require ptrauth target feature
 
-define i8* @foo() #0 {
-  %tmp = bitcast { i8*, i32, i64, i64 }* @g_weak.ptrauth to i8*
-  ret i8* %tmp
+define ptr @foo() #0 {
+  ret ptr @g_weak.ptrauth
 }
 
 @g_weak = extern_weak global i32
-@g_weak.ptrauth = private constant { i8*, i32, i64, i64 } { i8* bitcast (i32* @g_weak to i8*), i32 0, i64 0, i64 0 }, section "llvm.ptrauth"
+@g_weak.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @g_weak, i32 0, i64 0, i64 0 }, section "llvm.ptrauth"
 
 attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
 
@@ -92,11 +91,11 @@ attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
 
 ; CHECK: LLVM ERROR: pac instructions require ptrauth target feature
 
-define i64 @test(i64* %ptr) {
-  %tmp0 = ptrtoint i64* %ptr to i64
+define i64 @test(ptr %ptr) {
+  %tmp0 = ptrtoint ptr %ptr to i64
   %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
-  %tmp2 = inttoptr i64 %tmp1 to i64*
-  %tmp3 = load i64, i64* %tmp2
+  %tmp2 = inttoptr i64 %tmp1 to ptr
+  %tmp3 = load i64, ptr %tmp2
   ret i64 %tmp3
 }
 
