@@ -338,6 +338,11 @@ bool AArch64ExpandHardenedPseudos::expandAuthLoad(MachineInstr &MI) {
 
   LLVM_DEBUG(dbgs() << "Expanding: " << MI << "\n");
 
+  // LDRA and LDRApre preudos are emitted in AArch64DAGToDAGISel::tryAuthLoad
+  // and AArch64InstructionSelector::selectAuthLoad with prior checks against
+  // ptrauth subtarget feature
+  assert(STI.hasPAuth());
+
   bool IsPre = MI.getOpcode() == AArch64::LDRApre;
 
   MachineOperand DstOp = MI.getOperand(0);

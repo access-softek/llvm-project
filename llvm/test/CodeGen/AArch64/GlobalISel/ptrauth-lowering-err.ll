@@ -84,3 +84,20 @@ define void @bar(ptr %foo) #0 {
 }
 
 attributes #0 = { "ptrauth-calls" "target-cpu"="generic" }
+
+;--- tryAuthLoad.ll
+
+; RUN: not --crash llc -mtriple aarch64-elf tryAuthLoad.ll 2>&1 | \
+; RUN:   FileCheck tryAuthLoad.ll
+
+; CHECK: LLVM ERROR: pac instructions require ptrauth target feature
+
+define i64 @test(i64* %ptr) {
+  %tmp0 = ptrtoint i64* %ptr to i64
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
+  %tmp2 = inttoptr i64 %tmp1 to i64*
+  %tmp3 = load i64, i64* %tmp2
+  ret i64 %tmp3
+}
+
+declare i64 @llvm.ptrauth.auth(i64, i32, i64)
