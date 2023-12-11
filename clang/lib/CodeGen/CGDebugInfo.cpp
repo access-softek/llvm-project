@@ -1058,8 +1058,25 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCObjectPointerType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
                                       llvm::DIFile *Unit) {
-  return CreatePointerLikeType(llvm::dwarf::DW_TAG_pointer_type, Ty,
-                               Ty->getPointeeType(), Unit);
+  llvm::DIType *DIPointerTy = CreatePointerLikeType(
+      llvm::dwarf::DW_TAG_pointer_type, Ty, Ty->getPointeeType(), Unit);
+
+  if (!Ty->getPointeeType()->isFunctionType())
+    return DIPointerTy;
+
+  CGPointerAuthInfo SignSchema =
+      CGM.getFunctionPointerAuthInfo(QualType(Ty, 0));
+  if (!SignSchema)
+    return DIPointerTy;
+
+  llvm::ConstantInt *Discr =
+      cast_or_null<llvm::ConstantInt>(SignSchema.getDiscriminator());
+  // See CodeGenModule::getMemberFunctionPointer in CGPointerAuth.cpp - we
+  // do not use address discrimination
+  return DBuilder.createPtrAuthQualifiedType(
+      DIPointerTy, SignSchema.getKey(), false,
+      Discr ? Discr->getValue().getZExtValue() : 0, SignSchema.isIsaPointer(),
+      SignSchema.authenticatesNullValues());
 }
 
 /// \return whether a C++ mangling exists for the type defined by TD.
@@ -2432,6 +2449,14 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
   if (!VPtrTy)
     VPtrTy = getOrCreateVTablePtrType(Unit);
 
+  if (std::optional<PointerAuthQualifier> VTAuth =
+          CGM.getVTablePointerAuthentication(RD)) {
+    VPtrTy = DBuilder.createPtrAuthQualifiedType(
+        VPtrTy, VTAuth->getKey(), VTAuth->isAddressDiscriminated(),
+        VTAuth->getExtraDiscriminator(), VTAuth->isIsaPointer(),
+        VTAuth->authenticatesNullValues());
+  }
+
   unsigned Size = CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
   llvm::DIType *VPtrMember =
       DBuilder.createMemberType(Unit, getVTableName(RD), Unit, 0, Size, 0, 0,
@@ -3311,11 +3336,26 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
 
   const FunctionProtoType *FPT =
       Ty->getPointeeType()->castAs<FunctionProtoType>();
-  return DBuilder.createMemberPointerType(
+
+  llvm::DIType *DIPointerTy = DBuilder.createMemberPointerType(
       getOrCreateInstanceMethodType(
           CXXMethodDecl::getThisType(FPT, Ty->getMostRecentCXXRecordDecl()),
           FPT, U),
       ClassType, Size, /*Align=*/0, Flags);
+
+  CGPointerAuthInfo SignSchema =
+      CGM.getMemberFunctionPointerAuthInfo(QualType(Ty, 0));
+  if (!SignSchema)
+    return DIPointerTy;
+
+  llvm::ConstantInt *Discr =
+      cast_or_null<llvm::ConstantInt>(SignSchema.getDiscriminator());
+  // See CodeGenModule::getFunctionPointer in CGPointerAuth.cpp - we do not
+  // use address discrimination
+  return DBuilder.createPtrAuthQualifiedType(
+      DIPointerTy, SignSchema.getKey(), false,
+      Discr ? Discr->getValue().getZExtValue() : 0, SignSchema.isIsaPointer(),
+      SignSchema.authenticatesNullValues());
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const AtomicType *Ty, llvm::DIFile *U) {

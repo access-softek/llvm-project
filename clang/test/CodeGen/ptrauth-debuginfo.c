@@ -39,6 +39,17 @@ void f() {
 // CHECK-SAME:           ptrAuthIsaPointer: false,
 // CHECK-SAME:           ptrAuthAuthenticatesNullValues: false)
 
+/* Block descriptor signed function type. The same is used for further block
+ * descriptors, so checking only once. */
+
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "__FuncPtr",
+// CHECK-SAME:           baseType: [[BASE1:![0-9]+]],
+
+// CHECK: [[BASE1]] = !DIDerivedType(tag: DW_TAG_LLVM_ptrauth_type,
+// CHECK-SAME:                       ptrAuthIsAddressDiscriminated: false,
+// CHECK-SAME:                       ptrAuthIsaPointer: false,
+// CHECK-SAME:                       ptrAuthAuthenticatesNullValues: false)
+
 void f2() {
   __block struct A *__ptrauth(1, 1, 1237, "isa-pointer") ptr = createA();
   ^{
