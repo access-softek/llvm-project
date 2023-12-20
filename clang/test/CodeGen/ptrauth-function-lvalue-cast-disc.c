@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o-  -fptrauth-function-pointer-type-discrimination | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64e-apple-ios13 -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o-  -fptrauth-function-pointer-type-discrimination | FileCheck %s
 
 typedef void (*fptr_t)(void);
 

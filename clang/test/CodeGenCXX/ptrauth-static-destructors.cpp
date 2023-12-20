@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
-// RUN:  | FileCheck %s --check-prefix=CXAATEXIT
+// RUN:    -target-feature +pauth | FileCheck %s --check-prefix=CXAATEXIT
 
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
-// RUN:    -fno-use-cxa-atexit \
+// RUN:    -target-feature +pauth -fno-use-cxa-atexit \
 // RUN:  | FileCheck %s --check-prefix=ATEXIT
 
 class Foo {

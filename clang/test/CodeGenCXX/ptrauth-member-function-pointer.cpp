@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 3 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 3 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 
 
 // CHECK: %[[STRUCT_CLASS0:.*]] = type { { i64, i64 } }

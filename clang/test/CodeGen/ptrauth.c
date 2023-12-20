@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck -check-prefix=CHECK -check-prefix=NOPCH %s
-// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-pch %s -o %t.ast
-// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -x ast -o - %t.ast | FileCheck -check-prefix=CHECK -check-prefix=PCH %s
+// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck -check-prefix=CHECK -check-prefix=NOPCH %s
+// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-pch %s -o %t.ast
+// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -x ast -o - %t.ast | FileCheck -check-prefix=CHECK -check-prefix=PCH %s
 
 #define FNPTRKEY 0
 

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -x c++ -std=c++11  -triple x86_64-apple-darwin10 -emit-llvm -O1 -disable-llvm-passes -no-enable-noundef-analysis  -o - | FileCheck --check-prefix=CHECK-NOAUTH %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O1 -disable-llvm-passes -no-enable-noundef-analysis   -o - | FileCheck --check-prefix=CHECK-TYPEAUTH %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -no-enable-noundef-analysis  -o - | FileCheck --check-prefix=CHECK-ADDRESSAUTH %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -no-enable-noundef-analysis  -o - | FileCheck --check-prefix=CHECK-BOTHAUTH %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O1 -disable-llvm-passes -no-enable-noundef-analysis   -o - | FileCheck --check-prefix=CHECK-TYPEAUTH %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -no-enable-noundef-analysis  -o - | FileCheck --check-prefix=CHECK-ADDRESSAUTH %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -no-enable-noundef-analysis  -o - | FileCheck --check-prefix=CHECK-BOTHAUTH %s
 // FIXME: Assume load should not require -fstrict-vtable-pointers
 
 namespace test1 {

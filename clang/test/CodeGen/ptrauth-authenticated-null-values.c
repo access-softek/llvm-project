@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s -O0 -o - | FileCheck %s
 
 typedef void *__ptrauth(2, 0, 0, "authenticates-null-values") authenticated_null;
 typedef void *__ptrauth(2, 1, 0, "authenticates-null-values") authenticated_null_addr_disc;

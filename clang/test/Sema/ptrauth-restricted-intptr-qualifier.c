@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fsyntax-only -verify -fptrauth-intrinsics %s
 #if __has_feature(ptrauth_restricted_intptr_qualifier)
 int *__ptrauth_restricted_intptr(0) a;
 // expected-error@-1{{__ptrauth_restricted_intptr qualifier may only be applied to pointer sized integer types; type here is 'int *'}}

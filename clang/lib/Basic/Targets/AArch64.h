@@ -91,6 +91,9 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 public:
   AArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
+  void validatePAuthOptions(DiagnosticsEngine &Diags, LangOptions &Opts) const;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
 

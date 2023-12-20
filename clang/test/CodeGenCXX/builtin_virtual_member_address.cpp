@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-calls -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck %s --check-prefixes CHECK,CHECK-AUTH
+// RUN: %clang_cc1 -triple arm64e-apple-ios -target-feature +pauth -fptrauth-calls -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck %s --check-prefixes CHECK,CHECK-AUTH
 // RUN: %clang_cc1 -triple arm64-apple-ios -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck %s --check-prefixes CHECK,CHECK-NOAUTH
 
 struct Base {

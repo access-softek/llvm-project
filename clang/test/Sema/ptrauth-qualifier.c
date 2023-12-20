@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fsyntax-only -verify -fptrauth-intrinsics %s
 
 #include <ptrauth.h>
 

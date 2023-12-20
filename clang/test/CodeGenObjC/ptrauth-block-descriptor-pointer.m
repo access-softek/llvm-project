@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fobjc-arc -fblocks -fptrauth-calls -fptrauth-block-descriptor-pointers -triple arm64e-apple-ios  -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fobjc-arc -fblocks -fptrauth-calls -fptrauth-block-descriptor-pointers -triple arm64e-apple-ios -target-feature +pauth  -emit-llvm -o - %s | FileCheck %s
 
 void a() {
   // Test out a global block.

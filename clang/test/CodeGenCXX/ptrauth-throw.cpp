@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -fptrauth-calls -fcxx-exceptions -emit-llvm -no-enable-noundef-analysis %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fcxx-exceptions -emit-llvm -no-enable-noundef-analysis %s -o - | FileCheck %s
 
 class Foo {
  public:

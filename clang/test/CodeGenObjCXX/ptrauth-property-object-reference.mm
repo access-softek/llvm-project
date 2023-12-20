@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination %s -triple arm64-apple-ios11.0 -fobjc-runtime=ios-11.0 -fptrauth-calls -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination %s -triple arm64-apple-ios11.0 -target-feature +pauth -fobjc-runtime=ios-11.0 -fptrauth-calls -emit-llvm -o - | FileCheck %s
 
 extern int DEFAULT();
 

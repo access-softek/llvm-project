@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-windows -emit-llvm -fsanitize=null %s -o - | FileCheck %s --check-prefix=CHECK-NULL --check-prefix=MSABI
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-windows -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=MSABI  --check-prefix=CHECK-VPTR-MS
-// RUN: %clang_cc1 -std=c++11 -triple arm64e-ios-13 -emit-llvm -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM --check-prefix=CHECK-PTRAUTH
+// RUN: %clang_cc1 -std=c++11 -triple arm64e-ios-13 -target-feature +pauth -emit-llvm -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -fsanitize=null,vptr %s -o - | FileCheck %s --check-prefix=CHECK-VPTR --check-prefix=ITANIUM --check-prefix=CHECK-PTRAUTH
 struct T {
   virtual ~T() {}
   virtual int v() { return 1; }

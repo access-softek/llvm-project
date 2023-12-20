@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64e-apple-ios13.0 -fptrauth-calls -fptrauth-intrinsics -O1 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64e-apple-ios13.0 -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -O1 %s -emit-llvm -o - | FileCheck %s
 
 #include <ptrauth.h>
 

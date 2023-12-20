@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s -O0 -o - | FileCheck %s
 #if __has_feature(ptrauth_restricted_intptr_qualifier)
 
 __INTPTR_TYPE__ __ptrauth_restricted_intptr(1, 0, 56) g1 = 0;

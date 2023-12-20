@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -fobjc-arc -fobjc-runtime-has-weak -fblocks -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -fobjc-arc -fobjc-runtime-has-weak -fblocks -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck %s
 
 #define ATTR0 __attribute__((ptrauth_struct(1, 100)))
 #define ATTR1 __attribute__((ptrauth_struct(1, 101)))

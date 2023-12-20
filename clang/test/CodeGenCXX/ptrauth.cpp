@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -emit-llvm -std=c++11 -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -emit-llvm -std=c++11 -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
 
 // CHECK: @_Z1fv.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @_Z1fv, i32 0, i64 0, i64 0 },
 

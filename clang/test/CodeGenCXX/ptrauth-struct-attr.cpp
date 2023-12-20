@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -emit-llvm -std=c++17 -O1 -disable-llvm-passes -no-enable-noundef-analysis -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -emit-llvm -std=c++17 -O1 -disable-llvm-passes -no-enable-noundef-analysis -fexceptions -fcxx-exceptions -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_S0:.*]] = type { i32, i32, [4 x i32] }
 // CHECK: %[[STRUCT_S5:.*]] = type { %[[STRUCT_S2:.*]] }

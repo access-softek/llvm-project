@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @_ZTV1A = unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK1A3abcEv.ptrauth, ptr null] }
 // CHECK: @_ZTV4Base = unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK4Base3abcEv.ptrauth, ptr null] }

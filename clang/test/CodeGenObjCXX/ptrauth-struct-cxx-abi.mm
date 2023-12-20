@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fptrauth-calls -fptrauth-intrinsics -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
 
 #define AQ __ptrauth(1,1,50)
 

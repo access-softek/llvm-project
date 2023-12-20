@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++98 -fptrauth-calls -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -std=c++98 -fptrauth-calls -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev.ptrauth, ptr @_ZN5TemplIiED0Ev.ptrauth, ptr @_ZN5TemplIiE1fEv.ptrauth, ptr @_ZN5TemplIiE1gEv.ptrauth, ptr null] }
 

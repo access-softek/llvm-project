@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios                    -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,OFF
 
-// RUN: %clang_cc1 -triple arm64-apple-ios  -fptrauth-returns -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,RETS
-// RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-returns -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,RETS
+// RUN: %clang_cc1 -triple arm64-apple-ios  -target-feature +pauth -fptrauth-returns -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,RETS
+// RUN: %clang_cc1 -triple arm64e-apple-ios -target-feature +pauth -fptrauth-returns -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,RETS
 // RUN: %clang_cc1 -triple arm64e-apple-ios                   -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,OFF
 
-// RUN: %clang_cc1 -triple arm64-apple-ios  -fptrauth-calls   -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,CALLS
-// RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-calls   -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,CALLS
+// RUN: %clang_cc1 -triple arm64-apple-ios  -target-feature +pauth -fptrauth-calls   -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,CALLS
+// RUN: %clang_cc1 -triple arm64e-apple-ios -target-feature +pauth -fptrauth-calls   -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,CALLS
 // RUN: %clang_cc1 -triple arm64e-apple-ios                   -emit-llvm %s  -o - | FileCheck %s --check-prefixes=ALL,OFF
 
-// RUN: %clang_cc1 -triple arm64-apple-ios  -fptrauth-auth-traps -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,TRAPS
-// RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-auth-traps -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,TRAPS
+// RUN: %clang_cc1 -triple arm64-apple-ios  -target-feature +pauth -fptrauth-auth-traps -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,TRAPS
+// RUN: %clang_cc1 -triple arm64e-apple-ios -target-feature +pauth -fptrauth-auth-traps -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,TRAPS
 // RUN: %clang_cc1 -triple arm64e-apple-ios                      -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,OFF
 
 // RUN: %clang_cc1 -triple arm64e-apple-ios  -mbranch-target-enforce -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,BTI

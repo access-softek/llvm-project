@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -triple arm64-apple-ios -fptrauth-calls -emit-llvm -no-enable-noundef-analysis -std=c++11 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fblocks -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -emit-llvm -no-enable-noundef-analysis -std=c++11 %s -o - | FileCheck %s
 
 // CHECK: @_Z8handler2v.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @_Z8handler2v, i32 0, i64 0, i64 0 }, section "llvm.ptrauth"
 // CHECK: @global_handler = global ptr @_Z8handler2v.ptrauth

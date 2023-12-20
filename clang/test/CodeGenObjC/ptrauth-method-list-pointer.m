@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fptrauth-calls -triple arm64e-apple-ios %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fptrauth-calls -triple arm64e-apple-ios -target-feature +pauth %s -S -emit-llvm -o - | FileCheck %s
 
 @implementation X
 -(void)meth {}

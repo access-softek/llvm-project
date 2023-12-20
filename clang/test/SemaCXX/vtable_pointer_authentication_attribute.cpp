@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -triple arm64-apple-ios -verify -fptrauth-calls -std=c++2a %s
+// RUN: %clang_cc1 -fsyntax-only -triple arm64-apple-ios -target-feature +pauth -verify -fptrauth-calls -std=c++2a %s
 
 namespace basic {
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -no-enable-noundef-analysis %s -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -no-enable-noundef-analysis %s -O0 -o - | FileCheck %s
 
 // This is largely a duplicate of CodeGen/ptrauth-authenticated-null-values.c as
 // there are C++ specific branches in some struct init and copy implementations

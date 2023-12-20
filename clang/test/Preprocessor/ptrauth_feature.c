@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 %s -E -triple=arm64-- | FileCheck %s --check-prefixes=NOCALLS,NOINTRIN,NORETS,NOQUAL
-// RUN: %clang_cc1 %s -E -triple=arm64-- -fptrauth-calls | FileCheck %s --check-prefixes=CALLS,NOINTRIN,NORETS,NOQUAL,NOFUNC
-// RUN: %clang_cc1 %s -E -triple=arm64-- -fptrauth-returns | FileCheck %s --check-prefixes=NOCALLS,NOINTRIN,RETS,NOQUAL,NOFUNC
-// RUN: %clang_cc1 %s -E -triple=arm64-- -fptrauth-intrinsics | FileCheck %s --check-prefixes=NOCALLS,INTRIN,NORETS,QUAL,NOFUNC
-// RUN: %clang_cc1 %s -E -triple=arm64e-apple-ios6.0 -fptrauth-intrinsics -fptrauth-function-pointer-type-discrimination | FileCheck %s --check-prefixes=NOCALLS,INTRIN,NORETS,QUAL,FUNC
-// RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi | FileCheck %s --check-prefixes=INITFINI,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR
-// RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi -fno-ptrauth-init-fini | FileCheck %s --check-prefixes=NOINITFINI
-// RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi -fno-ptrauth-vtable-pointer-address-discrimination | FileCheck %s --check-prefixes=NOVPTR_ADDR_DISCR
-// RUN: %clang -E %s --target=aarch64-elf -mbranch-protection=pauthabi -fno-ptrauth-vtable-pointer-type-discrimination | FileCheck %s --check-prefixes=NOVPTR_TYPE_DISCR
+// RUN: %clang_cc1 %s -E -triple=arm64-- -target-feature +pauth -fptrauth-calls | FileCheck %s --check-prefixes=CALLS,NOINTRIN,NORETS,NOQUAL,NOFUNC
+// RUN: %clang_cc1 %s -E -triple=arm64-- -target-feature +pauth -fptrauth-returns | FileCheck %s --check-prefixes=NOCALLS,NOINTRIN,RETS,NOQUAL,NOFUNC
+// RUN: %clang_cc1 %s -E -triple=arm64-- -target-feature +pauth -fptrauth-intrinsics | FileCheck %s --check-prefixes=NOCALLS,INTRIN,NORETS,QUAL,NOFUNC
+// RUN: %clang_cc1 %s -E -triple=arm64e-apple-ios6.0 -target-feature +pauth -fptrauth-intrinsics -fptrauth-function-pointer-type-discrimination -fptrauth-calls | FileCheck %s --check-prefixes=CALLS,INTRIN,NORETS,QUAL,FUNC
+// RUN: %clang -E %s --target=aarch64-elf -mcpu=apple-a12 -mbranch-protection=pauthabi | FileCheck %s --check-prefixes=INITFINI,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR
+// RUN: %clang -E %s --target=aarch64-elf -mcpu=apple-a12 -mbranch-protection=pauthabi -fno-ptrauth-init-fini | FileCheck %s --check-prefixes=NOINITFINI
+// RUN: %clang -E %s --target=aarch64-elf -mcpu=apple-a12 -mbranch-protection=pauthabi -fno-ptrauth-vtable-pointer-address-discrimination | FileCheck %s --check-prefixes=NOVPTR_ADDR_DISCR
+// RUN: %clang -E %s --target=aarch64-elf -mcpu=apple-a12 -mbranch-protection=pauthabi -fno-ptrauth-vtable-pointer-type-discrimination | FileCheck %s --check-prefixes=NOVPTR_TYPE_DISCR
 
 #if __has_feature(ptrauth_calls)
 // CALLS: has_ptrauth_calls

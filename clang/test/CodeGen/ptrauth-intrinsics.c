@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck %s
 
 void (*fnptr)(void);
 long int_discriminator;

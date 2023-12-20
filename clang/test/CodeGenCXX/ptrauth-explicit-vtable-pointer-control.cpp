@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -emit-llvm -O1 -disable-llvm-passes  -o - | FileCheck  --check-prefix=CHECK-DEFAULT-NONE %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-TYPE %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-ADDRESS %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-BOTH %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -target-feature +pauth -fptrauth-intrinsics -fptrauth-calls -emit-llvm -O1 -disable-llvm-passes  -o - | FileCheck  --check-prefix=CHECK-DEFAULT-NONE %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -target-feature +pauth -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-TYPE %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -target-feature +pauth -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-ADDRESS %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -target-feature +pauth -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-BOTH %s
 #include <ptrauth.h>
 namespace test1 {
 
