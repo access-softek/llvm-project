@@ -485,6 +485,17 @@ CompilerType CompilerType::GetPointerType() const {
   return CompilerType();
 }
 
+CompilerType
+CompilerType::AddPtrAuthModifier(unsigned key, bool isAddressDiscriminated,
+                                 unsigned extraDiscriminator) const {
+  if (IsValid()) {
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddPtrAuthModifier(
+          m_type, key, isAddressDiscriminated, extraDiscriminator);
+  }
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

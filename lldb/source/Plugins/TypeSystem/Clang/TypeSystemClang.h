@@ -782,6 +782,10 @@ public:
 
   CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                  unsigned key, bool isAddressDiscriminated,
+                                  unsigned extraDiscriminator) override;
+
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;

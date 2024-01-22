@@ -230,6 +230,9 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
+      break;
     }
   }
 }
@@ -291,6 +294,8 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
     }
   }
 
@@ -383,6 +388,9 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
         return static_cast<uint64_t>(m_byte_size);
       }
     } break;
+    case eEncodingIsLLVMPtrAuthUID:
+      // TODO: compute byte size properly
+      return 8;
   }
   return {};
 }
@@ -538,6 +546,14 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
             encoding_type->GetForwardCompilerType().GetRValueReferenceType();
         break;
 
+      case eEncodingIsLLVMPtrAuthUID:
+        // TODO: proper signing schema
+        m_compiler_type =
+            encoding_type->GetForwardCompilerType().AddPtrAuthModifier(
+                /*key*/ 0, /*isAddressDiscriminated*/ false,
+                /*extraDiscriminator*/ 0);
+        break;
+
       default:
         llvm_unreachable("Unhandled encoding_data_type.");
       }
@@ -591,6 +607,13 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
 
         case eEncodingIsRValueReferenceUID:
           m_compiler_type = void_compiler_type.GetRValueReferenceType();
+          break;
+
+        case eEncodingIsLLVMPtrAuthUID:
+          // TODO: proper signing schema
+          m_compiler_type = void_compiler_type.AddPtrAuthModifier(
+              /*key*/ 0, /*isAddressDiscriminated*/ false,
+              /*extraDiscriminator*/ 0);
           break;
 
         default:

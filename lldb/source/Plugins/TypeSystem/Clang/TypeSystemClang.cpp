@@ -4623,6 +4623,24 @@ TypeSystemClang::AddConstModifier(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType
+TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                    unsigned key, bool isAddressDiscriminated,
+                                    unsigned extraDiscriminator) {
+  if (type) {
+    clang::ASTContext &clang_ast = getASTContext();
+    auto pauth = PointerAuthQualifier::Create(
+        key, isAddressDiscriminated, extraDiscriminator,
+        PointerAuthenticationMode::SignAndAuth,
+        /* isIsaPointer */ false,
+        /* authenticatesNullValues */ false);
+    clang::QualType result =
+        clang_ast.getPointerAuthType(GetQualType(type), pauth);
+    return GetType(result);
+  }
+  return CompilerType();
+}
+
+CompilerType
 TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));

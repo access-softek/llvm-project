@@ -445,6 +445,11 @@ ClangExpressionParser::ClangExpressionParser(
   // Supported subsets of x86
   if (target_machine == llvm::Triple::x86 ||
       target_machine == llvm::Triple::x86_64) {
+    // FIXME: shouldn't this be placed after
+    // `auto target_info = TargetInfo::CreateTargetInfo(...)`
+    // (see `if (target_machine == llvm::Triple::aarch64)`)?
+    // It computes `Features` from `FeatureMap` and `FeaturesAsWritten` and
+    // erases initial `Features` vector.
     m_compiler->getTargetOpts().Features.push_back("+sse");
     m_compiler->getTargetOpts().Features.push_back("+sse2");
   }
@@ -467,6 +472,10 @@ ClangExpressionParser::ClangExpressionParser(
 
   auto target_info = TargetInfo::CreateTargetInfo(
       m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
+  if (target_machine == llvm::Triple::aarch64) {
+    // TODO: enable this depending on corresponding tag section in ELF
+    target_info->getTargetOpts().Features.push_back("+pauth");
+  }
   if (log) {
     LLDB_LOGF(log, "Target datalayout string: '%s'",
               target_info->getDataLayoutString());
@@ -612,6 +621,13 @@ ClangExpressionParser::ClangExpressionParser(
   // additionally enabling them as expandable builtins is breaking Clang.
   lang_opts.NoBuiltin = true;
 
+  // TODO: enable this depending on corresponding tag section in ELF
+  lang_opts.PointerAuthCalls = true;
+  lang_opts.PointerAuthReturns = true;
+  lang_opts.PointerAuthVTPtrAddressDiscrimination = true;
+  lang_opts.PointerAuthVTPtrTypeDiscrimination = true;
+  lang_opts.PointerAuthInitFini = true;
+
   // Set CodeGen options
   m_compiler->getCodeGenOpts().EmitDeclMetadata = true;
   m_compiler->getCodeGenOpts().InstrumentFunctions = false;
@@ -621,6 +637,10 @@ ClangExpressionParser::ClangExpressionParser(
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
   else
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
+
+  CompilerInvocation::setDefaultPointerAuthOptions(
+      m_compiler->getCodeGenOpts().PointerAuth, lang_opts,
+      target_arch.GetTriple());
 
   // Disable some warnings.
   SetupDefaultClangDiagnostics(*m_compiler);

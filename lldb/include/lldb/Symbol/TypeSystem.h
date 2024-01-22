@@ -275,6 +275,13 @@ public:
 
   virtual CompilerType AddConstModifier(lldb::opaque_compiler_type_t type);
 
+  // TODO: are we allowed to insert virtual functions in the middle of the class
+  // interface and break ABI?
+  virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                          unsigned key,
+                                          bool isAddressDiscriminated,
+                                          unsigned extraDiscriminator);
+
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
