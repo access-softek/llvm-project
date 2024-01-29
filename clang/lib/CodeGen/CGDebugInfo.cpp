@@ -2432,6 +2432,47 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
   if (!VPtrTy)
     VPtrTy = getOrCreateVTablePtrType(Unit);
 
+  if (auto *VptrAuthAttr = RD->getAttr<VTablePointerAuthenticationAttr>()) {
+    unsigned TypedDiscriminator =
+        CGM.getContext().getPointerAuthVTablePointerDiscriminator(RD);
+    auto &LangOpts = CGM.getContext().getLangOpts();
+
+    unsigned Key = VptrAuthAttr->getKey();
+
+    bool HasAddressDiscrimination =
+        LangOpts.PointerAuthVTPtrAddressDiscrimination;
+    if (VptrAuthAttr->getAddressDiscrimination() !=
+        VTablePointerAuthenticationAttr::DefaultAddressDiscrimination) {
+      HasAddressDiscrimination =
+          (VptrAuthAttr->getAddressDiscrimination() ==
+           VTablePointerAuthenticationAttr::AddressDiscrimination);
+    }
+
+    unsigned ExtraDiscriminator = 0;
+
+    switch (VptrAuthAttr->getExtraDiscrimination()) {
+    case VTablePointerAuthenticationAttr::DefaultExtraDiscrimination:
+      if (LangOpts.PointerAuthVTPtrTypeDiscrimination)
+        ExtraDiscriminator = TypedDiscriminator;
+      break;
+    case VTablePointerAuthenticationAttr::TypeDiscrimination:
+      ExtraDiscriminator = TypedDiscriminator;
+      break;
+    case VTablePointerAuthenticationAttr::CustomDiscrimination:
+      ExtraDiscriminator = VptrAuthAttr->getCustomDiscriminationValue();
+      break;
+    case VTablePointerAuthenticationAttr::NoExtraDiscrimination:
+      break;
+    }
+
+    // See CodeGenModule::computeVTPointerAuthentication:
+    // isIsaPointer and authenticatesNullValues are always false.
+    VPtrTy = DBuilder.createPtrAuthQualifiedType(
+        VPtrTy, Key, HasAddressDiscrimination, ExtraDiscriminator,
+        /* isIsaPointer */ false,
+        /* authenticatesNullValues */ false);
+  }
+
   unsigned Size = CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
   llvm::DIType *VPtrMember =
       DBuilder.createMemberType(Unit, getVTableName(RD), Unit, 0, Size, 0, 0,
