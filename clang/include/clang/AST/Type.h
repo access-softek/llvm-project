@@ -141,7 +141,7 @@ using CanQualType = CanQual<Type>;
 
 /// Pointer-authentication qualifiers.
 class PointerAuthQualifier {
-  enum {
+  enum : uint32_t {
     EnabledShift = 0,
     EnabledBits = 1,
     EnabledMask = 1 << EnabledShift,
@@ -165,7 +165,7 @@ class PointerAuthQualifier {
     KeyMask = ((1 << KeyBits) - 1) << KeyShift,
     DiscriminatorShift = KeyShift + KeyBits,
     DiscriminatorBits = 16,
-    DiscriminatorMask = ((1 << DiscriminatorBits) - 1) << DiscriminatorShift,
+    DiscriminatorMask = ((1u << DiscriminatorBits) - 1) << DiscriminatorShift,
   };
 
   // bits:     |0      |1      |2..3              |4          |5                |6..15|   16...31   |
@@ -193,7 +193,9 @@ class PointerAuthQualifier {
                        PointerAuthenticationMode authenticationMode,
                        bool isIsaPointer, bool authenticatesNullValues)
       : Data(EnabledMask |
-             (isAddressDiscriminated ? AddressDiscriminatedMask : 0) |
+             (isAddressDiscriminated
+                  ? static_cast<uint32_t>(AddressDiscriminatedMask)
+                  : 0) |
              (key << KeyShift) |
              (unsigned(authenticationMode) << AuthenticationModeShift) |
              (extraDiscriminator << DiscriminatorShift) |
