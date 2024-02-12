@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=strip -fptrauth-objc-isa-masking -triple arm64-apple-ios -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-STRIP %s
-// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -fptrauth-objc-isa-masking -triple arm64-apple-ios -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-STRIP %s
-// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth -fptrauth-objc-isa-masking -triple arm64-apple-ios -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-AUTH %s
-// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=strip -triple arm64-apple-ios -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-STRIP-NO-MASK %s
-// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -triple arm64-apple-ios -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-STRIP-NO-MASK %s
-// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth -triple arm64-apple-ios -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-AUTH-NO-MASK %s
+// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=strip -fptrauth-objc-isa-masking -triple arm64-apple-ios -target-feature +pauth -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-STRIP %s
+// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -fptrauth-objc-isa-masking -triple arm64-apple-ios -target-feature +pauth -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-STRIP %s
+// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth -fptrauth-objc-isa-masking -triple arm64-apple-ios -target-feature +pauth -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-AUTH %s
+// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=strip -triple arm64-apple-ios -target-feature +pauth -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-STRIP-NO-MASK %s
+// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -triple arm64-apple-ios -target-feature +pauth -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-STRIP-NO-MASK %s
+// RUN: %clang_cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth -triple arm64-apple-ios -target-feature +pauth -E -O0 -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SIGN-AND-AUTH-NO-MASK %s
 
 #include <ptrauth.h>
 #define _TO_STRING(x) #x

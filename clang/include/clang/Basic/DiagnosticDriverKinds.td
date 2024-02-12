@@ -532,6 +532,13 @@ def err_stack_tagging_requires_hardware_feature : Error<
   "'-fsanitize=memtag-stack' requires hardware support (+memtag). For Armv8 or "
   "Armv9, try compiling with -march=armv8a+memtag or -march=armv9a+memtag">;
 
+def err_pauth_cpu_feature_missing : Error<
+  "%0 or -mbranch-protection=pauthabi is passed that require either enabling PAuth CPU feature or passing -fptrauth-soft option">;
+
+def warn_pauth_option_ignored : Warning<
+  "%0 is ignored because neither -fptrauth-calls nor -mbranch-protection=pauthabi is specified">,
+  InGroup<OptionIgnored>;
+
 def err_cmse_pi_are_incompatible : Error<
   "cmse is not compatible with %select{RWPI|ROPI}0">;
 

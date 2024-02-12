@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -verify -fptrauth-intrinsics %s
 
 typedef void *__ptrauth(2, 1, 0, "authenticates-null-values") authenticated_null_ptr;
 typedef unsigned long long __ptrauth_restricted_intptr(2, 1, 0, "authenticates-null-values") authenticated_null_uintptr;

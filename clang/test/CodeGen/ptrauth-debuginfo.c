@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios \
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth \
 // RUN:   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -fblocks \
 // RUN:   %s -debug-info-kind=limited -o - | FileCheck %s
 

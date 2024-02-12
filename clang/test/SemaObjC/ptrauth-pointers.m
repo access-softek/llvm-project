@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -verify %s
+// RUN: %clang_cc1 -fblocks -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -verify %s
 
 #if __has_feature(ptrauth_objc_signable_class)
 @class TestClass;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O0 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -target-feature +pauth -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O0 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK %s
 
 // The actual vtable construction
 // CHECK: @_ZTV1C = unnamed_addr constant { [5 x ptr], [11 x ptr] } { [5 x ptr] [ptr inttoptr (i64 8 to ptr), ptr null, ptr @_ZTI1C, ptr @_ZN1CD1Ev.ptrauth, ptr @_ZN1CD0Ev.ptrauth], [11 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr null, ptr null, ptr inttoptr (i64 -8 to ptr), ptr @_ZTI1C, ptr @_ZN1A1fEv.ptrauth.2, ptr @_ZN1A1gEv.ptrauth.3, ptr @_ZN1A1hEz.ptrauth.4, ptr @_ZTv0_n48_N1CD1Ev.ptrauth, ptr @_ZTv0_n48_N1CD0Ev.ptrauth] }, align 8

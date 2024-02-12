@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -cc1 -internal-isystem /Users/oliver/llvm-internal/debug/lib/clang/11.0.0/include -nostdsysteminc -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -triple arm64-apple-ios -emit-llvm -O2 -disable-llvm-passes -o - %s | FileCheck %s
-// RUN: %clang_cc1 -cc1 -internal-isystem /Users/oliver/llvm-internal/debug/lib/clang/11.0.0/include -nostdsysteminc -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth  -triple arm64-apple-ios -emit-llvm -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cc1 -internal-isystem /Users/oliver/llvm-internal/debug/lib/clang/11.0.0/include -nostdsysteminc -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -triple arm64-apple-ios -target-feature +pauth -emit-llvm -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cc1 -internal-isystem /Users/oliver/llvm-internal/debug/lib/clang/11.0.0/include -nostdsysteminc -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth  -triple arm64-apple-ios -target-feature +pauth -emit-llvm -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 #define CFSTR __builtin___CFStringMakeConstantString
 

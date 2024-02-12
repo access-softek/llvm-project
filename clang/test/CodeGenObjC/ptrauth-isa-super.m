@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -I %S/Inputs -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -triple arm64-apple-ios -fobjc-runtime=ios-12.2 -emit-llvm -no-enable-noundef-analysis -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
-// RUN: %clang_cc1 -I %S/Inputs -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth  -triple arm64-apple-ios -fobjc-runtime=ios-12.2 -emit-llvm -no-enable-noundef-analysis -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -triple arm64-apple-ios -target-feature +pauth -fobjc-runtime=ios-12.2 -emit-llvm -no-enable-noundef-analysis -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth  -triple arm64-apple-ios -target-feature +pauth -fobjc-runtime=ios-12.2 -emit-llvm -no-enable-noundef-analysis -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 #include "literal-support.h"
 

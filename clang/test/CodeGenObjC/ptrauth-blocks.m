@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -fobjc-arc -fblocks -fobjc-runtime=ios-7 -triple arm64-apple-ios -emit-llvm %s  -o - | FileCheck %s
-// RUN: %clang_cc1 -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth  -fobjc-arc -fblocks -fobjc-runtime=ios-7 -triple arm64-apple-ios -emit-llvm %s  -o - | FileCheck %s
+// RUN: %clang_cc1 -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-strip -fobjc-arc -fblocks -fobjc-runtime=ios-7 -triple arm64-apple-ios -target-feature +pauth -emit-llvm %s  -o - | FileCheck %s
+// RUN: %clang_cc1 -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth  -fobjc-arc -fblocks -fobjc-runtime=ios-7 -triple arm64-apple-ios -target-feature +pauth -emit-llvm %s  -o - | FileCheck %s
 
 void (^blockptr)(void);
 // CHECK: @_NSConcreteGlobalBlock.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @_NSConcreteGlobalBlock, i32 2, i64 ptrtoint (ptr [[GLOBAL_BLOCK_1:@.*]] to i64), i64 27361 }, section "llvm.ptrauth", align 8

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth -fptrauth-objc-isa-masking -triple arm64-apple-ios -emit-llvm -O0 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cc1 -nostdsysteminc -fptrauth-intrinsics -fptrauth-calls -fptrauth-objc-isa-mode=sign-and-auth -fptrauth-objc-isa-masking -triple arm64-apple-ios -target-feature +pauth -emit-llvm -O0 -disable-llvm-passes -o - %s | FileCheck %s
 #if __has_feature(ptrauth_qualifier_authentication_mode)
 #define test_ptrauth(a...) __ptrauth(a)
 #else

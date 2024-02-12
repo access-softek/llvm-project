@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
 // RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
-// RUN: %clang_cc1 -triple apple-macosx-arm64e -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all -fptrauth-calls | FileCheck %s --check-prefixes=CHECK,64,64e
+// RUN: %clang_cc1 -triple apple-macosx-arm64e -target-feature +pauth -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all -fptrauth-calls | FileCheck %s --check-prefixes=CHECK,64,64e
 // RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,ARM,32
 
 // CHECK: define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
