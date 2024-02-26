@@ -13,9 +13,12 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -1088,6 +1091,133 @@ public:
     }
   }
 
+  // TODO: move common code from StopInfoMachException and StopInfoUnixSignal to
+  // base class StopInfo.
+
+  /// Information about a pointer-authentication related instruction.
+  struct PtrauthInstructionInfo {
+    bool IsAuthenticated;
+    bool IsLoad;
+    bool DoesBranch;
+  };
+
+  /// Get any pointer-authentication related information about the instruction
+  /// at address \p at_addr.
+  static std::optional<PtrauthInstructionInfo>
+  GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
+                            const Address &at_addr) {
+    const char *plugin_name = nullptr;
+    const char *flavor = nullptr;
+    AddressRange range_bounds(at_addr, 4);
+    const bool prefer_file_cache = true;
+    DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+        arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
+    if (!disassembler_sp)
+      return std::nullopt;
+
+    InstructionList &insn_list = disassembler_sp->GetInstructionList();
+    InstructionSP insn = insn_list.GetInstructionAtIndex(0);
+    if (!insn)
+      return std::nullopt;
+
+    return PtrauthInstructionInfo{insn->IsAuthenticated(), insn->IsLoad(),
+                                  insn->DoesBranch()};
+  }
+
+  /// Describe the load address of \p addr using the format filename:line:col.
+  static void DescribeAddressBriefly(Stream &strm, const Address &addr,
+                                     Target &target) {
+    strm.Printf("at address=0x%" PRIx64, addr.GetLoadAddress(&target));
+    StreamString s;
+    if (addr.GetDescription(s, target, eDescriptionLevelBrief))
+      strm.Printf(" %s", s.GetString().data());
+    strm.Printf(".\n");
+  }
+
+  bool DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
+    // TODO: do we need to handle SIGBUS and SIGTRAP?
+    if (m_value != 11) // SIGSEGV
+      return false;
+
+    // Check that we have a live process.
+    if (!exe_ctx.HasProcessScope() || !exe_ctx.HasThreadScope() ||
+        !exe_ctx.HasTargetScope())
+      return false;
+
+    Thread &thread = *exe_ctx.GetThreadPtr();
+    StackFrameSP current_frame = thread.GetStackFrameAtIndex(0);
+    if (!current_frame)
+      return false;
+
+    Target &target = *exe_ctx.GetTargetPtr();
+    Process &process = *exe_ctx.GetProcessPtr();
+    ABISP abi_sp = process.GetABI();
+    const ArchSpec &arch = target.GetArchitecture();
+    assert(abi_sp && "Missing ABI info");
+
+    // Check for a ptrauth-enabled target.
+    Module *module_sp = target.GetExecutableModulePointer();
+    if (module_sp == nullptr)
+      return false;
+    ObjectFile *obj_file = module_sp->GetObjectFile();
+    if (obj_file == nullptr ||
+        obj_file->ParseGNUPropertyAArch64PAuthABI() == std::nullopt)
+      return false;
+
+    Address current_address = current_frame->GetFrameCodeAddress();
+    uint64_t bad_address = 0; // TODO: get proper fault address
+    uint64_t fixed_bad_address = abi_sp->FixCodeAddress(bad_address);
+    uint64_t current_pc = current_address.GetLoadAddress(&target);
+
+    // Detect: LDRAA, LDRAB (Load Register, with pointer authentication).
+    //
+    // If an authenticated load results in an exception, the instruction at the
+    // current PC should be one of LDRAx.
+    // TODO
+
+    // Detect: BLRAA, BLRAAZ, BLRAB, BLRABZ (Branch with Link to Register, with
+    // pointer authentication).
+    //
+    // TODO: Detect: BRAA, BRAAZ, BRAB, BRABZ (Branch to Register, with pointer
+    // authentication). At a minimum, this requires call site info support for
+    // indirect calls.
+    //
+    // If an authenticated call or tail call results in an exception, stripping
+    // the bad address should give the current PC, which points to the address
+    // we tried to branch to.
+    if (bad_address !=
+        current_pc /* TODO: && fixed_bad_address == current_pc */) {
+      if (StackFrameSP parent_frame = thread.GetStackFrameAtIndex(1)) {
+        addr_t return_pc =
+            parent_frame->GetFrameCodeAddress().GetLoadAddress(&target);
+        Address blr_address;
+        if (!target.ResolveLoadAddress(return_pc - 4, blr_address))
+          return false;
+
+        auto blr_ptrauth_info =
+            GetPtrauthInstructionInfo(target, arch, blr_address);
+        if (blr_ptrauth_info && blr_ptrauth_info->IsAuthenticated &&
+            blr_ptrauth_info->DoesBranch) {
+          StreamString strm;
+          strm.Printf(
+              "\nNote: Possible pointer authentication failure detected."
+              "\nFound authenticated indirect branch ");
+          DescribeAddressBriefly(strm, blr_address, target);
+          m_description_with_pauth =
+              m_description + std::string(strm.GetString());
+          return true;
+        }
+      }
+    }
+
+    // TODO: Detect: RETAA, RETAB (Return from subroutine, with pointer
+    // authentication).
+    //
+    // Is there a motivating, non-malicious code snippet that corrupts LR?
+
+    return false;
+  }
+
   const char *GetDescription() override {
     if (m_description.empty()) {
       ThreadSP thread_sp(m_thread_wp.lock());
@@ -1106,12 +1236,28 @@ public:
         m_description = std::string(strm.GetString());
       }
     }
-    return m_description.c_str();
+    if (!m_is_pauth_failure_checked) {
+      ThreadSP thread_sp(m_thread_wp.lock());
+      if (thread_sp) {
+        ExecutionContext exe_ctx(m_thread_wp.lock());
+        Target *target = exe_ctx.GetTargetPtr();
+        const llvm::Triple::ArchType cpu =
+            target ? target->GetArchitecture().GetMachine()
+                   : llvm::Triple::UnknownArch;
+
+        if (cpu == llvm::Triple::aarch64)
+          DeterminePtrauthFailure(exe_ctx);
+      }
+      m_is_pauth_failure_checked = true;
+    }
+    return m_description_with_pauth.c_str();
   }
 
 private:
   // In siginfo_t terms, if m_value is si_signo, m_code is si_code.
   std::optional<int> m_code;
+  std::string m_description_with_pauth;
+  bool m_is_pauth_failure_checked = false;
 };
 
 // StopInfoTrace
