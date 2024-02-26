@@ -2856,6 +2856,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   case AArch64::G_LDRA:
   case AArch64::G_LDRApre:
+    // TODO: implement a test case for this error
+    if (!STI.hasPAuth())
+      report_fatal_error("pac instructions require ptrauth target feature");
     return selectAuthLoad(I, MRI);
 
   case TargetOpcode::G_ZEXTLOAD:

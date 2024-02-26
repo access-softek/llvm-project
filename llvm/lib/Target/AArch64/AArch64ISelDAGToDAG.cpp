@@ -1723,6 +1723,9 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
         return false;
   }
 
+  if (!Subtarget->hasPAuth())
+    report_fatal_error("pac instructions require ptrauth target feature");
+
   // We have 2 main isel alternatives:
   // - LDRAA/LDRAB, writeback or indexed.  Zero disc, small offsets, D key.
   // - LDRA/LDRApre.  Pointer needs to be in X16.
