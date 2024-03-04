@@ -286,6 +286,552 @@ DWARF:
   ASSERT_EQ(found_function_types, expected_function_types);
 }
 
+TEST_F(DWARFASTParserClangTests, TestPtrAuthParsing) {
+  // Tests parsing values with type DW_TAG_LLVM_ptrauth_type corresponding to
+  // explicitly signed raw function pointers
+
+  // This is Dwarf for the following C code:
+  // ```
+  // void (*__ptrauth(0, 0, 42) a)();
+  // ```
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - a
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x01
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x02
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x03
+          Tag:             DW_TAG_LLVM_ptrauth_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_LLVM_ptrauth_key
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_LLVM_ptrauth_extra_discriminator
+              Form:            DW_FORM_data2
+        - Code:            0x04
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x05
+          Tag:             DW_TAG_subroutine_type
+          Children:        DW_CHILDREN_yes
+        - Code:            0x06
+          Tag:             DW_TAG_unspecified_parameters
+          Children:        DW_CHILDREN_no
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+#         DW_AT_language [DW_FORM_data2]    (DW_LANG_C99)
+        - AbbrCode:        0x01
+          Values:
+            - Value:           0x0c
+
+# 0x0f:   DW_TAG_variable
+#           DW_AT_name [DW_FORM_strp]       (\"a\")
+#           DW_AT_type [DW_FORM_ref4]       (0x00000018 \"void (*__ptrauth(0, 0, 0x02a)\")
+#           DW_AT_external [DW_FORM_flag_present]   (true)
+        - AbbrCode:        0x02
+          Values:
+            - Value:           0x00
+            - Value:           0x18
+
+# 0x18:   DW_TAG_LLVM_ptrauth_type
+#           DW_AT_type [DW_FORM_ref4]       (0x00000020 \"void (*)(...)\")
+#           DW_AT_LLVM_ptrauth_key [DW_FORM_data1]  (0x00)
+#           DW_AT_LLVM_ptrauth_extra_discriminator [DW_FORM_data2]  (0x002a)
+        - AbbrCode:        0x03
+          Values:
+            - Value:           0x20
+            - Value:           0x00
+            - Value:           0x2a
+
+# 0x20:   DW_TAG_pointer_type
+#           DW_AT_type [DW_AT_type [DW_FORM_ref4]       (0x00000025 \"void (...)\")
+        - AbbrCode:        0x04
+          Values:
+            - Value:           0x25
+
+# 0x25:   DW_TAG_subroutine_type
+        - AbbrCode:        0x05
+
+# 0x26:     DW_TAG_unspecified_parameters
+        - AbbrCode:        0x06
+
+        - AbbrCode:        0x00 # end of child tags of 0x25
+        - AbbrCode:        0x00 # end of child tags of 0x0c
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  DWARFDIE ptrauth_variable = cu_die.GetFirstChild();
+  ASSERT_EQ(ptrauth_variable.Tag(), DW_TAG_variable);
+  DWARFDIE ptrauth_type =
+      ptrauth_variable.GetAttributeValueAsReferenceDIE(DW_AT_type);
+  ASSERT_EQ(ptrauth_type.Tag(), DW_TAG_LLVM_ptrauth_type);
+
+  SymbolContext sc;
+  bool new_type = false;
+  lldb::TypeSP type =
+      ast_parser.ParseTypeFromDWARF(sc, ptrauth_type, &new_type);
+  std::string type_as_string =
+      type->GetForwardCompilerType().GetTypeName().AsCString();
+  ASSERT_EQ(type_as_string, "void (*__ptrauth(0,0,42))(...)");
+}
+
+TEST_F(DWARFASTParserClangTests, TestVTablePtrAuthParsing) {
+  // Tests parsing dynamic structure types with explicit vtable pointer
+  // authentication
+
+  // This is Dwarf for the following C++ code:
+  // ```
+  // struct [[clang::ptrauth_vtable_pointer(process_dependent,
+  //                                        address_discrimination,
+  //                                        custom_discrimination, 42)]] A {
+  //   virtual void foo() {}
+  // };
+  // A a;
+  // ```
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - a
+    - A
+    - _vptr$A
+    - foo
+    - __vtbl_ptr_type
+    - int
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x3
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_containing_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x4
+          Tag:             DW_TAG_member
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
+        - Code:            0x5
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_virtuality
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_containing_type
+              Form:            DW_FORM_ref4
+        - Code:            0x6
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
+        - Code:            0x7
+          Tag:             DW_TAG_LLVM_ptrauth_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_LLVM_ptrauth_key
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_LLVM_ptrauth_extra_discriminator
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_LLVM_ptrauth_address_discriminated
+              Form:            DW_FORM_flag_present
+        - Code:            0x8
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x9
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0xA
+          Tag:             DW_TAG_subroutine_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0xB
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0xC
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+#         DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus_11)
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1A
+
+# 0x0f:   DW_TAG_variable
+#           DW_AT_name [DW_FORM_strp]       (\"a\")
+#           DW_AT_type [DW_FORM_ref4]       (0x00000018 \"A\")
+#           DW_AT_external [DW_FORM_flag_present]   (true)
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x00
+            - Value:           0x18
+
+# 0x18:   DW_TAG_structure_type
+#           DW_AT_containing_type [DW_FORM_ref4]    (0x00000018 \"A\")
+#           DW_AT_name [DW_FORM_strp]       (\"A\")
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x18
+            - Value:           0x02
+
+# 0x21:     DW_TAG_member
+#             DW_AT_name [DW_FORM_strp]     (\"_vptr$A\")
+#             DW_AT_type [DW_FORM_ref4]     (0x0000002f)
+#             DW_AT_artificial [DW_FORM_flag_present]       (true)
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x04
+            - Value:           0x3B
+
+# 0x2a:     DW_TAG_subprogram
+#             DW_AT_name [DW_FORM_strp]     (\"foo\")
+#             DW_AT_virtuality [DW_FORM_data1]      (DW_VIRTUALITY_virtual)
+#             DW_AT_containing_type [DW_FORM_ref4]  (0x00000018 \"A\")
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x0C
+            - Value:           0x01
+            - Value:           0x18
+
+# 0x34:       DW_TAG_formal_parameter
+#               DW_AT_type [DW_FORM_ref4]   (0x0000005d \"A *\")
+#               DW_AT_artificial [DW_FORM_flag_present]     (true)
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x5D
+
+        - AbbrCode:        0x0 # end of child tags of 0x2a
+        - AbbrCode:        0x0 # end of child tags of 0x18
+
+# 0x3b:   DW_TAG_LLVM_ptrauth_type
+#           DW_AT_type [DW_FORM_ref4]       (0x00000043 \"int (**)()\")
+#           DW_AT_LLVM_ptrauth_key [DW_FORM_data1]  (0x02)
+#           DW_AT_LLVM_ptrauth_extra_discriminator [DW_FORM_data2]  (0x002a)
+#           DW_AT_LLVM_ptrauth_address_discriminated [DW_FORM_flag_present] (true)
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x43
+            - Value:           0x02
+            - Value:           0x2A
+
+# 0x43:   DW_TAG_pointer_type
+#           DW_AT_type [DW_FORM_ref4]       (0x00000048 \"int (*)()\")
+        - AbbrCode:        0x8
+          Values:
+            - Value:           0x48
+
+# 0x48:   DW_TAG_pointer_type
+#           DW_AT_type [DW_FORM_ref4]       (0x00000051 \"int ()\")
+#           DW_AT_name [DW_FORM_strp]       (\"__vtbl_ptr_type\")
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0x51
+            - Value:           0x10
+
+# 0x51:   DW_TAG_subroutine_type
+#           DW_AT_type [DW_FORM_ref4]       (0x00000056 \"int\")
+        - AbbrCode:        0xA
+          Values:
+            - Value:           0x56
+
+# 0x56:   DW_TAG_base_type
+#           DW_AT_name [DW_FORM_strp]       (\"int\")
+#           DW_AT_encoding [DW_FORM_data1]  (DW_ATE_signed)
+#           DW_AT_byte_size [DW_FORM_data1] (0x04)
+        - AbbrCode:        0xB
+          Values:
+            - Value:           0x20
+            - Value:           0x05
+            - Value:           0x04
+
+# 0x5d:   DW_TAG_pointer_type
+#           DW_AT_type [DW_FORM_ref4]       (0x00000018 \"A\")
+        - AbbrCode:        0xC
+          Values:
+            - Value:           0x18
+
+        - AbbrCode:        0x0 # end of child tags of 0x0c
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  DWARFDIE struct_object = cu_die.GetFirstChild();
+  ASSERT_EQ(struct_object.Tag(), DW_TAG_variable);
+  DWARFDIE structure_type =
+      struct_object.GetAttributeValueAsReferenceDIE(DW_AT_type);
+  ASSERT_EQ(structure_type.Tag(), DW_TAG_structure_type);
+
+  SymbolContext sc;
+  bool new_type = false;
+  lldb::TypeSP type =
+      ast_parser.ParseTypeFromDWARF(sc, structure_type, &new_type);
+  clang::RecordDecl *record_decl =
+      TypeSystemClang::GetAsRecordDecl(type->GetForwardCompilerType());
+  auto *attr = record_decl->getAttr<clang::VTablePointerAuthenticationAttr>();
+  ASSERT_NE(attr, nullptr);
+  ASSERT_EQ(attr->getKey(),
+            clang::VTablePointerAuthenticationAttr::ProcessDependent);
+  ASSERT_EQ(attr->getAddressDiscrimination(),
+            clang::VTablePointerAuthenticationAttr::AddressDiscrimination);
+  ASSERT_EQ(attr->getExtraDiscrimination(),
+            clang::VTablePointerAuthenticationAttr::CustomDiscrimination);
+  ASSERT_EQ(attr->getCustomDiscriminationValue(), 42);
+}
+
+TEST_F(DWARFASTParserClangTests, TestPtrAuthStructAttr) {
+  // Tests parsing types with ptrauth_struct attribute
+  // authentication
+
+  // This is Dwarf for the following C code:
+  // ```
+  // struct [[clang::ptrauth_struct(2, 42)]] A {};
+  // struct A a;
+  // ```
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - a
+    - A
+    - ptrauth_struct_key
+    - ptrauth_struct_disc
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x3
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x4
+          Tag:             DW_TAG_LLVM_annotation
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_const_value
+              Form:            DW_FORM_udata
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+#         DW_AT_language [DW_FORM_data2]    (DW_LANG_C99)
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0c
+
+# 0x0f:   DW_TAG_variable
+#           DW_AT_name [DW_FORM_strp]       (\"a\")
+#           DW_AT_type [DW_FORM_ref4]       (0x00000018 \"A\")
+#           DW_AT_external [DW_FORM_flag_present]   (true)
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x00
+            - Value:           0x18
+
+# 0x18:   DW_TAG_structure_type
+#           DW_AT_name [DW_FORM_strp]       (\"A\")
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x02
+
+# 0x1d:     DW_TAG_LLVM_annotation
+#             DW_AT_name [DW_FORM_strp]     (\"ptrauth_struct_key\")
+#             DW_AT_const_value [DW_FORM_udata]  (2)
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x04
+            - Value:           0x02
+
+# 0x23:     DW_TAG_LLVM_annotation
+#             DW_AT_name [DW_FORM_strp]     (\"ptrauth_struct_disc\")
+#             DW_AT_const_value [DW_FORM_udata]  (42)
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x17
+            - Value:           0x2a
+
+        - AbbrCode:        0x0 # end of child tags of 0x18
+        - AbbrCode:        0x0 # end of child tags of 0x0c
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  DWARFDIE struct_object = cu_die.GetFirstChild();
+  ASSERT_EQ(struct_object.Tag(), DW_TAG_variable);
+  DWARFDIE structure_type =
+      struct_object.GetAttributeValueAsReferenceDIE(DW_AT_type);
+  ASSERT_EQ(structure_type.Tag(), DW_TAG_structure_type);
+
+  SymbolContext sc;
+  bool new_type = false;
+  lldb::TypeSP type =
+      ast_parser.ParseTypeFromDWARF(sc, structure_type, &new_type);
+  clang::RecordDecl *record_decl =
+      TypeSystemClang::GetAsRecordDecl(type->GetForwardCompilerType());
+  auto [is_key_val_independent, key] =
+      ast_ctx.getASTContext().getPointerAuthStructKey(record_decl);
+  auto [is_disc_val_independent, disc] =
+      ast_ctx.getASTContext().getPointerAuthStructDisc(record_decl);
+  ASSERT_TRUE(is_key_val_independent);
+  ASSERT_TRUE(is_disc_val_independent);
+  ASSERT_EQ(key, 2);
+  ASSERT_EQ(disc, 42);
+}
+
 struct ExtractIntFromFormValueTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
   clang_utils::TypeSystemClangHolder holder;

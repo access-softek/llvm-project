@@ -296,6 +296,10 @@ private:
   lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
 
+  lldb::TypeSP
+  ParsePtrAuthQualifiedType(const DWARFDIE &die,
+                            const ParsedDWARFTypeAttributes &attrs);
+
   /// Parses a DW_TAG_inheritance DIE into a base/super class.
   ///
   /// \param die The DW_TAG_inheritance DIE to parse.

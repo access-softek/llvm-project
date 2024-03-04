@@ -226,6 +226,8 @@ protected:
   }
 
   LanguageRuntime(Process *process);
+
+  std::pair<uint64_t, uint64_t> m_aarch64_pauth_abi_tag;
 };
 
 } // namespace lldb_private

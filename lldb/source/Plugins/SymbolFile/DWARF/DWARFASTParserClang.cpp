@@ -504,6 +504,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     type_sp = ParsePointerToMemberType(die, attrs);
     break;
   }
+  case DW_TAG_LLVM_ptrauth_type: {
+    type_sp = ParsePtrAuthQualifiedType(die, attrs);
+    break;
+  }
   default:
     dwarf->GetObjectFile()->GetModule()->ReportError(
         "[{0:x16}]: unhandled type tag {1:x4} ({2}), "
@@ -1375,6 +1379,33 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
   return nullptr;
 }
 
+TypeSP DWARFASTParserClang::ParsePtrAuthQualifiedType(
+    const DWARFDIE &die, const ParsedDWARFTypeAttributes &attrs) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  Type *pointer_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
+
+  if (pointer_type == nullptr)
+    return nullptr;
+
+  CompilerType pointer_clang_type = pointer_type->GetForwardCompilerType();
+
+  unsigned key = die.GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_key, 0);
+  bool has_addr_discr = die.GetAttributeValueAsUnsigned(
+      DW_AT_LLVM_ptrauth_address_discriminated, false);
+  unsigned extra_discr = die.GetAttributeValueAsUnsigned(
+      DW_AT_LLVM_ptrauth_extra_discriminator, 0);
+  CompilerType clang_type = m_ast.AddPtrAuthModifier(
+      pointer_clang_type.GetOpaqueQualType(), key, has_addr_discr, extra_discr);
+
+  TypeSP type_sp = dwarf->MakeType(
+      die.GetID(), attrs.name, pointer_type->GetByteSize(nullptr), nullptr,
+      attrs.type.Reference().GetID(), Type::eEncodingIsLLVMPtrAuthUID,
+      &attrs.decl, clang_type, Type::ResolveState::Forward);
+
+  dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+  return type_sp;
+}
+
 void DWARFASTParserClang::ParseInheritance(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const CompilerType class_clang_type, const AccessType default_accessibility,
@@ -1810,6 +1841,81 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
           decl_ctx, GetOwningClangModule(die), attrs.accessibility,
           attrs.name.GetCString(), tag_decl_kind, attrs.class_language,
           &metadata, attrs.exports_symbols);
+    }
+
+    if (metadata.GetIsDynamicCXXType()) {
+      clang::RecordDecl *record_decl = m_ast.GetAsRecordDecl(clang_type);
+      DWARFDIE vptr_type_die =
+          die.GetFirstChild().GetAttributeValueAsReferenceDIE(DW_AT_type);
+      if (vptr_type_die.Tag() == DW_TAG_LLVM_ptrauth_type) {
+        unsigned key = vptr_type_die.GetAttributeValueAsUnsigned(
+            DW_AT_LLVM_ptrauth_key, -1);
+        unsigned discriminator = vptr_type_die.GetAttributeValueAsUnsigned(
+            DW_AT_LLVM_ptrauth_extra_discriminator, -1);
+        unsigned has_addr_discr = vptr_type_die.GetAttributeValueAsUnsigned(
+            DW_AT_LLVM_ptrauth_address_discriminated, -1);
+
+        auto error_missing = [&vptr_type_die](const dw_attr_t attr) {
+          vptr_type_die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
+              "[{0:x16}]: missing attribute {1:x4} ({2}) required for signed "
+              "vtable pointer",
+              vptr_type_die.GetOffset(), attr, DW_AT_value_to_name(attr));
+        };
+
+        if (key == unsigned(-1))
+          error_missing(DW_AT_LLVM_ptrauth_key);
+        if (discriminator == unsigned(-1))
+          error_missing(DW_AT_LLVM_ptrauth_extra_discriminator);
+        if (has_addr_discr == unsigned(-1))
+          error_missing(DW_AT_LLVM_ptrauth_extra_discriminator);
+
+        record_decl->addAttr(
+            clang::VTablePointerAuthenticationAttr::CreateImplicit(
+                m_ast.getASTContext(),
+                key == 2
+                    ? clang::VTablePointerAuthenticationAttr::ProcessDependent
+                    : clang::VTablePointerAuthenticationAttr::
+                          ProcessIndependent,
+                has_addr_discr ? clang::VTablePointerAuthenticationAttr::
+                                     AddressDiscrimination
+                               : clang::VTablePointerAuthenticationAttr::
+                                     NoAddressDiscrimination,
+                clang::VTablePointerAuthenticationAttr::CustomDiscrimination,
+                discriminator));
+      }
+    }
+
+    // TODO: check that each annotation does not appear more than once
+    std::optional<uint64_t> pauth_key, pauth_disc;
+    for (DWARFDIE die_child = die.GetFirstChild(); die_child;
+         die_child = die_child.GetSibling()) {
+      if (die_child.Tag() != DW_TAG_LLVM_annotation)
+        continue;
+      if (die_child.GetAttributeValueAsString(DW_AT_name, nullptr) ==
+          llvm::StringRef("ptrauth_struct_key"))
+        pauth_key =
+            die_child.GetAttributeValueAsOptionalUnsigned(DW_AT_const_value);
+      else if (die_child.GetAttributeValueAsString(DW_AT_name, nullptr) ==
+               llvm::StringRef("ptrauth_struct_disc"))
+        pauth_disc =
+            die_child.GetAttributeValueAsOptionalUnsigned(DW_AT_const_value);
+    }
+
+    // TODO: do we need some handling for one std::nullopt out of two?
+    if (pauth_key != std::nullopt && pauth_disc != std::nullopt) {
+      clang::ASTContext &ctx = m_ast.getASTContext();
+      llvm::APInt key_int = llvm::APInt(ctx.getTypeSize(ctx.UnsignedIntTy),
+                                        pauth_key.value(), false);
+      auto *key = clang::IntegerLiteral::Create(ctx, key_int, ctx.UnsignedIntTy,
+                                                clang::SourceLocation());
+      llvm::APInt disc_int = llvm::APInt(ctx.getTypeSize(ctx.UnsignedIntTy),
+                                         pauth_disc.value(), false);
+      auto *disc = clang::IntegerLiteral::Create(
+          ctx, disc_int, ctx.UnsignedIntTy, clang::SourceLocation());
+
+      clang::RecordDecl *record_decl = m_ast.GetAsRecordDecl(clang_type);
+      record_decl->addAttr(
+          clang::PointerAuthStructAttr::CreateImplicit(ctx, key, disc));
     }
   }
 

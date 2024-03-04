@@ -2304,6 +2304,50 @@ llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
   return DBuilder.getOrCreateArray(Annotations);
 }
 
+llvm::DINodeArray
+CGDebugInfo::CollectPtrAuthStructAnnotations(const RecordDecl *RD) {
+  if (!RD->hasAttr<PointerAuthStructAttr>())
+    return nullptr;
+
+  llvm::LLVMContext &Context = CGM.getLLVMContext();
+
+  auto [IsKeyValIndependent, Key] =
+      CGM.getContext().getPointerAuthStructKey(RD);
+  auto [IsDiscValIndependent, Disc] =
+      CGM.getContext().getPointerAuthStructDisc(RD);
+
+  // TODO: handle value-dependent keys and discriminators. What does this even
+  // mean? Using template integer parameters as key/disc or expressions like
+  // `__builtin_ptrauth_struct_key(...)` result in specific constants, and does
+  // not make key/disc value dependent.
+  if (!IsKeyValIndependent || !IsDiscValIndependent)
+    return nullptr;
+
+  // TODO: 2-bit key and 16-bit disc results in negative values of i2 and i16
+  // types in IR for unsigned integers using all the given bit-width (for ex.,
+  // key 3 is i8 -1, disc 65534 is i16 -2). Do we want to use wider types to
+  // prevent negation?
+  auto *KeyMD = llvm::ConstantAsMetadata::get(
+      llvm::ConstantInt::get(Context, llvm::APInt(2, Key, false)));
+  auto *DiscMD = llvm::ConstantAsMetadata::get(
+      llvm::ConstantInt::get(Context, llvm::APInt(16, Disc, false)));
+
+  llvm::Metadata *Annotations[2];
+  llvm::Metadata *OpsKey[2] = {
+      llvm::MDString::get(Context, StringRef("ptrauth_struct_key")), KeyMD};
+  Annotations[0] = llvm::MDNode::get(CGM.getLLVMContext(), OpsKey);
+  llvm::Metadata *OpsDisc[2] = {
+      llvm::MDString::get(Context, StringRef("ptrauth_struct_disc")), DiscMD};
+  Annotations[1] = llvm::MDNode::get(CGM.getLLVMContext(), OpsDisc);
+
+  // TODO: is it OK to return DINodeArray instead of MDNodeArray from
+  // CollectPtrAuthStructAnnotations and CollectBTFDeclTagAnnotations? The
+  // elements are not actually DINodes, and trying to iterate over the returned
+  // DINodeArray results in an assertion failure. This does not seem to happen
+  // though - it looks like that there are no places where such loops are used.
+  return DBuilder.getOrCreateArray(Annotations);
+}
+
 llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
   if (VTablePtrType)
     return VTablePtrType;
@@ -2431,6 +2475,47 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
 
   if (!VPtrTy)
     VPtrTy = getOrCreateVTablePtrType(Unit);
+
+  if (auto *VptrAuthAttr = RD->getAttr<VTablePointerAuthenticationAttr>()) {
+    unsigned TypedDiscriminator =
+        CGM.getContext().getPointerAuthVTablePointerDiscriminator(RD);
+    auto &LangOpts = CGM.getContext().getLangOpts();
+
+    unsigned Key = VptrAuthAttr->getKey();
+
+    bool HasAddressDiscrimination =
+        LangOpts.PointerAuthVTPtrAddressDiscrimination;
+    if (VptrAuthAttr->getAddressDiscrimination() !=
+        VTablePointerAuthenticationAttr::DefaultAddressDiscrimination) {
+      HasAddressDiscrimination =
+          (VptrAuthAttr->getAddressDiscrimination() ==
+           VTablePointerAuthenticationAttr::AddressDiscrimination);
+    }
+
+    unsigned ExtraDiscriminator = 0;
+
+    switch (VptrAuthAttr->getExtraDiscrimination()) {
+    case VTablePointerAuthenticationAttr::DefaultExtraDiscrimination:
+      if (LangOpts.PointerAuthVTPtrTypeDiscrimination)
+        ExtraDiscriminator = TypedDiscriminator;
+      break;
+    case VTablePointerAuthenticationAttr::TypeDiscrimination:
+      ExtraDiscriminator = TypedDiscriminator;
+      break;
+    case VTablePointerAuthenticationAttr::CustomDiscrimination:
+      ExtraDiscriminator = VptrAuthAttr->getCustomDiscriminationValue();
+      break;
+    case VTablePointerAuthenticationAttr::NoExtraDiscrimination:
+      break;
+    }
+
+    // See CodeGenModule::computeVTPointerAuthentication:
+    // isIsaPointer and authenticatesNullValues are always false.
+    VPtrTy = DBuilder.createPtrAuthQualifiedType(
+        VPtrTy, Key, HasAddressDiscrimination, ExtraDiscriminator,
+        /* isIsaPointer */ false,
+        /* authenticatesNullValues */ false);
+  }
 
   unsigned Size = CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
   llvm::DIType *VPtrMember =
@@ -3749,7 +3834,21 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
                            dyn_cast<CXXRecordDecl>(CXXRD->getDeclContext()));
   }
 
-  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
+  llvm::DINodeArray AnnotationsBTFTag = CollectBTFDeclTagAnnotations(D);
+  llvm::DINodeArray AnnotationsPAuthStruct = CollectPtrAuthStructAnnotations(D);
+
+  llvm::SmallVector<llvm::Metadata *, 4> AnnotationsVec;
+  if (AnnotationsBTFTag.get() != nullptr)
+    for (const llvm::MDOperand &Op : AnnotationsBTFTag.get()->operands())
+        AnnotationsVec.push_back(Op.get());
+  if (AnnotationsPAuthStruct.get() != nullptr)
+    for (const llvm::MDOperand &Op : AnnotationsPAuthStruct.get()->operands())
+        AnnotationsVec.push_back(Op.get());
+
+  llvm::DINodeArray Annotations =
+      AnnotationsVec.empty() ? nullptr
+                             : DBuilder.getOrCreateArray(AnnotationsVec);
+
   llvm::DICompositeType *RealDecl = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, RDContext, DefUnit, Line, 0, Size, Align,
       Flags, Identifier, Annotations);

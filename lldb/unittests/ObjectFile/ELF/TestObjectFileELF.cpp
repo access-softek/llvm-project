@@ -117,6 +117,161 @@ Symbols:
   EXPECT_EQ(text_sp, start->GetAddress().GetSection());
 }
 
+TEST_F(ObjectFileELFTest, GNUPropertyAArch64PAuthABI) {
+  // Successful parsing
+  {
+    llvm::StringRef SinglePropertyYaml = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Notes:
+      - Name:            GNU
+        Desc:            010000C01000000002000000000000001F00000000000000
+        #                ^^^^^^^^
+        #                type = 0xC0000001 = GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+        #                        ^^^^^^^^
+        #                        size = 0x00000010 = 16
+        #                                ^^^^^^^^^^^^^^^^
+        #                                platform = 0x0000000000000002 = 2
+        #                                                ^^^^^^^^^^^^^^^^
+        #                                                version = 0x000000000000001F = 31
+        Type:            NT_GNU_PROPERTY_TYPE_0
+...
+)";
+    llvm::StringRef MultiplePropertiesYaml = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Notes:
+      - Name:            GNU
+        Desc:            42424242040000001234567800000000010000C01000000002000000000000001F00000000000000
+        #                ^^^^^^^^
+        #                dummy property type = 0x42424242
+        #                        ^^^^^^^^
+        #                        dummy property size = 0x00000008 = 4
+        #                                ^^^^^^^^________
+        #                                dummy property contents = 0x78563412 and padding
+        #                                                ^^^^^^^^
+        #                                                type = 0xC0000001 = GNU_PROPERTY_AARCH64_FEATURE_PAUTH
+        #                                                        ^^^^^^^^
+        #                                                        size = 0x00000010 = 16
+        #                                                                ^^^^^^^^^^^^^^^^
+        #                                                                platform = 0x0000000000000002 = 2
+        #                                                                                ^^^^^^^^^^^^^^^^
+        #                                                                                version = 0x000000000000001F = 31
+        Type:            NT_GNU_PROPERTY_TYPE_0
+...
+)";
+    std::array<llvm::Expected<TestFile>, 2> TestFiles = {
+        TestFile::fromYaml(SinglePropertyYaml),
+        TestFile::fromYaml(MultiplePropertiesYaml)};
+
+    for (auto &TF : TestFiles) {
+      ASSERT_THAT_EXPECTED(TF, llvm::Succeeded());
+
+      auto module_sp = std::make_shared<Module>(TF->moduleSpec());
+      ObjectFile *obj_file = module_sp->GetObjectFile();
+      ASSERT_NE(nullptr, obj_file);
+
+      std::optional<std::pair<uint64_t, uint64_t>> pauthabi =
+          obj_file->ParseGNUPropertyAArch64PAuthABI();
+      ASSERT_NE(std::nullopt, pauthabi);
+      ASSERT_EQ(uint64_t(2),  pauthabi->first);
+      ASSERT_EQ(uint64_t(31), pauthabi->second);
+    }
+  }
+
+  // Error during parsing
+  {
+    llvm::StringRef InvalidNameSizeYaml = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Notes:
+      - Name:            XXXXX
+        Desc:            010000C01000000002000000000000001F00000000000000
+        Type:            NT_GNU_PROPERTY_TYPE_0
+...
+)";
+    llvm::StringRef InvalidNameYaml = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Notes:
+      - Name:            XXX
+        Desc:            010000C01000000002000000000000001F00000000000000
+        Type:            NT_GNU_PROPERTY_TYPE_0
+...
+)";
+    llvm::StringRef InvalidPropertySizeYaml = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Notes:
+      - Name:            XXXXX
+        Desc:            0000000000000000
+        Type:            NT_GNU_PROPERTY_TYPE_0
+...
+)";
+    std::array<llvm::Expected<TestFile>, 3> TestFiles = {
+        TestFile::fromYaml(InvalidNameSizeYaml),
+        TestFile::fromYaml(InvalidNameYaml),
+        TestFile::fromYaml(InvalidPropertySizeYaml)};
+
+    for (auto &TF : TestFiles) {
+      ASSERT_THAT_EXPECTED(TF, llvm::Succeeded());
+
+      auto module_sp = std::make_shared<Module>(TF->moduleSpec());
+      ObjectFile *obj_file = module_sp->GetObjectFile();
+      ASSERT_NE(nullptr, obj_file);
+
+      std::optional<std::pair<uint64_t, uint64_t>> pauthabi =
+          obj_file->ParseGNUPropertyAArch64PAuthABI();
+      ASSERT_EQ(std::nullopt, pauthabi);
+    }
+  }
+}
+
 // Test that GetModuleSpecifications works on an "atypical" object file which
 // has section headers right after the ELF header (instead of the more common
 // layout where the section headers are at the very end of the object file).

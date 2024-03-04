@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"
@@ -154,6 +155,9 @@ public:
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const override;
 
   void RelocateSection(lldb_private::Section *section) override;
+
+  std::optional<std::pair<uint64_t, uint64_t>>
+  ParseGNUPropertyAArch64PAuthABI() override;
 
 protected:
 

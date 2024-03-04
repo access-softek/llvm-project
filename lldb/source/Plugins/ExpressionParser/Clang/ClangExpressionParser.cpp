@@ -36,6 +36,7 @@
 #include "clang/Sema/SemaConsumer.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
@@ -445,6 +446,11 @@ ClangExpressionParser::ClangExpressionParser(
   // Supported subsets of x86
   if (target_machine == llvm::Triple::x86 ||
       target_machine == llvm::Triple::x86_64) {
+    // FIXME: shouldn't this be placed after
+    // `auto target_info = TargetInfo::CreateTargetInfo(...)`
+    // (see `if (target_machine == llvm::Triple::aarch64)`)?
+    // It computes `Features` from `FeatureMap` and `FeaturesAsWritten` and
+    // erases initial `Features` vector.
     m_compiler->getTargetOpts().Features.push_back("+sse");
     m_compiler->getTargetOpts().Features.push_back("+sse2");
   }
@@ -467,6 +473,22 @@ ClangExpressionParser::ClangExpressionParser(
 
   auto target_info = TargetInfo::CreateTargetInfo(
       m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
+
+  std::optional<std::pair<uint64_t, uint64_t>> elf_pauth_abi_tag;
+  if (target_machine == llvm::Triple::aarch64) {
+    do {
+      Module *module_sp = target_sp->GetExecutableModulePointer();
+      if (module_sp == nullptr)
+        break;
+      ObjectFile *obj_file = module_sp->GetObjectFile();
+      if (obj_file == nullptr)
+        break;
+      elf_pauth_abi_tag = obj_file->ParseGNUPropertyAArch64PAuthABI();
+      if (elf_pauth_abi_tag != std::nullopt)
+        target_info->getTargetOpts().Features.push_back("+pauth");
+    } while (false);
+  }
+
   if (log) {
     LLDB_LOGF(log, "Target datalayout string: '%s'",
               target_info->getDataLayoutString());
@@ -481,6 +503,23 @@ ClangExpressionParser::ClangExpressionParser(
   // 4. Set language options.
   lldb::LanguageType language = expr.Language();
   LangOptions &lang_opts = m_compiler->getLangOpts();
+
+  if (elf_pauth_abi_tag != std::nullopt) {
+    uint64_t elf_pauth_abi_platform = elf_pauth_abi_tag->first;
+    // TODO: store this magic constant corresponding to Linux platform in some
+    // header
+    if (elf_pauth_abi_platform ==
+        llvm::ELF::GNU_PROPERTY_AARCH64_FEATURE_PAUTH_PLATFORM_LINUX) {
+      uint64_t elf_pauth_abi_version = elf_pauth_abi_tag->second;
+      lang_opts.PointerAuthCalls = elf_pauth_abi_version & (1 << 0);
+      lang_opts.PointerAuthReturns = elf_pauth_abi_version & (1 << 1);
+      lang_opts.PointerAuthVTPtrAddressDiscrimination =
+          elf_pauth_abi_version & (1 << 2);
+      lang_opts.PointerAuthVTPtrTypeDiscrimination =
+          elf_pauth_abi_version & (1 << 3);
+      lang_opts.PointerAuthInitFini = elf_pauth_abi_version & (1 << 4);
+    }
+  }
 
   switch (language) {
   case lldb::eLanguageTypeC:
@@ -621,6 +660,10 @@ ClangExpressionParser::ClangExpressionParser(
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
   else
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
+
+  CompilerInvocation::setDefaultPointerAuthOptions(
+      m_compiler->getCodeGenOpts().PointerAuth, lang_opts,
+      target_arch.GetTriple());
 
   // Disable some warnings.
   SetupDefaultClangDiagnostics(*m_compiler);

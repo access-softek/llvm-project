@@ -805,7 +805,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (auto Key = DTy->getPtrAuthKey())
     addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_key, dwarf::DW_FORM_data1, *Key);
   if (auto AddrDisc = DTy->isPtrAuthAddressDiscriminated())
-    if (AddrDisc)
+    if (AddrDisc.value())
       addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_address_discriminated);
   if (auto Disc = DTy->getPtrAuthExtraDiscriminator())
     addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_extra_discriminator,

@@ -5105,6 +5105,51 @@ template <class ELFT> void GNUELFDumper<ELFT>::printAddrsig() {
   }
 }
 
+template <class ELFT>
+static bool printAArch64PAuthABITag(raw_ostream &OS, uint32_t DataSize,
+                                    ArrayRef<uint8_t> Desc) {
+  OS << "    AArch64 PAuth ABI tag: ";
+  // DataSize - size without padding, Desc.size() - size with padding
+  if (DataSize != 16) {
+    OS << format("<corrupted size: expected 16, got %d>", DataSize);
+    return false;
+  }
+
+  uint64_t Platform =
+      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
+  std::string PlatformDesc = [Platform]() {
+    switch (Platform) {
+    case GNU_PROPERTY_AARCH64_FEATURE_PAUTH_PLATFORM_INVALID:
+      return " (invalid)";
+    case GNU_PROPERTY_AARCH64_FEATURE_PAUTH_PLATFORM_BAREMETAL:
+      return " (baremetal)";
+    case GNU_PROPERTY_AARCH64_FEATURE_PAUTH_PLATFORM_LINUX:
+      return " (linux)";
+    default:
+      return "";
+    }
+  }();
+
+  uint64_t Version =
+      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
+  std::string VersionDesc = [Platform, Version]() -> std::string {
+    if (Platform != GNU_PROPERTY_AARCH64_FEATURE_PAUTH_PLATFORM_LINUX)
+      return "";
+    // TODO: notify if Version contains bits higher than 4 set
+    return std::string(" (") + ((Version & (1 << 0)) ? "" : "!") +
+           "PointerAuthCalls, " + ((Version & (1 << 1)) ? "" : "!") +
+           "PointerAuthReturns, " + ((Version & (1 << 2)) ? "" : "!") +
+           "PointerAuthVTPtrAddressDiscrimination, " +
+           ((Version & (1 << 3)) ? "" : "!") +
+           "PointerAuthVTPtrTypeDiscrimination, " +
+           ((Version & (1 << 4)) ? "" : "!") + "PointerAuthInitFini)";
+  }();
+  OS << format("platform 0x%x%s, version 0x%x%s", Platform,
+               PlatformDesc.c_str(), Version, VersionDesc.c_str());
+
+  return true;
+}
+
 template <typename ELFT>
 static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                                   ArrayRef<uint8_t> Data) {
@@ -5160,6 +5205,9 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     }
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
+    return OS.str();
+  case GNU_PROPERTY_AARCH64_FEATURE_PAUTH:
+    printAArch64PAuthABITag<ELFT>(OS, DataSize, Data);
     return OS.str();
   case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
   case GNU_PROPERTY_X86_FEATURE_2_USED:
@@ -5365,26 +5413,13 @@ static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
 template <class ELFT>
 static bool printAArch64Note(raw_ostream &OS, uint32_t NoteType,
                              ArrayRef<uint8_t> Desc) {
-  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    return false;
-
-  OS << "    AArch64 PAuth ABI tag: ";
-  if (Desc.size() < 16) {
-    OS << format("<corrupted size: expected at least 16, got %d>", Desc.size());
-    return false;
+  switch (NoteType) {
+  case NT_ARM_TYPE_PAUTH_ABI_TAG:
+    // TODO: if Desc.size() includes alignment, pass the real length from the
+    // caller
+    return printAArch64PAuthABITag<ELFT>(OS, Desc.size(), Desc);
   }
-
-  uint64_t platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  OS << format("platform 0x%x, version 0x%x", platform, version);
-
-  if (Desc.size() > 16)
-    OS << ", additional info 0x"
-       << toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16));
-
-  return true;
+  return false;
 }
 
 template <class ELFT>
@@ -7640,7 +7675,7 @@ static bool printAarch64NoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
   if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
     return false;
 
-  if (Desc.size() < 16)
+  if (Desc.size() != 16)
     return false;
 
   uint64_t platform =
@@ -7650,9 +7685,8 @@ static bool printAarch64NoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
   W.printNumber("Platform", platform);
   W.printNumber("Version", version);
 
-  if (Desc.size() > 16)
-    W.printString("Additional info",
-                  toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16)));
+  // TODO: print nice description for supported <Platform, Version> tuples (see
+  // printAArch64PAuthABITag).
 
   return true;
 }
@@ -7796,6 +7830,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
     } else if (Name == "ARM") {
       if (printAarch64NoteLLVMStyle<ELFT>(Type, Descriptor, W))
         return Error::success();
+      // TODO: notify about parsing failure, now we just silently print raw
+      // section contents
     }
     if (!Descriptor.empty()) {
       W.printBinaryBlock("Description data", Descriptor);

@@ -642,6 +642,10 @@ public:
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
                            bool &is_complex) override;
 
+  unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
+  unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
+  bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
+
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
   uint32_t IsHomogeneousAggregate(lldb::opaque_compiler_type_t type,
@@ -781,6 +785,10 @@ public:
   CompilerType GetAtomicType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                  unsigned key, bool isAddressDiscriminated,
+                                  unsigned extraDiscriminator) override;
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 

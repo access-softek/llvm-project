@@ -1284,6 +1284,68 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
   return error;
 }
 
+std::optional<std::pair<uint64_t, uint64_t>>
+ObjectFileELF::ParseGNUPropertyAArch64PAuthABI() {
+  // TODO: store parsing results in some kind of cache to avoid recurrent
+  // parsing on multiple calls
+  assert(m_arch_spec.GetMachine() == llvm::Triple::aarch64);
+
+  SectionList *SL = GetSectionList();
+  if (SL == nullptr)
+    return std::nullopt;
+
+  lldb::SectionSP GNUPropSecSP =
+      SL->FindSectionByName(ConstString(".note.gnu.property"));
+  if (GNUPropSecSP == nullptr)
+    return std::nullopt;
+
+  DataExtractor Data;
+  lldb::offset_t Length = GNUPropSecSP->GetSectionData(Data);
+  if (Length < 16)
+    return std::nullopt;
+
+  lldb::offset_t Offset = 0;
+  uint32_t NameSz = Data.GetU32(&Offset);
+  if (NameSz != 4)
+    return std::nullopt;
+
+  uint32_t ContentSz = Data.GetU32(&Offset);
+  if (ContentSz + 16 != Length) // the section is ill-formed
+    return std::nullopt;
+  uint32_t SectionType = Data.GetU32(&Offset);
+  if (SectionType != NT_GNU_PROPERTY_TYPE_0)
+    return std::nullopt;
+
+  llvm::StringRef Name = Data.GetCStr(&Offset, NameSz);
+  if (Name != "GNU")
+    return std::nullopt;
+
+  while (Offset < Length) {
+    lldb::offset_t OldOffset = Offset;
+
+    uint32_t FeatureType = Data.GetU32(&Offset);
+    uint32_t Size = Data.GetU32(&Offset);
+    if (OldOffset + 8 != Offset) // there were not enough bytes
+      return std::nullopt;
+    if (FeatureType != GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
+      Offset += Size;
+      Offset =
+          llvm::alignTo(Offset, (uint64_t(1) << GNUPropSecSP->GetLog2Align()));
+      continue;
+    }
+    if (Size != 16)
+      return std::nullopt;
+
+    uint64_t PAuthABIPlatform = Data.GetU64(&Offset);
+    uint64_t PAuthABIVersion = Data.GetU64(&Offset);
+    if (OldOffset + 24 != Offset) // there were not enough bytes
+      return std::nullopt;
+    return std::make_pair(PAuthABIPlatform, PAuthABIVersion);
+  }
+
+  return std::nullopt;
+}
+
 void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
                                        ArchSpec &arch_spec) {
   lldb::offset_t Offset = 0;

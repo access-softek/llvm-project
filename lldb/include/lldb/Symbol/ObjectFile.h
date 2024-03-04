@@ -23,6 +23,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 #include <optional>
+#include <utility>
 
 namespace lldb_private {
 
@@ -330,6 +331,15 @@ public:
   /// Perform relocations on the section if necessary.
   ///
   virtual void RelocateSection(lldb_private::Section *section);
+
+  /// Parse ELF's AArch64 PAuth ABI from GNU property section. If it's missing
+  /// or the object file is not an ELF, return std::nullopt. Define this as a
+  /// virtual function in a base class since direct usage of ObjectFileELF in
+  /// ClangExpressionParser requires linking against the ObjectFileELF plugin.
+  virtual std::optional<std::pair<uint64_t, uint64_t>>
+  ParseGNUPropertyAArch64PAuthABI() {
+    return std::nullopt;
+  }
 
   /// Appends a Symbol for the specified so_addr to the symbol table.
   ///

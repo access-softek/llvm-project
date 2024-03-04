@@ -150,7 +150,7 @@ class AArch64PauthAbiTag final : public SyntheticSection {
 public:
   AArch64PauthAbiTag();
   void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
+  size_t getSize() const override { return 32; };
   bool isNeeded() const override;
 };
 

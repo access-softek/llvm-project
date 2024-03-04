@@ -521,13 +521,18 @@ template <class ELFT> void elf::createSyntheticSections() {
   in.iplt = std::make_unique<IpltSection>();
   add(*in.iplt);
 
-  if (config->andFeatures)
+  if (config->andFeatures || ctx.aarch64PauthAbiTag.has_value())
     add(*make<GnuPropertySection>());
 
-  if (!ctx.aarch64PauthAbiTag.empty()) {
-    in.aarch64PauthAbiTag = std::make_unique<AArch64PauthAbiTag>();
-    add(*in.aarch64PauthAbiTag);
-  }
+  // TODO: alternative PAuth ELF marking way
+  // To be implemented after the following PRs are merged:
+  // - https://github.com/ARM-software/abi-aa/pull/240
+  // - https://github.com/llvm/llvm-project/pull/72714
+  //
+  // if (!ctx.aarch64PauthAbiTag.empty()) {
+  //   in.aarch64PauthAbiTag = std::make_unique<AArch64PauthAbiTag>();
+  //   add(*in.aarch64PauthAbiTag);
+  // }
 
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker

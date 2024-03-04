@@ -316,6 +316,9 @@ class CGDebugInfo {
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
+  /// A helper function to collect debug info for ptrauth_struct attribute.
+  llvm::DINodeArray CollectPtrAuthStructAnnotations(const RecordDecl *RD);
+
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
                                 uint64_t offsetInBits, uint32_t AlignInBits,

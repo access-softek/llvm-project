@@ -27,6 +27,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include <array>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -492,7 +493,7 @@ struct Ctx {
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
-  SmallVector<uint8_t, 0> aarch64PauthAbiTag;
+  std::optional<std::array<uint8_t, 16>> aarch64PauthAbiTag;
 };
 
 LLVM_LIBRARY_VISIBILITY extern Ctx ctx;

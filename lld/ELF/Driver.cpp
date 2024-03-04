@@ -2662,7 +2662,7 @@ static void getAarch64PauthInfo() {
 
   auto NonEmptyIt = std::find_if(
       ctx.objectFiles.begin(), ctx.objectFiles.end(),
-      [](const ELFFileBase *f) { return !f->aarch64PauthAbiTag.empty(); });
+      [](const ELFFileBase *f) { return f->aarch64PauthAbiTag.has_value(); });
   if (NonEmptyIt == ctx.objectFiles.end())
     return;
 
@@ -2670,9 +2670,9 @@ static void getAarch64PauthInfo() {
   StringRef F1 = (*NonEmptyIt)->getName();
   for (ELFFileBase *F : ArrayRef(ctx.objectFiles)) {
     StringRef F2 = F->getName();
-    const SmallVector<uint8_t, 0> &D1 = ctx.aarch64PauthAbiTag;
-    const SmallVector<uint8_t, 0> &D2 = F->aarch64PauthAbiTag;
-    if (D1.empty() != D2.empty()) {
+    std::optional<std::array<uint8_t, 16>> D1 = ctx.aarch64PauthAbiTag;
+    std::optional<std::array<uint8_t, 16>> D2 = F->aarch64PauthAbiTag;
+    if (D1.has_value() != D2.has_value()) {
       auto Helper = [](StringRef Report, const Twine &Msg) {
         if (Report == "warning")
           warn(Msg);
@@ -2681,19 +2681,19 @@ static void getAarch64PauthInfo() {
       };
 
       Helper(config->zPauthReport,
-             (D1.empty() ? F1.str() : F2.str()) +
+             (D1.has_value() ? F2.str() : F1.str()) +
                  " has no AArch64 PAuth compatibility info while " +
-                 (D1.empty() ? F2.str() : F1.str()) +
+                 (D1.has_value() ? F1.str() : F2.str()) +
                  " has one; either all or no input files must have it");
     }
 
-    if (!D1.empty() && !D2.empty() &&
-        !std::equal(D1.begin(), D1.end(), D2.begin(), D2.end()))
+    if (D1.has_value() && D2.has_value() &&
+        !std::equal(D1->begin(), D1->end(), D2->begin(), D2->end()))
       errorOrWarn(
           "incompatible values of AArch64 PAuth compatibility info found"
           "\n" +
-          F1 + ": 0x" + toHex(ArrayRef(D1.data(), D1.size())) + "\n" + F2 +
-          ": 0x" + toHex(ArrayRef(D2.data(), D2.size())));
+          F1 + ": 0x" + toHex(ArrayRef(D1->data(), D1->size())) + "\n" + F2 +
+          ": 0x" + toHex(ArrayRef(D2->data(), D2->size())));
   }
 }
 
