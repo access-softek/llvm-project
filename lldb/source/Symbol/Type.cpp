@@ -355,6 +355,9 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
+      break;
     }
   }
 }
@@ -416,6 +419,8 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
     }
   }
 
@@ -477,12 +482,13 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
     // If we are a pointer or reference, then this is just a pointer size;
     case eEncodingIsPointerUID:
     case eEncodingIsLValueReferenceUID:
-    case eEncodingIsRValueReferenceUID: {
-      if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
-        m_byte_size = arch.GetAddressByteSize();
-        m_byte_size_has_value = true;
-        return static_cast<uint64_t>(m_byte_size);
-      }
+    case eEncodingIsRValueReferenceUID:
+    case eEncodingIsLLVMPtrAuthUID: {
+    if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
+      m_byte_size = arch.GetAddressByteSize();
+      m_byte_size_has_value = true;
+      return static_cast<uint64_t>(m_byte_size);
+    }
     } break;
   }
   return {};
