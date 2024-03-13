@@ -53,6 +53,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CallingConv.h"
@@ -1161,6 +1162,20 @@ void CodeGenModule::Release() {
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 1);
+
+    if (getTriple().isOSLinux() && getTriple().isOSBinFormatELF()) {
+      uint64_t PAuthABIVersion = 0;
+      for (size_t I = 0; I < sizeof(LangOpts.PointerAuth.Flags); ++I)
+        PAuthABIVersion |= LangOpts.PointerAuth.Flags[I] << I;
+      if (PAuthABIVersion != 0) {
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "aarch64-elf-pauthabi-platform",
+                                  llvm::ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX);
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "aarch64-elf-pauthabi-version",
+                                  PAuthABIVersion);
+      }
+    }
   }
 
   if (CodeGenOpts.StackClashProtector)
