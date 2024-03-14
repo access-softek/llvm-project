@@ -532,6 +532,24 @@ public:
   // implementation on real-world examples.
   std::string OpenACCMacroOverride;
 
+  struct {
+    bool Flags[7] = {false};
+    bool intrinsics() const { return Flags[0]; }
+    bool &intrinsics() { return Flags[0]; }
+    bool calls() const { return Flags[1]; }
+    bool &calls() { return Flags[1]; }
+    bool returns() const { return Flags[2]; }
+    bool &returns() { return Flags[2]; }
+    bool authTraps() const { return Flags[3]; }
+    bool &authTraps() { return Flags[3]; }
+    bool vtptrAddressDiscrimination() const { return Flags[4]; }
+    bool &vtptrAddressDiscrimination() { return Flags[4]; }
+    bool vtptrTypeDiscrimination() const { return Flags[5]; }
+    bool &vtptrTypeDiscrimination() { return Flags[5]; }
+    bool initFini() const { return Flags[6]; }
+    bool &initFini() { return Flags[6]; }
+  } PointerAuth;
+
   LangOptions();
 
   /// Set language defaults for the given input language and

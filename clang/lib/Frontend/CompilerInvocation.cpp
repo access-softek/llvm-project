@@ -3293,6 +3293,37 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
     Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
+static void GeneratePointerAuthArgs(const LangOptions &Opts,
+                                    ArgumentConsumer Consumer) {
+  if (Opts.PointerAuth.intrinsics())
+    GenerateArg(Consumer, OPT_fptrauth_intrinsics);
+  if (Opts.PointerAuth.calls())
+    GenerateArg(Consumer, OPT_fptrauth_calls);
+  if (Opts.PointerAuth.returns())
+    GenerateArg(Consumer, OPT_fptrauth_returns);
+  if (Opts.PointerAuth.authTraps())
+    GenerateArg(Consumer, OPT_fptrauth_auth_traps);
+  if (Opts.PointerAuth.vtptrAddressDiscrimination())
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
+  if (Opts.PointerAuth.vtptrTypeDiscrimination())
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuth.initFini())
+    GenerateArg(Consumer, OPT_fptrauth_init_fini);
+}
+
+static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
+                                 DiagnosticsEngine &Diags) {
+  Opts.PointerAuth.intrinsics() = Args.hasArg(OPT_fptrauth_intrinsics);
+  Opts.PointerAuth.calls() = Args.hasArg(OPT_fptrauth_calls);
+  Opts.PointerAuth.returns() = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuth.authTraps() = Args.hasArg(OPT_fptrauth_auth_traps);
+  Opts.PointerAuth.vtptrAddressDiscrimination() =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
+  Opts.PointerAuth.vtptrTypeDiscrimination() =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuth.initFini() = Args.hasArg(OPT_fptrauth_init_fini);
+}
+
 /// Check if input file kind and language standard are compatible.
 static bool IsInputCompatibleWithStandard(InputKind IK,
                                           const LangStandard &S) {
@@ -4610,6 +4641,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  ParsePointerAuthArgs(LangOpts, Args, Diags);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
@@ -4841,6 +4873,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);
   GenerateTargetArgs(getTargetOpts(), Consumer);
   GenerateHeaderSearchArgs(getHeaderSearchOpts(), Consumer);
+  GeneratePointerAuthArgs(getLangOpts(), Consumer);
   GenerateAPINotesArgs(getAPINotesOpts(), Consumer);
   GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
   GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
