@@ -31,6 +31,7 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <tuple>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -903,11 +904,14 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
 // of zero or more type-length-value fields. We want to find a field of a
 // certain type. It seems a bit too much to just store a 32-bit value, perhaps
 // the ABI is unnecessarily complicated.
-template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
+template <class ELFT>
+static std::pair<uint32_t, std::optional<std::array<uint8_t, 16>>>
+readGnuProperty(const InputSection &sec) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
 
   uint32_t featuresSet = 0;
+  std::optional<std::array<uint8_t, 16>> aarch64PauthAbiTag;
   ArrayRef<uint8_t> data = sec.content();
   auto reportFatal = [&](const uint8_t *place, const char *msg) {
     fatal(toString(sec.file) + ":(" + sec.name + "+0x" +
@@ -949,6 +953,21 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
         if (size < 4)
           reportFatal(place, "FEATURE_1_AND entry is too short");
         featuresSet |= read32<ELFT::TargetEndianness>(desc.data());
+      } else if (config->emachine == EM_AARCH64 &&
+                 type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
+        if (aarch64PauthAbiTag != std::nullopt)
+          reportFatal(data.data(),
+                      "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH properties "
+                      "are not allowed");
+        if (size != 16)
+          reportFatal(
+              data.data(),
+              "size of GNU_PROPERTY_AARCH64_FEATURE_PAUTH property must be 16");
+        aarch64PauthAbiTag = std::array<uint8_t, 16>{};
+        memcpy(aarch64PauthAbiTag->data(), desc.data(),
+               aarch64PauthAbiTag->size());
+        ctx.aarch64PauthElfMarkingWay =
+            Ctx::AArch64PAuthELFMarkingWay::GNUProperty;
       }
 
       // Padding is present in the note descriptor, if necessary.
@@ -959,7 +978,7 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
     data = data.slice(nhdr->getSize(sec.addralign));
   }
 
-  return featuresSet;
+  return {featuresSet, aarch64PauthAbiTag};
 }
 
 // Extract compatibility info for aarch64 pointer authentication from the
@@ -989,14 +1008,16 @@ static void readAArch64PauthAbiTag(const InputSection &sec, ObjFile<ELFT> &f) {
                 note.getName() + " (ARM expected)");
 
   ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
-  if (desc.size() < 16) {
+  if (desc.size() != 16) {
     errorOrWarn(toString(&sec) +
-                ": AArch64 PAuth compatibility info is too short "
-                "(at least 16 bytes expected)");
+                ": invalid AArch64 PAuth compatibility info length "
+                "(exactly 16 bytes expected)");
     return;
   }
 
-  f.aarch64PauthAbiTag = desc;
+  f.aarch64PauthAbiTag = std::array<uint8_t, 16>{};
+  memcpy(f.aarch64PauthAbiTag->data(), desc.data(),
+         f.aarch64PauthAbiTag->size());
 }
 
 template <class ELFT>
@@ -1053,7 +1074,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // .note.gnu.property containing a single AND'ed bitmap, we discard an input
     // file's .note.gnu.property section.
     if (name == ".note.gnu.property") {
-      this->andFeatures = readAndFeatures<ELFT>(InputSection(*this, sec, name));
+      std::tie(this->andFeatures, this->aarch64PauthAbiTag) =
+          readGnuProperty<ELFT>(InputSection(*this, sec, name));
       return &InputSection::discarded;
     }
 

@@ -576,10 +576,13 @@ template <class ELFT> void elf::createSyntheticSections() {
   in.iplt = std::make_unique<IpltSection>();
   add(*in.iplt);
 
-  if (config->andFeatures)
+  if (config->andFeatures || (ctx.aarch64PauthAbiTag.has_value() &&
+                              ctx.aarch64PauthElfMarkingWay ==
+                                  Ctx::AArch64PAuthELFMarkingWay::GNUProperty))
     add(*make<GnuPropertySection>());
 
-  if (!ctx.aarch64PauthAbiTag.empty()) {
+  if (ctx.aarch64PauthAbiTag.has_value() &&
+      ctx.aarch64PauthElfMarkingWay == Ctx::AArch64PAuthELFMarkingWay::Note) {
     in.aarch64PauthAbiTag = std::make_unique<AArch64PauthAbiTag>();
     add(*in.aarch64PauthAbiTag);
   }

@@ -2591,7 +2591,7 @@ static void readSecurityNotes() {
   StringRef referenceFileName;
   if (config->emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
-      return !f->aarch64PauthAbiTag.empty();
+      return f->aarch64PauthAbiTag.has_value();
     });
     if (it != ctx.objectFiles.end()) {
       ctx.aarch64PauthAbiTag = (*it)->aarch64PauthAbiTag;
@@ -2636,10 +2636,10 @@ static void readSecurityNotes() {
     }
     config->andFeatures &= features;
 
-    if (ctx.aarch64PauthAbiTag.empty())
+    if (!ctx.aarch64PauthAbiTag.has_value())
       continue;
 
-    if (f->aarch64PauthAbiTag.empty()) {
+    if (!f->aarch64PauthAbiTag.has_value()) {
       reportMissingFeature(config->zPauthReport,
                            toString(f) +
                                ": -z pauth-report: file does not have AArch64 "
@@ -2648,14 +2648,14 @@ static void readSecurityNotes() {
       continue;
     }
 
-    if (ctx.aarch64PauthAbiTag != f->aarch64PauthAbiTag)
+    if (*ctx.aarch64PauthAbiTag != *f->aarch64PauthAbiTag)
       errorOrWarn(
           "incompatible values of AArch64 PAuth compatibility info found"
           "\n>>> " +
           referenceFileName + ": 0x" +
-          toHex(ctx.aarch64PauthAbiTag, /*LowerCase=*/true) + "\n>>> " +
+          toHex(*ctx.aarch64PauthAbiTag, /*LowerCase=*/true) + "\n>>> " +
           toString(f) + ": 0x" +
-          toHex(f->aarch64PauthAbiTag, /*LowerCase=*/true));
+          toHex(*f->aarch64PauthAbiTag, /*LowerCase=*/true));
   }
 
   // Force enable Shadow Stack.

@@ -218,7 +218,7 @@ protected:
 public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
-  ArrayRef<uint8_t> aarch64PauthAbiTag;
+  std::optional<std::array<uint8_t, 16>> aarch64PauthAbiTag;
 };
 
 // .o file.

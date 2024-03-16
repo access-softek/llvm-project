@@ -27,6 +27,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include <array>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -498,7 +499,11 @@ struct Ctx {
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
-  ArrayRef<uint8_t> aarch64PauthAbiTag;
+  std::optional<std::array<uint8_t, 16>> aarch64PauthAbiTag;
+  enum class AArch64PAuthELFMarkingWay {
+    GNUProperty,
+    Note,
+  } aarch64PauthElfMarkingWay = AArch64PAuthELFMarkingWay::Note;
 };
 
 LLVM_LIBRARY_VISIBILITY extern Ctx ctx;

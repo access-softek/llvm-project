@@ -7,7 +7,7 @@
 # RUN: ld.lld -shared tag1.o tag1a.o -o tagok.so
 # RUN: llvm-readelf -n tagok.so | FileCheck --check-prefix OK %s
 
-# OK: AArch64 PAuth ABI tag: platform 0x2a, version 0x1
+# OK: AArch64 PAuth ABI tag: platform 0x2a (unknown), version 0x1
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag2.s -o tag2.o
 # RUN: not ld.lld tag1.o tag1a.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
@@ -21,7 +21,7 @@
 
 # ERR2:      error: errs.o:(.note.AARCH64-PAUTH-ABI-tag): invalid type field value 42 (1 expected)
 # ERR2-NEXT: error: errs.o:(.note.AARCH64-PAUTH-ABI-tag): invalid name field value XXX (ARM expected)
-# ERR2-NEXT: error: errs.o:(.note.AARCH64-PAUTH-ABI-tag): AArch64 PAuth compatibility info is too short (at least 16 bytes expected)
+# ERR2-NEXT: error: errs.o:(.note.AARCH64-PAUTH-ABI-tag): invalid AArch64 PAuth compatibility info length (exactly 16 bytes expected)
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-short.s -o short.o
 # RUN: not ld.lld short.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR3 %s
