@@ -1799,6 +1799,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
                     options::OPT_fno_ptrauth_init_fini);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_got,
+                    options::OPT_fno_ptrauth_got);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
