@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -892,4 +894,21 @@ VersionTuple Module::getDarwinTargetVariantSDKVersion() const {
 
 void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
+}
+
+bool Module::hasELFSignedGOT() const {
+  if (!Triple(TargetTriple).isOSBinFormatELF())
+    return false;
+  uint64_t PAuthABIPlatform = -1;
+  if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
+          getModuleFlag("aarch64-elf-pauthabi-platform")))
+    PAuthABIPlatform = PAP->getZExtValue();
+  if (PAuthABIPlatform != ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX)
+    return false;
+  uint64_t PAuthABIVersion = -1;
+  if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
+          getModuleFlag("aarch64-elf-pauthabi-version")))
+    PAuthABIVersion = PAV->getZExtValue();
+  return (PAuthABIVersion &
+          (1 << ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT)) != 0;
 }

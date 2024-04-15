@@ -82,6 +82,9 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_TLSDESC_PAGE:        return ":tlsdesc:";
   case VK_SECREL_LO12:         return ":secrel_lo12:";
   case VK_SECREL_HI12:         return ":secrel_hi12:";
+  case VK_GOT_AUTH:            return ":got_auth:";
+  case VK_GOT_AUTH_PAGE:       return ":got_auth:";
+  case VK_GOT_AUTH_LO12:       return ":got_auth_lo12:";
   default:
     llvm_unreachable("Invalid ELF symbol kind");
   }
