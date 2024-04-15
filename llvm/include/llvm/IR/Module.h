@@ -1062,6 +1062,12 @@ public:
 
   /// Set the target variant version build SDK version metadata.
   void setDarwinTargetVariantSDKVersion(VersionTuple Version);
+
+  /// Check if the module is compiled with signed GOT.
+  /// @returns true if and only if aarch64-elf-pauthabi-platform module flag
+  /// equals AARCH64_PAUTH_PLATFORM_LLVM_LINUX and aarch64-elf-pauthabi-version
+  /// module flag has AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT bit set.
+  bool hasELFSignedGOT() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
