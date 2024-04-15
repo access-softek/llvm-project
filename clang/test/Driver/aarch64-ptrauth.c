@@ -25,9 +25,12 @@
 // RUN: %clang -### -c --target=aarch64 -fno-ptrauth-init-fini -fptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=INITFINI
 // INITFINI: "-cc1"{{.*}} "-fptrauth-init-fini"
 
+// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-got -fptrauth-got %s 2>&1 | FileCheck %s --check-prefix=GOT
+// GOT: "-cc1"{{.*}} "-fptrauth-got"
+
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=ERR
+// RUN:   -fptrauth-init-fini -fptrauth-got %s 2>&1 | FileCheck %s --check-prefix=ERR
 // ERR:      error: unsupported option '-fptrauth-intrinsics' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-calls' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-returns' for target '{{.*}}'
@@ -35,3 +38,4 @@
 // ERR-NEXT: error: unsupported option '-fptrauth-vtable-pointer-address-discrimination' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-vtable-pointer-type-discrimination' for target '{{.*}}'
 // ERR-NEXT: error: unsupported option '-fptrauth-init-fini' for target '{{.*}}'
+// ERR-NEXT: error: unsupported option '-fptrauth-got' for target '{{.*}}'

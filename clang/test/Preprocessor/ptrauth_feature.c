@@ -4,56 +4,72 @@
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-got | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,GOT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-got | \
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,GOT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-got | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,GOT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,NORETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-got | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,NORETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,GOT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-got | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,GOT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-got | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,INITFINI,GOT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
-// RUN:   -fptrauth-vtable-pointer-type-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-got | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI,GOT
+
+// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN:   -fptrauth-intrinsics \
+// RUN:   -fptrauth-calls \
+// RUN:   -fptrauth-returns \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-init-fini | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,NOGOT
 
 #if __has_feature(ptrauth_intrinsics)
 // INTRIN: has_ptrauth_intrinsics
@@ -110,4 +126,12 @@ void has_ptrauth_init_fini() {}
 #else
 // NOINITFINI: no_ptrauth_init_fini
 void no_ptrauth_init_fini() {}
+#endif
+
+#if __has_feature(ptrauth_got)
+// GOT: has_ptrauth_got
+void has_ptrauth_got() {}
+#else
+// NOGOT: no_ptrauth_got
+void no_ptrauth_got() {}
 #endif
