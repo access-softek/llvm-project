@@ -1704,6 +1704,10 @@ let Predicates = [HasPAuth] in {
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
+  def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
+               Sched<[WriteI, ReadI]> {
+    let Defs = [X16];
+  }
 }
 
 // v9.5-A pointer authentication extensions
