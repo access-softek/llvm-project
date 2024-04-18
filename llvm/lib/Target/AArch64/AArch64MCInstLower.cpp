@@ -184,9 +184,16 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
                                                     MCSymbol *Sym) const {
   uint32_t RefFlags = 0;
 
-  if (MO.getTargetFlags() & AArch64II::MO_GOT)
-    RefFlags |= AArch64MCExpr::VK_GOT;
-  else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
+  if (MO.getTargetFlags() & AArch64II::MO_GOT) {
+    // TODO: it's probably better to introduce MO_GOT_AUTH or smth and avoid
+    // running M->hasELFSignedGOT() every time, but existing flags already cover
+    // all 12 bits of SubReg_TargetFlags field in MachineOperand, and making the
+    // field wider breaks static assertions.
+    const Module *M =
+        MO.getParent()->getParent()->getParent()->getFunction().getParent();
+    RefFlags |= (M->hasELFSignedGOT() ? AArch64MCExpr::VK_GOT_AUTH
+                                      : AArch64MCExpr::VK_GOT);
+  } else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     TLSModel::Model Model;
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
