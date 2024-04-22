@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=0 -fast-isel=1 -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel=1              -relocation-model=pic -mattr=+pauth -o - %s | FileCheck %s
 
+; RUN: llc -mtriple=aarch64-none-elf -code-model=tiny -mattr=+pauth -o - %s | FileCheck --check-prefix=CHECK-TINY %s
+
 ;; Note: for FastISel, we fall back to SelectionDAG
 
 declare extern_weak dso_local i32 @var()
@@ -16,19 +18,28 @@ define ptr @foo() {
 ; CHECK: add x[[ADDRHI]], x[[ADDRHI]], :got_auth_lo12:var
 ; CHECK: ldr x0, [x[[ADDRHI]]]
 ; CHECK: autia x0, x[[ADDRHI]]
+
+; CHECK-TINY: adr x16, :got_auth:var
+; CHECK-TINY: ldr x0, [x16]
+; CHECK-TINY: autia x0, x16
 }
 
 @arr_var = extern_weak global [10 x i32]
 
 define ptr @bar() {
   %addr = getelementptr [10 x i32], ptr @arr_var, i32 0, i32 5
+  ret ptr %addr
 
 ; CHECK: adrp x[[ADDRHI:[0-9]+]], :got_auth:arr_var
 ; CHECK: add x[[ADDRHI]], x[[ADDRHI]], :got_auth_lo12:arr_var
 ; CHECK: ldr [[BASE:x[0-9]+]], [x[[ADDRHI]]]
 ; CHECK: autda [[BASE]], x[[ADDRHI]]
 ; CHECK: add x0, [[BASE]], #20
-  ret ptr %addr
+
+; CHECK-TINY: adr x16, :got_auth:arr_var
+; CHECK-TINY: ldr [[BASE:x[0-9]+]], [x16]
+; CHECK-TINY: autda [[BASE]], x16
+; CHECK-TINY: add x0, [[BASE]], #20
 }
 
 !llvm.module.flags = !{!0, !1}
