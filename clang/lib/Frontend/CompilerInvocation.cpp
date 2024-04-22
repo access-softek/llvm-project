@@ -3319,11 +3319,34 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
                                     ArgumentConsumer Consumer) {
   if (Opts.PointerAuthIntrinsics)
     GenerateArg(Consumer, OPT_fptrauth_intrinsics);
+  if (Opts.PointerAuthCalls)
+    GenerateArg(Consumer, OPT_fptrauth_calls);
+  if (Opts.PointerAuthReturns)
+    GenerateArg(Consumer, OPT_fptrauth_returns);
+  if (Opts.PointerAuthAuthTraps)
+    GenerateArg(Consumer, OPT_fptrauth_auth_traps);
+  if (Opts.PointerAuthVTPtrAddressDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
+  if (Opts.PointerAuthVTPtrTypeDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthInitFini)
+    GenerateArg(Consumer, OPT_fptrauth_init_fini);
+  if (Opts.PointerAuthELFGOT)
+    GenerateArg(Consumer, OPT_fptrauth_elf_got);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
                                  DiagnosticsEngine &Diags) {
   Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
+  Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
+  Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
+  Opts.PointerAuthVTPtrAddressDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
+  Opts.PointerAuthVTPtrTypeDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
+  Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -4677,6 +4700,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParsePointerAuthArgs(LangOpts, Args, Diags);
+  LangOpts.PointerAuthELFGOT &= T.isOSBinFormatELF();
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);

@@ -10,6 +10,14 @@
 // CHECK-ERROR: error: ILP32 8 byte absolute data relocation not supported (LP64 eqv: ABS64)
 // CHECK-ERROR: ^
 
+        .xword sym@AUTH(da,42)
+// CHECK-ERROR: error: ILP32 8 byte absolute data relocation not supported (LP64 eqv: AUTH_ABS64)
+// CHECK-ERROR: ^
+
+        .xword sym@AUTH(da,42,addr)
+// CHECK-ERROR: error: ILP32 8 byte absolute data relocation not supported (LP64 eqv: AUTH_ABS64)
+// CHECK-ERROR: ^
+
         movz x7, #:abs_g3:some_label
 // CHECK-ERROR: error: ILP32 absolute MOV relocation not supported (LP64 eqv: MOVW_UABS_G3)
 // CHECK-ERROR:        movz x7, #:abs_g3:some_label
@@ -79,6 +87,14 @@
 // CHECK-ERROR: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: LD64_GOT_LO12_NC)
 // CHECK-ERROR: ^
 
+   ldr x24, [x23, #:got_auth_lo12:sym]
+// CHECK-ERROR: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: AUTH_GOT_LO12_NC)
+// CHECK-ERROR: ^
+
+   add x24, x23, #:got_auth_lo12:sym
+// CHECK-ERROR: error: ILP32 ADD AUTH relocation not supported (LP64 eqv: AUTH_GOT_ADD_LO12_NC)
+// CHECK-ERROR: ^
+
    ldr x24, [x23, :gottprel_lo12:sym]
 // CHECK-ERROR: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: TLSIE_LD64_GOTTPREL_LO12_NC)
 // CHECK-ERROR: ^
@@ -94,4 +110,12 @@
 
    ldr x24, [x23, :gottprel_lo12:sym]
 // CHECK-ERROR: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: TLSIE_LD64_GOTTPREL_LO12_NC)
+// CHECK-ERROR: ^
+
+   ldr x24, :got_auth:sym
+// CHECK-ERROR: error: ILP32 LDR AUTH relocation not supported (LP64 eqv: AUTH_GOT_LD_PREL19)
+// CHECK-ERROR: ^
+
+   adr x24, :got_auth:sym
+// CHECK-ERROR: error: ILP32 ADR AUTH relocation not supported (LP64 eqv: AUTH_GOT_ADR_PREL21)
 // CHECK-ERROR: ^
