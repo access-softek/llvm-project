@@ -220,9 +220,17 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     case TLSModel::LocalDynamic:
       RefFlags |= AArch64MCExpr::VK_DTPREL;
       break;
-    case TLSModel::GeneralDynamic:
-      RefFlags |= AArch64MCExpr::VK_TLSDESC;
+    case TLSModel::GeneralDynamic: {
+      // TODO: it's probably better to introduce MO_GOT_AUTH or smth and avoid
+      // running M->hasELFSignedGOT() every time, but existing flags already
+      // cover all 12 bits of SubReg_TargetFlags field in MachineOperand, and
+      // making the field wider breaks static assertions.
+      const Module *M =
+          MO.getParent()->getParent()->getParent()->getFunction().getParent();
+      RefFlags |= M->hasELFSignedGOT() ? AArch64MCExpr::VK_TLSDESC_AUTH
+                                       : AArch64MCExpr::VK_TLSDESC;
       break;
+    }
     }
   } else if (MO.getTargetFlags() & AArch64II::MO_PREL) {
     RefFlags |= AArch64MCExpr::VK_PREL;
