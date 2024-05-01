@@ -1324,7 +1324,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
   bool isRISCV = config->emachine == EM_RISCV;
 
-  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
+  if (oneof<R_AARCH64_TLSDESC_PAGE, R_AARCH64_AUTH_TLSDESC_PAGE, R_TLSDESC,
+            RelExpr::R_AARCH64_AUTH_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
@@ -1332,6 +1333,9 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     if (expr != R_TLSDESC_CALL) {
       if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
         sym.setFlags(NEEDS_TLSDESC);
+      if (oneof<R_AARCH64_AUTH_TLSDESC_PAGE, RelExpr::R_AARCH64_AUTH_TLSDESC>(
+              expr))
+        sym.setFlags(NEEDS_TLSDESC_AUTH);
       c.addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
@@ -1788,9 +1792,13 @@ void elf::postScanRelocations() {
 
     if (flags & NEEDS_TLSDESC) {
       got->addTlsDescEntry(sym);
+      RelType tlsDescRel = target->tlsDescRel;
+      if (flags & NEEDS_TLSDESC_AUTH) {
+        assert(config->emachine == EM_AARCH64);
+        tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
+      }
       mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          target->tlsDescRel, *got, got->getTlsDescOffset(sym), sym,
-          target->tlsDescRel);
+          tlsDescRel, *got, got->getTlsDescOffset(sym), sym, tlsDescRel);
     }
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);
