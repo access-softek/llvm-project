@@ -4,56 +4,72 @@
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-elf-personality | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,PERSONALITY
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-elf-personality | \
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,PERSONALITY
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-elf-personality | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,PERSONALITY
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,NORETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-elf-personality | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,NORETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,PERSONALITY
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-elf-personality | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,PERSONALITY
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
-// RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,INITFINI
+// RUN:   -fptrauth-init-fini \
+// RUN:   -fptrauth-elf-personality | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,INITFINI,PERSONALITY
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
-// RUN:   -fptrauth-vtable-pointer-type-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-elf-personality | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI,PERSONALITY
+
+// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN:   -fptrauth-intrinsics \
+// RUN:   -fptrauth-calls \
+// RUN:   -fptrauth-returns \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-init-fini | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI,NOPERSONALITY
 
 #if __has_feature(ptrauth_intrinsics)
 // INTRIN: has_ptrauth_intrinsics
@@ -110,4 +126,12 @@ void has_ptrauth_init_fini() {}
 #else
 // NOINITFINI: no_ptrauth_init_fini
 void no_ptrauth_init_fini() {}
+#endif
+
+#if __has_feature(ptrauth_elf_personality)
+// PERSONALITY: has_ptrauth_elf_personality
+void has_ptrauth_elf_personality() {}
+#else
+// NOPERSONALITY: no_ptrauth_elf_personality
+void no_ptrauth_elf_personality() {}
 #endif

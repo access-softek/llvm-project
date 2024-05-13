@@ -29,6 +29,10 @@ public:
                                           const MCValue &MV, int64_t Offset,
                                           MachineModuleInfo *MMI,
                                           MCStreamer &Streamer) const override;
+
+  void emitPersonalityValueImpl(MCStreamer &Streamer, const DataLayout &DL,
+                                const MCSymbol *Sym,
+                                const MachineModuleInfo *MMI) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.
