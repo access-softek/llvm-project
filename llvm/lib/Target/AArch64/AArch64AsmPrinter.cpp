@@ -135,6 +135,13 @@ public:
   unsigned emitPtrauthDiscriminator(uint16_t Disc, unsigned AddrDisc,
                                     unsigned &InstsEmitted);
 
+  // Emit the sequence for LOADauthptrstatic
+  void LowerLOADauthptrstatic(const MachineInstr &MI);
+
+  // Emit the sequence for LOADgotPAC/MOVaddrPAC (either GOT adrp-ldr or
+  // adrp-add followed by PAC sign)
+  void LowerMOVaddrPAC(const MachineInstr &MI);
+
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
@@ -1579,6 +1586,173 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
 }
 
+void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
+  unsigned DstReg = MI.getOperand(0).getReg();
+  MachineOperand GAOp = MI.getOperand(1);
+  uint64_t KeyC = MI.getOperand(2).getImm();
+  assert(KeyC <= AArch64PACKey::LAST && "Key is out of range");
+  auto Key = (AArch64PACKey::ID)KeyC;
+  uint64_t Disc = MI.getOperand(3).getImm();
+  assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
+
+  const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+  uint64_t Offset = GAOp.getOffset();
+
+  // Emit instruction sequence like the following:
+  //   ADRP x16, symbol$auth_ptr$key$disc
+  //   LDR x16, [x16, :lo12:symbol$auth_ptr$key$disc]
+  //
+  // Where the $auth_ptr$ symbol is the stub slot containing the signed pointer
+  // to symbol.
+  assert(TM.getTargetTriple().isOSBinFormatELF() &&
+         "LOADauthptrstatic only implemented on ELF");
+  assert(Offset == 0 &&
+         "Non-zero offset for $auth_ptr$ stub slots is not supported");
+
+  const auto &TLOF =
+      static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
+  MCSymbol *AuthPtrStubSym =
+      TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+
+  MachineOperand StubMOHi =
+      MachineOperand::CreateMCSymbol(AuthPtrStubSym, AArch64II::MO_PAGE);
+  MachineOperand StubMOLo = MachineOperand::CreateMCSymbol(
+      AuthPtrStubSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  MCOperand StubMCHi, StubMCLo;
+
+  MCInstLowering.lowerOperand(StubMOHi, StubMCHi);
+  MCInstLowering.lowerOperand(StubMOLo, StubMCLo);
+
+  EmitToStreamer(
+      *OutStreamer,
+      MCInstBuilder(AArch64::ADRP).addReg(DstReg).addOperand(StubMCHi));
+
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRXui)
+                                   .addReg(DstReg)
+                                   .addReg(DstReg)
+                                   .addOperand(StubMCLo));
+}
+
+void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
+  unsigned InstsEmitted = 0;
+
+  const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
+  MachineOperand GAOp = MI.getOperand(0);
+  uint64_t KeyC = MI.getOperand(1).getImm();
+  assert(KeyC <= AArch64PACKey::LAST && "Key is out of range");
+  auto Key = (AArch64PACKey::ID)KeyC;
+  unsigned AddrDisc = MI.getOperand(2).getReg();
+  uint64_t Disc = MI.getOperand(3).getImm();
+  assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
+
+  uint64_t Offset = GAOp.getOffset();
+  GAOp.setOffset(0);
+
+  // Emit:
+  // target materialization:
+  //   via GOT:
+  //     adrp x16, :got:target
+  //     ldr x16, [x16, :got_lo12:target]
+  //     add x16, x16, #<offset> ; if offset != 0; up to 3 depending on width
+  //
+  //   direct:
+  //     adrp x16, target
+  //     add x16, x16, :lo12:target
+  //     add x16, x16, #<offset> ; if offset != 0; up to 3 depending on width
+  //
+  // signing:
+  // - 0 discriminator:
+  //     paciza x16
+  // - Non-0 discriminator, no address discriminator:
+  //     mov x17, #Disc
+  //     pacia x16, x17
+  // - address discriminator (with potentially folded immediate discriminator):
+  //     pacia x16, xAddrDisc
+
+  MachineOperand GAMOHi(GAOp), GAMOLo(GAOp);
+  MCOperand GAMCHi, GAMCLo;
+
+  GAMOHi.setTargetFlags(AArch64II::MO_PAGE);
+  GAMOLo.setTargetFlags(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  if (IsGOTLoad) {
+    GAMOHi.addTargetFlag(AArch64II::MO_GOT);
+    GAMOLo.addTargetFlag(AArch64II::MO_GOT);
+  }
+
+  MCInstLowering.lowerOperand(GAMOHi, GAMCHi);
+  MCInstLowering.lowerOperand(GAMOLo, GAMCLo);
+
+  EmitToStreamer(
+      *OutStreamer,
+      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
+  ++InstsEmitted;
+
+  if (IsGOTLoad) {
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRXui)
+                                     .addReg(AArch64::X16)
+                                     .addReg(AArch64::X16)
+                                     .addOperand(GAMCLo));
+    ++InstsEmitted;
+  } else {
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXri)
+                                     .addReg(AArch64::X16)
+                                     .addReg(AArch64::X16)
+                                     .addOperand(GAMCLo)
+                                     .addImm(0));
+    ++InstsEmitted;
+  }
+
+  if (Offset) {
+    if (!isUInt<32>(Offset))
+      report_fatal_error("ptrauth global offset too large, 32bit max encoding");
+
+    for (int BitPos = 0; BitPos < 32 && (Offset >> BitPos); BitPos += 12) {
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXri)
+                                       .addReg(AArch64::X16)
+                                       .addReg(AArch64::X16)
+                                       .addImm((Offset >> BitPos) & 0xfff)
+                                       .addImm(AArch64_AM::getShifterImm(
+                                           AArch64_AM::LSL, BitPos)));
+      ++InstsEmitted;
+    }
+  }
+
+  unsigned DiscReg = AddrDisc;
+  if (Disc) {
+    if (AddrDisc != AArch64::XZR) {
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::XZR)
+                                       .addReg(AddrDisc)
+                                       .addImm(0));
+      ++InstsEmitted;
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKXi)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::X17)
+                                       .addImm(Disc)
+                                       .addImm(/*shift=*/48));
+      ++InstsEmitted;
+    } else {
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVZXi)
+                                       .addReg(AArch64::X17)
+                                       .addImm(Disc)
+                                       .addImm(/*shift=*/0));
+      ++InstsEmitted;
+    }
+    DiscReg = AArch64::X17;
+  }
+
+  auto MIB = MCInstBuilder(getPACOpcodeForKey(Key, DiscReg == AArch64::XZR))
+                 .addReg(AArch64::X16)
+                 .addReg(AArch64::X16);
+  if (DiscReg != AArch64::XZR)
+    MIB.addReg(DiscReg);
+  EmitToStreamer(*OutStreamer, MIB);
+  ++InstsEmitted;
+
+  assert(STI->getInstrInfo()->getInstSizeInBytes(MI) >= InstsEmitted * 4);
+}
+
 const MCExpr *
 AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   MCContext &Ctx = OutContext;
@@ -1768,6 +1942,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutStreamer->emitCFIMTETaggedFrame();
     return;
   }
+
+  case AArch64::LOADauthptrstatic:
+    LowerLOADauthptrstatic(*MI);
+    return;
+
+  case AArch64::LOADgotPAC:
+  case AArch64::MOVaddrPAC:
+    LowerMOVaddrPAC(*MI);
+    return;
 
   case AArch64::BLRA:
     emitPtrauthBranch(MI);

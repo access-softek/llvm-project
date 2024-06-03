@@ -224,6 +224,8 @@ private:
   bool selectJumpTable(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectPtrAuthGlobalValue(MachineInstr &I,
+                                MachineRegisterInfo &MRI) const;
   bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -2840,6 +2842,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
+
+  case TargetOpcode::G_PTRAUTH_GLOBAL_VALUE:
+    return selectPtrAuthGlobalValue(I, MRI);
 
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:
@@ -6571,6 +6576,139 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     return true;
   }
   return false;
+}
+
+// G_PTRAUTH_GLOBAL_VALUE lowering
+
+// We have 3 lowering alternatives to choose from:
+// - MOVaddrPAC: similar to MOVaddr, with added PAC.
+//   If the GV doesn't need a GOT load (i.e., is locally defined)
+//   materialize the pointer using adrp+add+pac.
+//   This is the preferred lowering.
+//
+// - LOADgotPAC: similar to LOADgot, with added PAC.
+//   If the GV needs a GOT load, materialize the pointer using the usual
+//   GOT adrp+ldr, +pac. Pointers in GOT should not be signed, the GOT section
+//   should be read-only (for example, via relro mechanism).
+//
+// - LOADauthptrstatic: similar to LOADgot, but use a
+//   special stub slot instead of a GOT slot.
+//   Load a signed pointer for symbol sym from a stub slot named
+//   sym$auth_ptr$key$disc filled by dynamic linker during relocation resolving.
+//   This usually lowers to adrp+ldr, but also emits an entry into .data with an
+//   @AUTH relocation. This is done in LowerPtrAuthGlobalAddressStatically.
+//
+// All 3 are pseudos that are expand late to longer sequences: this lets us
+// provide integrity guarantees on the to-be-signed intermediate values.
+//
+// LOADauthptrstatic is undesirable because it requires a large section filled
+// with often similarly-signed pointers, making it a good harvesting target.
+// Thus, it's only used for ptrauth references to extern_weak to avoid null
+// checks.
+
+bool AArch64InstructionSelector::selectPtrAuthGlobalValue(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  Register DefReg = I.getOperand(0).getReg();
+  Register Addr = I.getOperand(1).getReg();
+  auto Key = static_cast<AArch64PACKey::ID>(I.getOperand(2).getImm());
+  Register AddrDisc = I.getOperand(3).getReg();
+  uint64_t Disc = I.getOperand(4).getImm();
+  uint64_t Offset = 0;
+
+  if (!MRI.hasOneDef(Addr))
+    return false;
+
+  // First match any offset we take from the real global.
+  const MachineInstr *DefMI = &*MRI.def_instr_begin(Addr);
+  if (DefMI->getOpcode() == TargetOpcode::G_PTR_ADD) {
+    Register OffsetReg = DefMI->getOperand(2).getReg();
+    if (!MRI.hasOneDef(OffsetReg))
+      return false;
+    const MachineInstr &OffsetMI = *MRI.def_instr_begin(OffsetReg);
+    if (OffsetMI.getOpcode() != TargetOpcode::G_CONSTANT)
+      return false;
+
+    Addr = DefMI->getOperand(1).getReg();
+    if (!MRI.hasOneDef(Addr))
+      return false;
+
+    DefMI = &*MRI.def_instr_begin(Addr);
+    Offset = OffsetMI.getOperand(1).getCImm()->getZExtValue();
+  }
+
+  // We should be left with a genuine unauthenticated GlobalValue.
+  const GlobalValue *GV = nullptr;
+  if (DefMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+    GV = DefMI->getOperand(1).getGlobal();
+    Offset += DefMI->getOperand(1).getOffset();
+  } else if (DefMI->getOpcode() == AArch64::G_ADD_LOW) {
+    GV = DefMI->getOperand(2).getGlobal();
+    Offset += DefMI->getOperand(2).getOffset();
+  } else {
+    return false;
+  }
+
+  MachineIRBuilder MIB(I);
+
+  // Classify the reference to determine whether it needs a GOT load.
+  unsigned OpFlags = STI.ClassifyGlobalReference(GV, TM);
+  const bool NeedsGOTLoad = ((OpFlags & AArch64II::MO_GOT) != 0);
+  assert(((OpFlags & (~AArch64II::MO_GOT)) == 0) &&
+         "Unsupported non-GOT op flags on ptrauth global reference");
+  assert((!GV->hasExternalWeakLinkage() || NeedsGOTLoad) &&
+         "Unsupported non-GOT reference to weak ptrauth global");
+
+  // None of our lowerings support an offset larger than 32-bit.
+  if (!isUInt<32>(Offset))
+    report_fatal_error("Unsupported >32-bit-wide offset in ptrauth global");
+
+  // Blend only works if the integer discriminator is 16-bit wide.
+  if (!isUInt<16>(Disc))
+    report_fatal_error(
+        "Unsupported >16-bit-wide constant discriminator in ptrauth global");
+
+  std::optional<APInt> AddrDiscVal = getIConstantVRegVal(AddrDisc, MRI);
+  bool HasAddrDisc = !AddrDiscVal || *AddrDiscVal != 0;
+
+  // Non-extern_weak:
+  // - No GOT load needed -> MOVaddrPAC
+  // - GOT load for non-extern_weak -> LOADgotPAC
+  //   Note that we disallow extern_weak refs to avoid null checks later.
+  if (!GV->hasExternalWeakLinkage()) {
+    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
+    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
+    MIB.buildInstr(NeedsGOTLoad ? AArch64::LOADgotPAC : AArch64::MOVaddrPAC)
+        .addGlobalAddress(GV, Offset)
+        .addImm(Key)
+        .addReg(HasAddrDisc ? AddrDisc : AArch64::XZR)
+        .addImm(Disc)
+        .constrainAllUses(TII, TRI, RBI);
+    MIB.buildCopy(DefReg, Register(AArch64::X16));
+    RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  // extern_weak -> LOADauthptrstatic
+
+  // Offsets and extern_weak don't mix well: ptrauth aside, you'd get the
+  // offset alone as a pointer if the symbol wasn't available, which probably
+  // breaking null checks in users.
+  // ptrauth complicates things further: error out.
+  if (Offset)
+    report_fatal_error("Unsupported offset in weak ptrauth global reference");
+
+  if (HasAddrDisc)
+    report_fatal_error("Unsupported weak addr-div ptrauth global");
+
+  MIB.buildInstr(AArch64::LOADauthptrstatic, {DefReg}, {})
+      .addGlobalAddress(GV, Offset)
+      .addImm(Key)
+      .addImm(Disc);
+  RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
+
+  I.eraseFromParent();
+  return true;
 }
 
 void AArch64InstructionSelector::SelectTable(MachineInstr &I,
