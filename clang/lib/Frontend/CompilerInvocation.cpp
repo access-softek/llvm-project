@@ -1462,12 +1462,17 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
     PointerAuthOptions &Opts, const LangOptions &LangOpts,
     const llvm::Triple &Triple) {
   if (Triple.getArch() == llvm::Triple::aarch64) {
+    using Key = PointerAuthSchema::ARM8_3Key;
+    using Discrimination = PointerAuthSchema::Discrimination;
     if (LangOpts.PointerAuthCalls) {
-      using Key = PointerAuthSchema::ARM8_3Key;
-      using Discrimination = PointerAuthSchema::Discrimination;
       // If you change anything here, be sure to update <ptrauth.h>.
       Opts.FunctionPointers =
           PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+    }
+    if (LangOpts.PointerAuthInitFini) {
+      Opts.InitFiniPointers =
+          PointerAuthSchema(Key::ASIA, false, Discrimination::Constant,
+                            InitFiniPointerConstantDiscriminator);
     }
     return true;
   }
@@ -1480,7 +1485,7 @@ static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
                                     const LangOptions &LangOpts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
-  if (!LangOpts.PointerAuthCalls)
+  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthInitFini)
     return true;
 
   if (CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple))
