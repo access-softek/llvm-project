@@ -1292,26 +1292,33 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return true;
   }
   case AArch64::LOADgotAUTH: {
+    const MachineFunction *MF = MBB.getParent();
     Register DstReg = MI.getOperand(0).getReg();
     const MachineOperand &MO1 = MI.getOperand(1);
-
-    MachineOperand GAHiOp(MO1);
-    MachineOperand GALoOp(MO1);
-    GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
-    GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
-
     DebugLoc DL = MI.getDebugLoc();
-    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), AArch64::X16)
-        .add(GAHiOp);
 
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X16)
-        .addReg(AArch64::X16)
-        .add(GALoOp)
-        .addImm(0);
+    if (MF->getTarget().getCodeModel() == CodeModel::Tiny) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADR), AArch64::X16).add(MO1);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), DstReg)
+          .addReg(AArch64::X16)
+          .addImm(0);
+    } else {
+      MachineOperand GAHiOp(MO1);
+      MachineOperand GALoOp(MO1);
+      GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
+      GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
 
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), DstReg)
-        .addReg(AArch64::X16)
-        .addImm(0);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X16).add(GAHiOp);
+
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X16)
+          .addReg(AArch64::X16)
+          .add(GALoOp)
+          .addImm(0);
+
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), DstReg)
+          .addReg(AArch64::X16)
+          .addImm(0);
+    }
 
     assert(MO1.isGlobal());
     assert(MO1.getGlobal()->getValueType() != nullptr);
