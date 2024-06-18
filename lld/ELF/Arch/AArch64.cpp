@@ -172,6 +172,9 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_AUTH_GOT_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
     return R_AARCH64_AUTH_GOT;
+  case R_AARCH64_AUTH_GOT_LD_PREL19:
+  case R_AARCH64_AUTH_GOT_ADR_PREL21:
+    return R_AARCH64_AUTH_GOT_PC;
   case R_AARCH64_LD64_GOTPAGE_LO15:
     return R_AARCH64_GOT_PAGE;
   case R_AARCH64_ADR_GOT_PAGE:
@@ -450,6 +453,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32AArch64Addr(loc, val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
+  case R_AARCH64_AUTH_GOT_ADR_PREL21:
     checkInt(loc, val, 21, rel);
     write32AArch64Addr(loc, val);
     break;
@@ -470,6 +474,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
   case R_AARCH64_GOT_LD_PREL19:
+  case R_AARCH64_AUTH_GOT_LD_PREL19:
     checkAlignment(loc, val, 4, rel);
     checkInt(loc, val, 21, rel);
     or32le(loc, (val & 0x1FFFFC) << 3);
