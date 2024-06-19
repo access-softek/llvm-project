@@ -857,8 +857,9 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
-  addPass(createAArch64IndirectThunks());
+  addPass(createAArch64RequestedThunksInfoWrapperPass());
   addPass(createAArch64SLSHardeningPass());
+  addPass(createAArch64IndirectThunks());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());

@@ -40,6 +40,7 @@ FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
 FunctionPass *createAArch64StorePairSuppressPass();
 FunctionPass *createAArch64ExpandPseudoPass();
 FunctionPass *createAArch64SLSHardeningPass();
+FunctionPass *createAArch64RequestedThunksInfoWrapperPass();
 FunctionPass *createAArch64IndirectThunks();
 FunctionPass *createAArch64SpeculationHardeningPass();
 FunctionPass *createAArch64LoadStoreOptimizationPass();
@@ -112,6 +113,7 @@ void initializeLDTLSCleanupPass(PassRegistry&);
 void initializeSMEABIPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+void initializeAArch64RequestedThunksInfoWrapperPass(PassRegistry &);
 } // end namespace llvm
 
 #endif

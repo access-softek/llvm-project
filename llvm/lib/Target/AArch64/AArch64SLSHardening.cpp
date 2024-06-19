@@ -27,6 +27,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 
@@ -38,16 +39,107 @@ using namespace llvm;
 
 namespace {
 
+class RequestedThunksInfo {
+public:
+  void requestThunk(unsigned OriginalOpcode, Register Xn, Register Xm = AArch64::NoRegister);
+
+  using CallbackFn = std::function<void(unsigned OriginalOpcode, Register Xn, Register Xm)>;
+  void forAllThunks(CallbackFn Callback) const;
+
+  static SmallString<64> getThunkName(unsigned OriginalOpcode, Register Xn, Register Xm = AArch64::NoRegister);
+
+  static constexpr StringRef BLRThunkPrefixCommon = "__llvm_slsblr_thunk";
+  static constexpr StringRef BLRThunkPrefix       = "__llvm_slsblr_thunk";
+  static constexpr StringRef BLRAAZThunkPrefix    = "__llvm_slsblr_thunk_aaz";
+  static constexpr StringRef BLRABZThunkPrefix    = "__llvm_slsblr_thunk_abz";
+  static constexpr StringRef BLRAAThunkPrefix     = "__llvm_slsblr_thunk_aa";
+  static constexpr StringRef BLRABThunkPrefix     = "__llvm_slsblr_thunk_ab";
+
+private:
+  static constexpr unsigned NumPermittedRegs = 29;
+  static constexpr struct {
+    const char* Name;
+    Register Reg;
+  } NamesAndRegs[NumPermittedRegs] = {
+    { "x0",  AArch64::X0},
+    { "x1",  AArch64::X1},
+    { "x2",  AArch64::X2},
+    { "x3",  AArch64::X3},
+    { "x4",  AArch64::X4},
+    { "x5",  AArch64::X5},
+    { "x6",  AArch64::X6},
+    { "x7",  AArch64::X7},
+    { "x8",  AArch64::X8},
+    { "x9",  AArch64::X9},
+    { "x10",  AArch64::X10},
+    { "x11",  AArch64::X11},
+    { "x12",  AArch64::X12},
+    { "x13",  AArch64::X13},
+    { "x14",  AArch64::X14},
+    { "x15",  AArch64::X15},
+    // X16 and X17 are deliberately missing, as the mitigation requires those
+    // register to not be used in BLR. See comment in ConvertBLRToBL for more
+    // details.
+    { "x18",  AArch64::X18},
+    { "x19",  AArch64::X19},
+    { "x20",  AArch64::X20},
+    { "x21",  AArch64::X21},
+    { "x22",  AArch64::X22},
+    { "x23",  AArch64::X23},
+    { "x24",  AArch64::X24},
+    { "x25",  AArch64::X25},
+    { "x26",  AArch64::X26},
+    { "x27",  AArch64::X27},
+    { "x28",  AArch64::X28},
+    { "x29",  AArch64::FP},
+    // X30 is deliberately missing, for similar reasons as X16 and X17 are
+    // missing.
+    { "x31",  AArch64::XZR},
+  };
+
+  /// Returns small integer uniquely representing possible operand of BLR*.
+  static unsigned getIndex(Register Reg);
+
+  static StringRef getRegName(Register Reg) {
+    return NamesAndRegs[getIndex(Reg)].Name;
+  }
+
+  uint32_t BLROperands = 0;
+  uint32_t BLRAAZOperands = 0;
+  uint32_t BLRABZOperands = 0;
+  uint32_t BLRAAOperands[NumPermittedRegs] = { 0, };
+  uint32_t BLRABOperands[NumPermittedRegs] = { 0, };
+};
+
+class AArch64RequestedThunksInfoWrapper : public ImmutablePass {
+  RequestedThunksInfo RTI;
+
+public:
+  static char ID;
+  explicit AArch64RequestedThunksInfoWrapper() : ImmutablePass(ID) {
+    initializeAArch64RequestedThunksInfoWrapperPass(*PassRegistry::getPassRegistry());
+  }
+
+  RequestedThunksInfo &getRTI() { return RTI; }
+  const RequestedThunksInfo &getRTI() const { return RTI; }
+};
+
 class AArch64SLSHardening : public MachineFunctionPass {
 public:
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const AArch64Subtarget *ST;
+  RequestedThunksInfo *RTI;
 
   static char ID;
 
   AArch64SLSHardening() : MachineFunctionPass(ID) {
     initializeAArch64SLSHardeningPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AArch64RequestedThunksInfoWrapper>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -63,10 +155,121 @@ private:
 
 } // end anonymous namespace
 
+char AArch64RequestedThunksInfoWrapper::ID = 0;
 char AArch64SLSHardening::ID = 0;
 
+INITIALIZE_PASS(AArch64RequestedThunksInfoWrapper, "aarch64-sls-thunks-info-wrapper", "AArch64 SLS Thunks Info Wrapper", false, false)
 INITIALIZE_PASS(AArch64SLSHardening, "aarch64-sls-hardening",
                 AARCH64_SLS_HARDENING_NAME, false, false)
+
+FunctionPass *llvm::createAArch64RequestedThunksInfoWrapperPass() {
+  return new AArch64SLSHardening();
+}
+
+unsigned RequestedThunksInfo::getIndex(Register Reg) {
+  assert(Reg != AArch64::X16 && Reg != AArch64::X17 && Reg != AArch64::LR);
+
+  // Most Xn registers have consequent ids, except for FP and XZR.
+  unsigned Result = (unsigned)Reg - (unsigned)AArch64::X0;
+  if (Reg == AArch64::FP)
+    Result = 29;
+  else if (Reg == AArch64::XZR)
+    Result = 31;
+
+  // Account for X30 (LR) being forbidden.
+  if (Result > 29)
+    Result -= 1;
+  // Account for X16 and X17 being forbidden.
+  if (Result > 15)
+    Result -= 2;
+
+  // Ensure the assumptions about integer ids assigned by TableGen still hold.
+  assert(Result < NumPermittedRegs &&
+          "Reg is not from GPR64 or internal register numbering changed");
+  assert(NamesAndRegs[Result].Reg == Reg && "Register numbering changed");
+
+  return Result;
+}
+
+void RequestedThunksInfo::requestThunk(unsigned OriginalOpcode, Register Xn, Register Xm) {
+  uint32_t XnBit = 1u << getIndex(Xn);
+
+  switch (OriginalOpcode) {
+  default:
+    llvm_unreachable_internal("Unexpected opcode");
+  case AArch64::BLR:
+  case AArch64::BLRNoIP:
+    BLROperands |= XnBit;
+    break;
+  case AArch64::BLRAAZ:
+    BLRAAZOperands |= XnBit;
+    break;
+  case AArch64::BLRABZ:
+    BLRABZOperands |= XnBit;
+    break;
+  case AArch64::BLRAA:
+    BLRAAOperands[getIndex(Xm)] |= XnBit;
+    break;
+  case AArch64::BLRAB:
+    BLRABOperands[getIndex(Xm)] |= XnBit;
+    break;
+  }
+}
+
+SmallString<64> RequestedThunksInfo::getThunkName(unsigned OriginalOpcode, Register Xn, Register Xm) {
+  StringRef NamePrefix;
+  bool IsTwoReg = false;
+
+  switch (OriginalOpcode) {
+  default:
+    llvm_unreachable_internal("Unexpected opcode");
+  case AArch64::BLR:
+  case AArch64::BLRNoIP:
+    NamePrefix = BLRThunkPrefix;
+    break;
+  case AArch64::BLRAAZ:
+    NamePrefix = BLRAAZThunkPrefix;
+    break;
+  case AArch64::BLRABZ:
+    NamePrefix = BLRABZThunkPrefix;
+    break;
+  case AArch64::BLRAA:
+    IsTwoReg = true;
+    NamePrefix = BLRAAThunkPrefix;
+    break;
+  case AArch64::BLRAB:
+    IsTwoReg = true;
+    NamePrefix = BLRABThunkPrefix;
+    break;
+  }
+
+  if (IsTwoReg) {
+    assert(Xm != AArch64::NoRegister && "Missing Xm operand");
+    return formatv("{0}_{1}_{2}", NamePrefix, getRegName(Xn), getRegName(Xm)).sstr<64>();
+  }
+  assert(Xm == AArch64::NoRegister && "Unexpected Xm operand");
+  return formatv("{0}_{1}", NamePrefix, getRegName(Xn)).sstr<64>();
+}
+
+void RequestedThunksInfo::forAllThunks(CallbackFn Callback) const {
+  for (unsigned XnIndex = 0; XnIndex < NumPermittedRegs; ++XnIndex) {
+    unsigned XnBit = 1u << XnIndex;
+    Register XnReg = NamesAndRegs[XnIndex].Reg;
+    if (BLROperands & XnBit)
+      Callback(AArch64::BLR, XnReg, AArch64::NoRegister);
+    if (BLRAAZOperands & XnBit)
+      Callback(AArch64::BLRAAZ, XnReg, AArch64::NoRegister);
+    if (BLRABZOperands & XnBit)
+      Callback(AArch64::BLRABZ, XnReg, AArch64::NoRegister);
+    for (unsigned XmIndex = 0; XmIndex < NumPermittedRegs; ++XmIndex) {
+      Register XmReg = NamesAndRegs[XmIndex].Reg;
+      if (BLRAAOperands[XmIndex] & XnBit)
+        Callback(AArch64::BLRAA, XnReg, XmReg);
+      if (BLRABOperands[XmIndex] & XnBit)
+        Callback(AArch64::BLRAB, XnReg, XmReg);
+    }
+  }
+}
 
 static void insertSpeculationBarrier(const AArch64Subtarget *ST,
                                      MachineBasicBlock &MBB,
@@ -94,6 +297,7 @@ bool AArch64SLSHardening::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<AArch64Subtarget>();
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
+  RTI = &getAnalysis<AArch64RequestedThunksInfoWrapper>().getRTI();
 
   bool Modified = false;
   for (auto &MBB : MF) {
@@ -108,14 +312,11 @@ static bool isBLR(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AArch64::BLR:
   case AArch64::BLRNoIP:
-    return true;
   case AArch64::BLRAA:
   case AArch64::BLRAB:
   case AArch64::BLRAAZ:
   case AArch64::BLRABZ:
-    llvm_unreachable("Currently, LLVM's code generator does not support "
-                     "producing BLRA* instructions. Therefore, there's no "
-                     "support in this pass for those instructions.");
+    return true;
   }
   return false;
 }
@@ -138,51 +339,11 @@ bool AArch64SLSHardening::hardenReturnsAndBRs(MachineBasicBlock &MBB) const {
   return Modified;
 }
 
-static const char SLSBLRNamePrefix[] = "__llvm_slsblr_thunk_";
-
-static const struct ThunkNameAndReg {
-  const char* Name;
-  Register Reg;
-} SLSBLRThunks[] = {
-  { "__llvm_slsblr_thunk_x0",  AArch64::X0},
-  { "__llvm_slsblr_thunk_x1",  AArch64::X1},
-  { "__llvm_slsblr_thunk_x2",  AArch64::X2},
-  { "__llvm_slsblr_thunk_x3",  AArch64::X3},
-  { "__llvm_slsblr_thunk_x4",  AArch64::X4},
-  { "__llvm_slsblr_thunk_x5",  AArch64::X5},
-  { "__llvm_slsblr_thunk_x6",  AArch64::X6},
-  { "__llvm_slsblr_thunk_x7",  AArch64::X7},
-  { "__llvm_slsblr_thunk_x8",  AArch64::X8},
-  { "__llvm_slsblr_thunk_x9",  AArch64::X9},
-  { "__llvm_slsblr_thunk_x10",  AArch64::X10},
-  { "__llvm_slsblr_thunk_x11",  AArch64::X11},
-  { "__llvm_slsblr_thunk_x12",  AArch64::X12},
-  { "__llvm_slsblr_thunk_x13",  AArch64::X13},
-  { "__llvm_slsblr_thunk_x14",  AArch64::X14},
-  { "__llvm_slsblr_thunk_x15",  AArch64::X15},
-  // X16 and X17 are deliberately missing, as the mitigation requires those
-  // register to not be used in BLR. See comment in ConvertBLRToBL for more
-  // details.
-  { "__llvm_slsblr_thunk_x18",  AArch64::X18},
-  { "__llvm_slsblr_thunk_x19",  AArch64::X19},
-  { "__llvm_slsblr_thunk_x20",  AArch64::X20},
-  { "__llvm_slsblr_thunk_x21",  AArch64::X21},
-  { "__llvm_slsblr_thunk_x22",  AArch64::X22},
-  { "__llvm_slsblr_thunk_x23",  AArch64::X23},
-  { "__llvm_slsblr_thunk_x24",  AArch64::X24},
-  { "__llvm_slsblr_thunk_x25",  AArch64::X25},
-  { "__llvm_slsblr_thunk_x26",  AArch64::X26},
-  { "__llvm_slsblr_thunk_x27",  AArch64::X27},
-  { "__llvm_slsblr_thunk_x28",  AArch64::X28},
-  { "__llvm_slsblr_thunk_x29",  AArch64::FP},
-  // X30 is deliberately missing, for similar reasons as X16 and X17 are
-  // missing.
-  { "__llvm_slsblr_thunk_x31",  AArch64::XZR},
-};
-
 namespace {
 struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
-  const char *getThunkPrefix() { return SLSBLRNamePrefix; }
+  const char *getThunkPrefix() {
+    return RequestedThunksInfo::BLRThunkPrefixCommon.data();
+  }
   bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
     if (InsertedThunks)
       return false;
@@ -192,32 +353,56 @@ struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
     return MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr();
   }
   bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
-  void populateThunk(MachineFunction &MF);
+  void populateThunk(MachineFunction &MF, unsigned Opcode, Register Xn, Register Xm);
+  void populateThunk(MachineFunction &MF) {}
+
+  void setRequestedThunksInfo(const RequestedThunksInfo &Req) { RTI = &Req; }
 
 private:
   bool ComdatThunks = true;
+  const RequestedThunksInfo *RTI;
 };
 } // namespace
 
-bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
-                                       MachineFunction &MF) {
-  // FIXME: It probably would be possible to filter which thunks to produce
-  // based on which registers are actually used in BLR instructions in this
-  // function. But would that be a worthwhile optimization?
-  for (auto T : SLSBLRThunks)
-    createThunkFunction(MMI, T.Name, ComdatThunks);
-  return true;
+static unsigned getThunkOpcode(unsigned OriginalOpcode) {
+  switch (OriginalOpcode) {
+  default:
+    llvm_unreachable_internal("Unexpected opcode");
+  case AArch64::BLR:
+  case AArch64::BLRNoIP:
+    return AArch64::BR;
+  case AArch64::BLRAA:
+    return AArch64::BRAA;
+  case AArch64::BLRAB:
+    return AArch64::BRAB;
+  case AArch64::BLRAAZ:
+    return AArch64::BRAAZ;
+  case AArch64::BLRABZ:
+    return AArch64::BRABZ;
+  }
 }
 
-void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
-  // FIXME: How to better communicate Register number, rather than through
-  // name and lookup table?
-  assert(MF.getName().starts_with(getThunkPrefix()));
-  auto ThunkIt = llvm::find_if(
-      SLSBLRThunks, [&MF](auto T) { return T.Name == MF.getName(); });
-  assert(ThunkIt != std::end(SLSBLRThunks));
-  Register ThunkReg = ThunkIt->Reg;
+bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
+                                       MachineFunction &MF) {
+  bool Modified = false;
+  RTI->forAllThunks([&](unsigned OriginalOpcode, Register Xn, Register Xm) {
+    unsigned ThunkOpcode = getThunkOpcode(OriginalOpcode);
 
+    auto ThunkName = RequestedThunksInfo::getThunkName(OriginalOpcode, Xn, Xm);
+    StringRef TargetAttrs = ThunkOpcode == AArch64::BR ? "" : "+pauth";
+    createThunkFunction(MMI, ThunkName, ComdatThunks, TargetAttrs);
+
+    Function *ThunkFn = MF.getFunction().getParent()->getFunction(ThunkName);
+    MachineFunction *ThunkMF = MMI.getMachineFunction(*ThunkFn);
+    populateThunk(*ThunkMF, ThunkOpcode, Xn, Xm);
+
+    Modified = true;
+  });
+  return Modified;
+}
+
+void SLSBLRThunkInserter::populateThunk(MachineFunction &MF, unsigned Opcode, Register Xn, Register Xm) {
+  assert(MF.getName().starts_with(getThunkPrefix()));
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
 
@@ -239,15 +424,22 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
 
   //  These thunks need to consist of the following instructions:
   //  __llvm_slsblr_thunk_xN:
-  //      BR xN
+  //      ; BR instruction is not compatible with "BTI c" branch target
+  //      ; in general, but "BR x16" is.
+  //      MOV x16, xN
+  //      BR x16
   //      barrierInsts
-  Entry->addLiveIn(ThunkReg);
-  // MOV X16, ThunkReg == ORR X16, XZR, ThunkReg, LSL #0
+  Entry->addLiveIn(Xn);
+  if (Xm != AArch64::NoRegister)
+    Entry->addLiveIn(Xm);
+  // MOV X16, Xn == ORR X16, XZR, Xn, LSL #0
   BuildMI(Entry, DebugLoc(), TII->get(AArch64::ORRXrs), AArch64::X16)
       .addReg(AArch64::XZR)
-      .addReg(ThunkReg)
+      .addReg(Xn)
       .addImm(0);
-  BuildMI(Entry, DebugLoc(), TII->get(AArch64::BR)).addReg(AArch64::X16);
+  auto &BMI = BuildMI(Entry, DebugLoc(), TII->get(Opcode)).addReg(AArch64::X16);
+  if (Xm != AArch64::NoRegister)
+    BMI.addReg(Xm);
   // Make sure the thunks do not make use of the SB extension in case there is
   // a function somewhere that will call to it that for some reason disabled
   // the SB extension locally on that function, even though it's enabled for
@@ -279,13 +471,14 @@ MachineBasicBlock &AArch64SLSHardening::ConvertBLRToBL(
   //
   //   __llvm_slsblr_thunk_xN:
   //   |-----------------------------|
-  //   |  BR xN                      |
+  //   |  MOV x16, xN                |
+  //   |  BR x16                     |
   //   |  barrierInsts               |
   //   |-----------------------------|
   //
   // The __llvm_slsblr_thunk_xN thunks are created by the SLSBLRThunkInserter.
-  // This function merely needs to transform BLR xN into BL
-  // __llvm_slsblr_thunk_xN.
+  // This function merely needs to transform BLR xN into
+  // BL __llvm_slsblr_thunk_xN.
   //
   // Since linkers are allowed to clobber X16 and X17 on function calls, the
   // above mitigation only works if the original BLR instruction was not
@@ -294,61 +487,36 @@ MachineBasicBlock &AArch64SLSHardening::ConvertBLRToBL(
 
   MachineInstr &BLR = *MBBI;
   assert(isBLR(BLR));
-  unsigned BLOpcode;
-  Register Reg;
-  bool RegIsKilled;
-  switch (BLR.getOpcode()) {
-  case AArch64::BLR:
-  case AArch64::BLRNoIP:
-    BLOpcode = AArch64::BL;
-    Reg = BLR.getOperand(0).getReg();
-    assert(Reg != AArch64::X16 && Reg != AArch64::X17 && Reg != AArch64::LR);
-    RegIsKilled = BLR.getOperand(0).isKill();
-    break;
+  unsigned OriginalOpcode = BLR.getOpcode();
+  Register Xn, Xm;
+  unsigned NumRegOperands;
+  switch (OriginalOpcode) {
   case AArch64::BLRAA:
   case AArch64::BLRAB:
+    Xn = BLR.getOperand(0).getReg();
+    Xm = BLR.getOperand(1).getReg();
+    NumRegOperands = 2;
+    break;
+  case AArch64::BLR:
+  case AArch64::BLRNoIP:
   case AArch64::BLRAAZ:
   case AArch64::BLRABZ:
-    llvm_unreachable("BLRA instructions cannot yet be produced by LLVM, "
-                     "therefore there is no need to support them for now.");
+    Xn = BLR.getOperand(0).getReg();
+    Xm = AArch64::NoRegister;
+    NumRegOperands = 1;
+    break;
   default:
     llvm_unreachable("unhandled BLR");
   }
   DebugLoc DL = BLR.getDebugLoc();
 
-  // If we'd like to support also BLRAA and BLRAB instructions, we'd need
-  // a lot more different kind of thunks.
-  // For example, a
-  //
-  // BLRAA xN, xM
-  //
-  // instruction probably would need to be transformed to something like:
-  //
-  // BL __llvm_slsblraa_thunk_x<N>_x<M>
-  //
-  // __llvm_slsblraa_thunk_x<N>_x<M>:
-  //   BRAA x<N>, x<M>
-  //   barrierInsts
-  //
-  // Given that about 30 different values of N are possible and about 30
-  // different values of M are possible in the above, with the current way
-  // of producing indirect thunks, we'd be producing about 30 times 30, i.e.
-  // about 900 thunks (where most might not be actually called). This would
-  // multiply further by two to support both BLRAA and BLRAB variants of those
-  // instructions.
-  // If we'd want to support this, we'd probably need to look into a different
-  // way to produce thunk functions, based on which variants are actually
-  // needed, rather than producing all possible variants.
-  // So far, LLVM does never produce BLRA* instructions, so let's leave this
-  // for the future when LLVM can start producing BLRA* instructions.
   MachineFunction &MF = *MBBI->getMF();
   MCContext &Context = MBB.getParent()->getContext();
-  auto ThunkIt =
-      llvm::find_if(SLSBLRThunks, [Reg](auto T) { return T.Reg == Reg; });
-  assert (ThunkIt != std::end(SLSBLRThunks));
-  MCSymbol *Sym = Context.getOrCreateSymbol(ThunkIt->Name);
+  auto ThunkName = RequestedThunksInfo::getThunkName(BLR.getOpcode(), Xn, Xm);
+  MCSymbol *Sym = Context.getOrCreateSymbol(ThunkName);
+  RTI->requestThunk(OriginalOpcode, Xn, Xm);
 
-  MachineInstr *BL = BuildMI(MBB, MBBI, DL, TII->get(BLOpcode)).addSym(Sym);
+  MachineInstr *BL = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL)).addSym(Sym);
 
   // Now copy the implicit operands from BLR to BL and copy other necessary
   // info.
@@ -379,9 +547,14 @@ MachineBasicBlock &AArch64SLSHardening::ConvertBLRToBL(
   // Now copy over the implicit operands from the original BLR
   BL->copyImplicitOps(MF, BLR);
   MF.moveCallSiteInfo(&BLR, BL);
-  // Also add the register called in the BLR as being used in the called thunk.
-  BL->addOperand(MachineOperand::CreateReg(Reg, false /*isDef*/, true /*isImp*/,
-                                           RegIsKilled /*isKill*/));
+  // Also add the register operands of the original BLR* instruction
+  // as being used in the called thunk.
+  assert(BLR.getNumExplicitOperands() == NumRegOperands && "Expected one or two register inputs");
+  for (unsigned OpIdx = 0; OpIdx < NumRegOperands; ++OpIdx) {
+    MachineOperand &Op = BLR.getOperand(OpIdx);
+    BL->addOperand(MachineOperand::CreateReg(Op.getReg(), /*isDef=*/false,
+                                             /*isImp=*/true, Op.isKill()));
+  }
   // Remove BLR instruction
   MBB.erase(MBBI);
 
@@ -416,6 +589,10 @@ public:
   static char ID;
 
   AArch64IndirectThunks() : MachineFunctionPass(ID) {}
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AArch64RequestedThunksInfoWrapper>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   StringRef getPassName() const override { return "AArch64 Indirect Thunks"; }
 
@@ -453,5 +630,7 @@ bool AArch64IndirectThunks::doInitialization(Module &M) {
 bool AArch64IndirectThunks::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << getPassName() << '\n');
   auto &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  auto &RTI = getAnalysis<AArch64RequestedThunksInfoWrapper>().getRTI();
+  std::get<SLSBLRThunkInserter>(TIs).setRequestedThunksInfo(RTI);
   return runTIs(MMI, MF, TIs);
 }
