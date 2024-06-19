@@ -1854,6 +1854,69 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInstSB);
     return;
   }
+  case AArch64::TLSDESC_AUTH_CALLSEQ: {
+    // FIXME: use BLRAA instead of AUTIA + BLR. BLRAA is currently explicitly
+    //        unsupported in AArch64SLSHardening pass.
+    /// lower this to:
+    ///    adrp  x0, :tlsdesc:var
+    ///    ldr   x16, [x0, #:tlsdesc_lo12:var]
+    ///    add   x0, x0, #:tlsdesc_lo12:var
+    ///    autia x16, x0
+    ///    .tlsdesccall var
+    ///    blr   x16
+    ///    (TPIDR_EL0 offset now in x0)
+    const MachineOperand &MO_Sym = MI->getOperand(0);
+    MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
+    MCOperand Sym, SymTLSDescLo12, SymTLSDesc;
+    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
+    MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
+    MCInstLowering.lowerOperand(MO_Sym, Sym);
+    MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);
+    MCInstLowering.lowerOperand(MO_TLSDESC, SymTLSDesc);
+
+    MCInst Adrp;
+    Adrp.setOpcode(AArch64::ADRP);
+    Adrp.addOperand(MCOperand::createReg(AArch64::X0));
+    Adrp.addOperand(SymTLSDesc);
+    EmitToStreamer(*OutStreamer, Adrp);
+
+    MCInst Ldr;
+    Ldr.setOpcode(AArch64::LDRXui);
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    Ldr.addOperand(MCOperand::createReg(AArch64::X0));
+    Ldr.addOperand(SymTLSDescLo12);
+    Ldr.addOperand(MCOperand::createImm(0));
+    EmitToStreamer(*OutStreamer, Ldr);
+
+    MCInst Add;
+    Add.setOpcode(AArch64::ADDXri);
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(SymTLSDescLo12);
+    Add.addOperand(MCOperand::createImm(AArch64_AM::getShiftValue(0)));
+    EmitToStreamer(*OutStreamer, Add);
+
+    MCInst Autia;
+    Autia.setOpcode(AArch64::AUTIA);
+    Autia.addOperand(MCOperand::createReg(AArch64::X16));
+    Autia.addOperand(MCOperand::createReg(AArch64::X16));
+    Autia.addOperand(MCOperand::createReg(AArch64::X0));
+    EmitToStreamer(*OutStreamer, Autia);
+
+    // Emit a relocation-annotation. This expands to no code, but requests
+    // the following instruction gets an R_AARCH64_TLSDESC_CALL.
+    MCInst TLSDescCall;
+    TLSDescCall.setOpcode(AArch64::TLSDESCCALL);
+    TLSDescCall.addOperand(Sym);
+    EmitToStreamer(*OutStreamer, TLSDescCall);
+
+    MCInst Blr;
+    Blr.setOpcode(AArch64::BLR);
+    Blr.addOperand(MCOperand::createReg(AArch64::X16));
+    EmitToStreamer(*OutStreamer, Blr);
+
+    return;
+  }
   case AArch64::TLSDESC_CALLSEQ: {
     /// lower this to:
     ///    adrp  x0, :tlsdesc:var

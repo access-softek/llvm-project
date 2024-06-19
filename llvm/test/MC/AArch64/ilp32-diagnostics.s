@@ -119,3 +119,15 @@
    adr x24, :got_auth:sym
 // CHECK-ERROR: error: ILP32 ADR AUTH relocation not supported (LP64 eqv: AUTH_GOT_ADR_PREL21)
 // CHECK-ERROR: ^
+
+   adrp x24, :tlsdesc_auth:sym
+// CHECK-ERROR: error: ILP32 ADRP AUTH relocation not supported (LP64 eqv: AUTH_TLSDESC_ADR_PAGE21)
+// CHECK-ERROR: ^
+
+   ldr x24, [x23, :tlsdesc_auth_lo12:sym]
+// CHECK-ERROR: error: ILP32 64-bit load/store AUTH relocation not supported (LP64 eqv: AUTH_TLSDESC_LD64_LO12)
+// CHECK-ERROR: ^
+
+   add x24, x23, :tlsdesc_auth_lo12:sym
+// CHECK-ERROR: error: ILP32 ADD AUTH relocation not supported (LP64 eqv: AUTH_TLSDESC_ADD_LO12)
+// CHECK-ERROR: ^

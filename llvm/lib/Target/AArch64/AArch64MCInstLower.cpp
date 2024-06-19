@@ -217,9 +217,13 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     case TLSModel::LocalDynamic:
       RefFlags |= AArch64MCExpr::VK_DTPREL;
       break;
-    case TLSModel::GeneralDynamic:
-      RefFlags |= AArch64MCExpr::VK_TLSDESC;
+    case TLSModel::GeneralDynamic: {
+      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+      RefFlags |= MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+                      ? AArch64MCExpr::VK_TLSDESC_AUTH
+                      : AArch64MCExpr::VK_TLSDESC;
       break;
+    }
     }
   } else if (MO.getTargetFlags() & AArch64II::MO_PREL) {
     RefFlags |= AArch64MCExpr::VK_PREL;
