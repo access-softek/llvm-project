@@ -1210,10 +1210,13 @@ void CodeGenModule::Release() {
           (LangOpts.PointerAuthVTPtrTypeDiscrimination
            << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR) |
           (LangOpts.PointerAuthInitFini
-           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI);
-      static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
-                        AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
-                    "Update when new enum items are defined");
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI) |
+          (LangOpts.PointerAuthInitFiniAddressDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC);
+      static_assert(
+          AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC ==
+              AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
+          "Update when new enum items are defined");
       if (PAuthABIVersion != 0) {
         getModule().addModuleFlag(llvm::Module::Error,
                                   "aarch64-elf-pauthabi-platform",
@@ -2053,7 +2056,6 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
 
   const PointerAuthSchema &InitFiniAuthSchema =
       getCodeGenOpts().PointerAuth.InitFiniPointers;
-  assert(!InitFiniAuthSchema || !InitFiniAuthSchema.isAddressDiscriminated());
 
   // Ctor function type is ptr.
   llvm::PointerType *PtrTy = llvm::PointerType::get(
@@ -2069,9 +2071,12 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
     auto Ctor = Ctors.beginStruct(CtorStructTy);
     Ctor.addInt(Int32Ty, I.Priority);
     if (InitFiniAuthSchema) {
+      llvm::Constant *StorageAddress =
+          (InitFiniAuthSchema.isAddressDiscriminated()
+               ? StorageAddress = Ctor.getAddrOfCurrentPosition(PtrTy)
+               : nullptr);
       llvm::Constant *SignedCtorPtr = getConstantSignedPointer(
-          I.Initializer, InitFiniAuthSchema.getKey(),
-          /*StorageAddress=*/nullptr,
+          I.Initializer, InitFiniAuthSchema.getKey(), StorageAddress,
           llvm::ConstantInt::get(
               SizeTy, InitFiniAuthSchema.getConstantDiscrimination()));
       Ctor.add(SignedCtorPtr);
