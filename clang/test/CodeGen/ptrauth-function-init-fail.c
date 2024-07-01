@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-calls %s -verify -emit-llvm -o -
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls %s -verify -emit-llvm -o -
+// RUN: %clang_cc1 -triple arm64e-apple-ios  -target-feature +pauth -fptrauth-calls %s -verify -emit-llvm -o -
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +pauth -fptrauth-calls %s -verify -emit-llvm -o -
 
 void f(void);
 

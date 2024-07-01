@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,NODISC %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls \
+// RUN:   -fptrauth-intrinsics -emit-llvm -o - | FileCheck --check-prefixes=CHECK,NODISC %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls \
+// RUN:   -fptrauth-intrinsics -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,TYPE %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls \
+// RUN:   -fptrauth-intrinsics  -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,ADDR %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -target-feature +pauth -fptrauth-calls \
+// RUN:   -fptrauth-intrinsics -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,BOTH %s
 

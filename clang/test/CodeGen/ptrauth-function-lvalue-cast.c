@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- | FileCheck %s
-// RUN: %clang_cc1 %s -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64e-apple-ios13 -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- | FileCheck %s
+// RUN: %clang_cc1 %s -triple aarch64-linux-gnu  -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -emit-llvm -o- | FileCheck %s
 
 typedef void (*fptr_t)(void);
 

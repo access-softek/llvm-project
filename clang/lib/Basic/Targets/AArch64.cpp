@@ -12,6 +12,7 @@
 
 #include "AArch64.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -199,6 +200,59 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
     this->MCountName =
         Opts.EABIVersion == llvm::EABI::GNU ? "\01_mcount" : "mcount";
+}
+
+void AArch64TargetInfo::validatePAuthOptions(DiagnosticsEngine &Diags,
+                                             LangOptions &Opts) const {
+  // AArch64TargetInfo::adjust can be called multiple times during
+  // compilation, so unset unsupported options to prevent printing
+  // multiple identical diagnostics.
+  auto UnsetIgnoredOptions = [&]() {
+    assert(!Opts.PointerAuthCalls && "Will change the behavior");
+    Opts.PointerAuthInitFini = false;
+    Opts.PointerAuthVTPtrAddressDiscrimination = false;
+    Opts.PointerAuthVTPtrTypeDiscrimination = false;
+  };
+  auto UnsetUnsupportedOptions = [&]() {
+    assert(!HasPAuth && "Will change the behavior");
+    Opts.PointerAuthIntrinsics = false;
+    Opts.PointerAuthCalls = false;
+    Opts.PointerAuthReturns = false;
+  };
+
+  if (!Opts.PointerAuthCalls) {
+    if (Opts.PointerAuthInitFini)
+      Diags.Report(diag::warn_pauth_option_ignored) << "-fptrauth-init-fini";
+    if (Opts.PointerAuthVTPtrAddressDiscrimination)
+      Diags.Report(diag::warn_pauth_option_ignored)
+          << "-fptrauth-vtable-pointer-address-discrimination";
+    if (Opts.PointerAuthVTPtrTypeDiscrimination)
+      Diags.Report(diag::warn_pauth_option_ignored)
+          << "-fptrauth-vtable-pointer-type-discrimination";
+    UnsetIgnoredOptions();
+  }
+
+  if (HasPAuth)
+    return;
+
+  // FIXME: Some ptrauth_* intrinsics can be implemented by only using
+  //        HINT-encoded instructions, thus not requiring FEAT_PAUTH.
+  //        At now, checking conservatively.
+  if (Opts.PointerAuthIntrinsics)
+    Diags.Report(diag::err_pauth_cpu_feature_missing) << "-fptrauth-intrinsics";
+  if (Opts.PointerAuthCalls)
+    Diags.Report(diag::err_pauth_cpu_feature_missing) << "-fptrauth-calls";
+  if (Opts.PointerAuthReturns)
+    Diags.Report(diag::err_pauth_cpu_feature_missing) << "-fptrauth-returns";
+
+  UnsetUnsupportedOptions();
+  // Opts.PointerAuthCalls was unset - prevent unexpected warnings, too.
+  UnsetIgnoredOptions();
+}
+
+void AArch64TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+  TargetInfo::adjust(Diags, Opts);
+  validatePAuthOptions(Diags, Opts);
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O0 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -target-feature +pauth -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O0 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK %s
 
 // The actual vtable construction
 

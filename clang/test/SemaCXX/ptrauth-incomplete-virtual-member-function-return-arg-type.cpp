@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++17 -Wno-vla -fsyntax-only -verify -fptrauth-intrinsics -fptrauth-calls %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +pauth -std=c++17 -Wno-vla -fsyntax-only -verify -fptrauth-intrinsics -fptrauth-calls %s
 
 struct Incomplete0; // expected-note 3 {{forward declaration of 'Incomplete0'}}
 

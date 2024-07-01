@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s       -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
-// RUN: %clang_cc1 %s       -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
-// RUN: %clang_cc1 -xc++ %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,CXX
-// RUN: %clang_cc1 -xc++ %s -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,CXX
+// RUN: %clang_cc1 %s       -triple arm64e-apple-ios13 -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
+// RUN: %clang_cc1 %s       -triple aarch64-linux-gnu  -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
+// RUN: %clang_cc1 -xc++ %s -triple arm64e-apple-ios13 -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,CXX
+// RUN: %clang_cc1 -xc++ %s -triple aarch64-linux-gnu  -target-feature +pauth -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,CXX
 
 #ifdef __cplusplus
 extern "C" {

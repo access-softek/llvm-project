@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -target-feature +pauth \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
@@ -7,7 +7,7 @@
 // RUN:   -fptrauth-init-fini | \
 // RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
 
-// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -target-feature +pauth \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
@@ -15,15 +15,15 @@
 // RUN:   -fptrauth-init-fini | \
 // RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
 
-// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -target-feature +pauth \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-returns \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
+// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,RETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOINITFINI
 
-// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -target-feature +pauth \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
@@ -31,7 +31,7 @@
 // RUN:   -fptrauth-init-fini | \
 // RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,NORETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
 
-// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -target-feature +pauth \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
@@ -39,7 +39,7 @@
 // RUN:   -fptrauth-init-fini | \
 // RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,INITFINI
 
-// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -target-feature +pauth \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
@@ -47,7 +47,7 @@
 // RUN:   -fptrauth-init-fini | \
 // RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,INITFINI
 
-// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -target-feature +pauth \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
