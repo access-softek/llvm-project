@@ -158,7 +158,7 @@ public:
                                           const MCSymbol *OnFailure);
 
   // Check authenticated LR before tail calling.
-  void emitPtrauthTailCallHardening(const MachineInstr *TC);
+  void emitPtrauthTailCallHardening(const MachineInstr *TC, Register ScratchReg);
 
   // Emit the sequence for AUT or AUTPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
@@ -1706,6 +1706,17 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   }
 }
 
+static Register getPtrauthScratchReg(const MachineInstr *MI) {
+  // Scratch register is passed as the last operand of the instruction.
+  // This operand is implicit-use and is always either X16 or X17.
+  // Some instructions rarely use scratch register - in that case it is added
+  // conditionally.
+  Register ScratchReg = MI->getOperand(MI->getNumOperands() - 1).getReg();
+  assert((ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17) &&
+         "Incorrect scratch register or none was provided");
+  return ScratchReg;
+}
+
 unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
                                                      unsigned AddrDisc) {
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
@@ -1877,7 +1888,7 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
 // authenticated value in LR before performing a tail call.
 // Otherwise, the callee may re-sign the invalid return address,
 // introducing a signing oracle.
-void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
+void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC, Register ScratchReg) {
   if (!AArch64FI->shouldSignReturnAddress(*MF))
     return;
 
@@ -1885,11 +1896,6 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
   if (LRCheckMethod == AArch64PAuth::AuthCheckMethod::None)
     return;
 
-  const AArch64RegisterInfo *TRI = STI->getRegisterInfo();
-  Register ScratchReg =
-      TC->readsRegister(AArch64::X16, TRI) ? AArch64::X17 : AArch64::X16;
-  assert(!TC->readsRegister(ScratchReg, TRI) &&
-         "Neither x16 nor x17 is available as a scratch register");
   AArch64PACKey::ID Key =
       AArch64FI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
   emitPtrauthCheckAuthenticatedValue(
@@ -2448,6 +2454,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
+  case AArch64::ALLOCATE_SCRATCH:
+    // Do nothing.
+    return;
+
   case AArch64::AUT:
   case AArch64::AUTPAC:
     emitPtrauthAuthResign(MI);
@@ -2481,11 +2491,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     Register AddrDisc = MI->getOperand(4).getReg();
 
-    Register ScratchReg = MI->getOperand(0).getReg() == AArch64::X16
-                              ? AArch64::X17
-                              : AArch64::X16;
+    Register ScratchReg = getPtrauthScratchReg(MI);
 
-    emitPtrauthTailCallHardening(MI);
+    emitPtrauthTailCallHardening(MI, ScratchReg);
 
     unsigned DiscReg = AddrDisc;
     if (Disc) {
@@ -2517,7 +2525,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::TCRETURNrix17:
   case AArch64::TCRETURNrinotx16:
   case AArch64::TCRETURNriALL: {
-    emitPtrauthTailCallHardening(MI);
+    emitPtrauthTailCallHardening(MI, MI->getOperand(0).getReg() == AArch64::X16 ? AArch64::X17 : AArch64::X16);
 
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
@@ -2526,7 +2534,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case AArch64::TCRETURNdi: {
-    emitPtrauthTailCallHardening(MI);
+    emitPtrauthTailCallHardening(MI, AArch64::X16);
 
     MCOperand Dest;
     MCInstLowering.lowerOperand(MI->getOperand(0), Dest);

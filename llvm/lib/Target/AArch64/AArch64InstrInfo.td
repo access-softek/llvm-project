@@ -1705,6 +1705,8 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 // Pseudos
 
+def ALLOCATE_SCRATCH : Pseudo<(outs tcGPRx16x17:$scratch), (ins), []>, Sched<[]>;
+
 let Uses = [LR, SP], Defs = [LR] in {
 // Insertion point of LR signing code.
 def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
@@ -1910,29 +1912,29 @@ let Predicates = [HasPAuth] in {
   // make sure at least one register is usable as a scratch one - for that
   // purpose, use tcGPRnotx16x17 register class for the second operand.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
-      Uses = [SP] in {
+      usesCustomInserter = 1, Uses = [SP] in {
     def AUTH_TCRETURN
       : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff, i32imm:$Key,
-                            i64imm:$Disc, tcGPRnotx16x17:$AddrDisc),
+                            i64imm:$Disc, tcGPR64:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
     def AUTH_TCRETURN_BTI
       : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
-                            i64imm:$Disc, tcGPRnotx16x17:$AddrDisc),
+                            i64imm:$Disc, tcGPR64:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
   }
 
   let Predicates = [TailCallAny] in
     def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
-                                (i64 timm:$Disc), tcGPRnotx16x17:$AddrDisc),
+                                (i64 timm:$Disc), tcGPR64:$AddrDisc),
               (AUTH_TCRETURN tcGPR64:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
-                             tcGPRnotx16x17:$AddrDisc)>;
+                             tcGPR64:$AddrDisc)>;
 
   let Predicates = [TailCallX16X17] in
     def : Pat<(AArch64authtcret tcGPRx16x17:$dst, (i32 timm:$FPDiff),
                                 (i32 timm:$Key), (i64 timm:$Disc),
-                                tcGPRnotx16x17:$AddrDisc),
+                                tcGPR64:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
-                                 imm:$Disc, tcGPRnotx16x17:$AddrDisc)>;
+                                 imm:$Disc, tcGPR64:$AddrDisc)>;
 }
 
 // v9.5-A pointer authentication extensions

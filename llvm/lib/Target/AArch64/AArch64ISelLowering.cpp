@@ -3174,6 +3174,31 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     }
   }
 
+
+  bool NeedsScratchRegister = false;
+  switch (MI.getOpcode()) {
+  case AArch64::AUTH_TCRETURN:
+  case AArch64::AUTH_TCRETURN_BTI:
+    NeedsScratchRegister = true;
+    break;
+  default:
+    break;
+  }
+  if (NeedsScratchRegister) {
+    const auto &DL = MI.getDebugLoc();
+    const auto *TII = Subtarget->getInstrInfo();
+    Register ScratchReg = MI.getMF()->getRegInfo().createVirtualRegister(&AArch64::tcGPRx16x17RegClass);
+
+    BuildMI(*BB, MI.getIterator(), DL,
+            TII->get(AArch64::ALLOCATE_SCRATCH), ScratchReg);
+
+    MachineOperand ScratchOp = MachineOperand::CreateReg(ScratchReg, /*isDef=*/false);
+    ScratchOp.setImplicit();
+    ScratchOp.setIsKill();
+    MI.addOperand(ScratchOp);
+    return BB;
+  }
+
   switch (MI.getOpcode()) {
   default:
 #ifndef NDEBUG
