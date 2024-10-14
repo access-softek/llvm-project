@@ -3352,6 +3352,10 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     ptrauthRefineDiscriminator(BB, MI.getOperand(1), MI.getOperand(2));
     ptrauthRefineDiscriminator(BB, MI.getOperand(4), MI.getOperand(5));
     return BB;
+  case AArch64::AUTH_TCRETURN:
+  case AArch64::AUTH_TCRETURN_BTI:
+    ptrauthAddScratchRegister(MI, BB);
+    return BB;
   }
 }
 

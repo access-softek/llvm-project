@@ -1134,6 +1134,7 @@ bool AArch64CallLowering::lowerTailCall(
           *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(),
           MIB->getOperand(4), 4));
     }
+    MIB.addUse(/*ScratchReg=*/AArch64::NoRegister);
   }
 
   // Tell the call which registers are clobbered.
