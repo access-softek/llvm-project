@@ -1787,37 +1787,39 @@ let Predicates = [HasPAuth] in {
   // operations (such as raw address manipulation or discriminator
   // materialization here), in part because they're handled in a safer way by
   // the kernel, notably on Darwin.
-  def BLRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                                 GPR64noip:$AddrDisc),
-                    [(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
-                                      GPR64noip:$AddrDisc)]>, Sched<[]> {
+  def BLRA : Pseudo<(outs), (ins GPR64:$Rn, i32imm:$Key, i64imm:$Disc,
+                                 GPR64:$AddrDisc),
+                    [(AArch64authcall GPR64:$Rn, timm:$Key, timm:$Disc,
+                                      GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let isCall = 1;
     let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
-    let Defs = [X17,LR];
+    let usesCustomInserter = 1;
+    let Defs = [LR];
     let Uses = [SP];
   }
 
   def BLRA_RVMARKER : Pseudo<
-        (outs), (ins i64imm:$rvfunc, GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                     GPR64noip:$AddrDisc),
+        (outs), (ins i64imm:$rvfunc, GPR64:$Rn, i32imm:$Key, i64imm:$Disc,
+                     GPR64:$AddrDisc),
         [(AArch64authcall_rvmarker tglobaladdr:$rvfunc,
-                                   GPR64noip:$Rn, timm:$Key, timm:$Disc,
-                                   GPR64noip:$AddrDisc)]>, Sched<[]> {
+                                   GPR64:$Rn, timm:$Key, timm:$Disc,
+                                   GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
     let isCall = 1;
-    let Defs = [X17,LR];
+    let usesCustomInserter = 1;
+    let Defs = [LR];
     let Uses = [SP];
   }
 
   // BRA pseudo, generalized version of BRAA/BRAB/Z.
   // This directly manipulates x16/x17, which are the only registers the OS
   // guarantees are safe to use for sensitive operations.
-  def BRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                                GPR64noip:$AddrDisc), []>, Sched<[]> {
+  def BRA : Pseudo<(outs), (ins GPR64:$Rn, i32imm:$Key, i64imm:$Disc,
+                                GPR64:$AddrDisc), []>, Sched<[]> {
     let isCodeGenOnly = 1;
     let hasNoSchedulingInfo = 1;
     let hasSideEffects = 1;
@@ -1828,7 +1830,7 @@ let Predicates = [HasPAuth] in {
     let isBarrier = 1;
     let isIndirectBranch = 1;
     let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
-    let Defs = [X17];
+    let usesCustomInserter = 1;
   }
 
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {

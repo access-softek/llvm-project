@@ -62,15 +62,15 @@ define i32 @test_tailcall_ib_0(ptr %arg0) #0 {
 define i32 @test_call_ia_imm(ptr %arg0) #0 {
 ; DARWIN-LABEL: test_call_ia_imm:
 ; DARWIN-NEXT:    stp x29, x30, [sp, #-16]!
-; DARWIN-NEXT:    mov x17, #42
-; DARWIN-NEXT:    blraa x0, x17
+; DARWIN-NEXT:    mov x16, #42
+; DARWIN-NEXT:    blraa x0, x16
 ; DARWIN-NEXT:    ldp x29, x30, [sp], #16
 ; DARWIN-NEXT:    ret
 ;
 ; ELF-LABEL: test_call_ia_imm:
 ; ELF-NEXT:    str x30, [sp, #-16]!
-; ELF-NEXT:    mov x17, #42
-; ELF-NEXT:    blraa x0, x17
+; ELF-NEXT:    mov x16, #42
+; ELF-NEXT:    blraa x0, x16
 ; ELF-NEXT:    ldr x30, [sp], #16
 ; ELF-NEXT:    ret
   %tmp0 = call i32 %arg0() [ "ptrauth"(i32 0, i64 42) ]
@@ -80,15 +80,15 @@ define i32 @test_call_ia_imm(ptr %arg0) #0 {
 define i32 @test_call_ib_imm(ptr %arg0) #0 {
 ; DARWIN-LABEL: test_call_ib_imm:
 ; DARWIN-NEXT:    stp x29, x30, [sp, #-16]!
-; DARWIN-NEXT:    mov x17, #42
-; DARWIN-NEXT:    blrab x0, x17
+; DARWIN-NEXT:    mov x16, #42
+; DARWIN-NEXT:    blrab x0, x16
 ; DARWIN-NEXT:    ldp x29, x30, [sp], #16
 ; DARWIN-NEXT:    ret
 ;
 ; ELF-LABEL: test_call_ib_imm:
 ; ELF-NEXT:    str x30, [sp, #-16]!
-; ELF-NEXT:    mov x17, #42
-; ELF-NEXT:    blrab x0, x17
+; ELF-NEXT:    mov x16, #42
+; ELF-NEXT:    blrab x0, x16
 ; ELF-NEXT:    ldr x30, [sp], #16
 ; ELF-NEXT:    ret
   %tmp0 = call i32 %arg0() [ "ptrauth"(i32 1, i64 42) ]
@@ -326,9 +326,8 @@ define i32 @test_direct_call_mismatch() #0 {
 ; DARWIN-NEXT:   ldr x16, [x16, _f@GOTPAGEOFF]
 ; DARWIN-NEXT:   mov x17, #42
 ; DARWIN-NEXT:   pacia x16, x17
-; DARWIN-NEXT:   mov x8, x16
 ; DARWIN-NEXT:   mov x17, #42
-; DARWIN-NEXT:   blrab x8, x17
+; DARWIN-NEXT:   blrab x16, x17
 ; DARWIN-NEXT:   ldp x29, x30, [sp], #16
 ; DARWIN-NEXT:   ret
 ;
@@ -338,9 +337,8 @@ define i32 @test_direct_call_mismatch() #0 {
 ; ELF-NEXT:   ldr x16, [x16, :got_lo12:f]
 ; ELF-NEXT:   mov x17, #42
 ; ELF-NEXT:   pacia x16, x17
-; ELF-NEXT:   mov x8, x16
 ; ELF-NEXT:   mov x17, #42
-; ELF-NEXT:   blrab x8, x17
+; ELF-NEXT:   blrab x16, x17
 ; ELF-NEXT:   ldr x30, [sp], #16
 ; ELF-NEXT:   ret
   %tmp0 = call i32 ptrauth(ptr @f, i32 0, i64 42)() [ "ptrauth"(i32 1, i64 42) ]

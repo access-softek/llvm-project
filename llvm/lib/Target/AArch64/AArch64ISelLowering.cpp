@@ -3181,6 +3181,9 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::AUTH_TCRETURN_BTI:
   case AArch64::AUT:
   case AArch64::AUTPAC:
+  case AArch64::BLRA:
+  case AArch64::BLRA_RVMARKER:
+  case AArch64::BRA:
     NeedsScratchRegister = true;
     break;
   default:

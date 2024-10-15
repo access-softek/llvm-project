@@ -48,8 +48,8 @@ entry:
 define void @rv_marker_ptrauth_blraa_disc_imm16(i8* ()** %arg0) {
 ; CHECK-LABEL: rv_marker_ptrauth_blraa_disc_imm16
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
-; CHECK-NEXT:    mov x17, #45431
-; CHECK-NEXT:    blrab [[ADDR]], x17
+; CHECK-NEXT:    mov x16, #45431
+; CHECK-NEXT:    blrab [[ADDR]], x16
 ; CHECK-NEXT:    mov x29, x29
 ; CHECK-NEXT:    bl objc_retainAutoreleasedReturnValue
 ;
@@ -95,8 +95,8 @@ define void @rv_marker_ptrauth_blrab(i8* ()** %arg0, i64 %arg1) {
 define void @rv_marker_ptrauth_blrab_disc_imm16(i8* ()** %arg0) {
 ; CHECK-LABEL: rv_marker_ptrauth_blrab_disc_imm16
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
-; CHECK-NEXT:    mov x17, #256
-; CHECK-NEXT:    blrab [[ADDR]], x17
+; CHECK-NEXT:    mov x16, #256
+; CHECK-NEXT:    blrab [[ADDR]], x16
 ; CHECK-NEXT:   mov x29, x29
 ; CHECK-NEXT:   bl objc_retainAutoreleasedReturnValue
 ;

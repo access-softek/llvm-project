@@ -2028,7 +2028,8 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   unsigned AddrDisc = MI->getOperand(3).getReg();
 
   // Compute discriminator into x17
-  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17);
+  Register ScratchReg = getPtrauthScratchReg(MI);
+  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
