@@ -2179,13 +2179,15 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
-  MachineOperand GAOp = MI.getOperand(0);
-  const uint64_t KeyC = MI.getOperand(1).getImm();
+  Register DstReg = MI.getOperand(0).getReg();
+  MachineOperand GAOp = MI.getOperand(1);
+  const uint64_t KeyC = MI.getOperand(2).getImm();
   assert(KeyC <= AArch64PACKey::LAST &&
          "key is out of range [0, AArch64PACKey::LAST]");
   const auto Key = (AArch64PACKey::ID)KeyC;
-  const unsigned AddrDisc = MI.getOperand(2).getReg();
-  const uint64_t Disc = MI.getOperand(3).getImm();
+  const unsigned AddrDisc = MI.getOperand(3).getReg();
+  const uint64_t Disc = MI.getOperand(4).getImm();
+  Register ScratchReg = getPtrauthScratchReg(&MI);
   assert(isUInt<16>(Disc) &&
          "constant discriminator is out of range [0, 0xffff]");
 
@@ -2240,17 +2242,17 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   MCInstLowering.lowerOperand(GAMOLo, GAMCLo);
 
   EmitToStreamer(
-      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X16).addOperand(GAMCHi));
+      MCInstBuilder(AArch64::ADRP).addReg(DstReg).addOperand(GAMCHi));
 
   if (IsGOTLoad) {
     EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
-                       .addReg(AArch64::X16)
-                       .addReg(AArch64::X16)
+                       .addReg(DstReg)
+                       .addReg(DstReg)
                        .addOperand(GAMCLo));
   } else {
     EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
-                       .addReg(AArch64::X16)
-                       .addReg(AArch64::X16)
+                       .addReg(DstReg)
+                       .addReg(DstReg)
                        .addOperand(GAMCLo)
                        .addImm(0));
   }
@@ -2263,15 +2265,15 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
            BitPos += 12) {
         EmitToStreamer(
             MCInstBuilder(IsNeg ? AArch64::SUBXri : AArch64::ADDXri)
-                .addReg(AArch64::X16)
-                .addReg(AArch64::X16)
+                .addReg(DstReg)
+                .addReg(DstReg)
                 .addImm((AbsOffset >> BitPos) & 0xfff)
                 .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos)));
       }
     } else {
       const uint64_t UOffset = Offset;
       EmitToStreamer(MCInstBuilder(IsNeg ? AArch64::MOVNXi : AArch64::MOVZXi)
-                         .addReg(AArch64::X17)
+                         .addReg(ScratchReg)
                          .addImm((IsNeg ? ~UOffset : UOffset) & 0xffff)
                          .addImm(/*shift=*/0));
       auto NeedMovk = [IsNeg, UOffset](int BitPos) -> bool {
@@ -2285,21 +2287,21 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
         return false;
       };
       for (int BitPos = 16; BitPos != 64 && NeedMovk(BitPos); BitPos += 16)
-        emitMOVK(AArch64::X17, (UOffset >> BitPos) & 0xffff, BitPos);
+        emitMOVK(ScratchReg, (UOffset >> BitPos) & 0xffff, BitPos);
 
       EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X16)
-                         .addReg(AArch64::X17)
+                         .addReg(DstReg)
+                         .addReg(DstReg)
+                         .addReg(ScratchReg)
                          .addImm(/*shift=*/0));
     }
   }
 
-  Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17);
+  Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg);
 
   auto MIB = MCInstBuilder(getPACOpcodeForKey(Key, DiscReg == AArch64::XZR))
-                 .addReg(AArch64::X16)
-                 .addReg(AArch64::X16);
+                 .addReg(DstReg)
+                 .addReg(DstReg);
   if (DiscReg != AArch64::XZR)
     MIB.addReg(DiscReg);
   EmitToStreamer(MIB);

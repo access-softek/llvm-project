@@ -88,18 +88,18 @@ define ptr @foo() {
 define ptr @test_global_zero_disc() {
 ; ELF-LABEL:   test_global_zero_disc:
 ; ELF:         // %bb.0:
-; ELF-NEXT:      adrp    x16, :got:g
-; ELF-NEXT:      ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:      paciza  x16
-; ELF-NEXT:      mov     x0, x16
+; ELF-NEXT:      adrp    x17, :got:g
+; ELF-NEXT:      ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:      paciza  x17
+; ELF-NEXT:      mov     x0, x17
 ; ELF-NEXT:      ret
 
 ; MACHO-LABEL: _test_global_zero_disc:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    paciza  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    paciza  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr @g, i32 0)
@@ -108,20 +108,20 @@ define ptr @test_global_zero_disc() {
 define ptr @test_global_offset_zero_disc() {
 ; ELF-LABEL: test_global_offset_zero_disc:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, :got:g
-; ELF-NEXT:    ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:    add     x16, x16, #16
-; ELF-NEXT:    pacdza  x16
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, :got:g
+; ELF-NEXT:    ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:    add     x17, x17, #16
+; ELF-NEXT:    pacdza  x17
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_offset_zero_disc:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    add     x16, x16, #16
-; MACHO-NEXT:    pacdza  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    add     x17, x17, #16
+; MACHO-NEXT:    pacdza  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 16), i32 2)
@@ -130,22 +130,22 @@ define ptr @test_global_offset_zero_disc() {
 define ptr @test_global_neg_offset_zero_disc() {
 ; ELF-LABEL: test_global_neg_offset_zero_disc:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, :got:g
-; ELF-NEXT:    ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:    sub     x16, x16, #576
-; ELF-NEXT:    sub     x16, x16, #30, lsl #12
-; ELF-NEXT:    pacdza  x16
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, :got:g
+; ELF-NEXT:    ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:    sub     x17, x17, #576
+; ELF-NEXT:    sub     x17, x17, #30, lsl #12
+; ELF-NEXT:    pacdza  x17
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_neg_offset_zero_disc:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    sub     x16, x16, #576
-; MACHO-NEXT:    sub     x16, x16, #30, lsl #12
-; MACHO-NEXT:    pacdza  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    sub     x17, x17, #576
+; MACHO-NEXT:    sub     x17, x17, #30, lsl #12
+; MACHO-NEXT:    pacdza  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 -123456), i32 2)
@@ -154,24 +154,24 @@ define ptr @test_global_neg_offset_zero_disc() {
 define ptr @test_global_big_offset_zero_disc() {
 ; ELF-LABEL: test_global_big_offset_zero_disc:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, :got:g
-; ELF-NEXT:    ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:    mov     x17, #1
-; ELF-NEXT:    movk    x17, #32769, lsl #16
-; ELF-NEXT:    add     x16, x16, x17
-; ELF-NEXT:    pacdza  x16
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, :got:g
+; ELF-NEXT:    ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:    mov     x16, #1
+; ELF-NEXT:    movk    x16, #32769, lsl #16
+; ELF-NEXT:    add     x17, x17, x16
+; ELF-NEXT:    pacdza  x17
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_big_offset_zero_disc:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    mov     x17, #1
-; MACHO-NEXT:    movk    x17, #32769, lsl #16
-; MACHO-NEXT:    add     x16, x16, x17
-; MACHO-NEXT:    pacdza  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    mov     x16, #1
+; MACHO-NEXT:    movk    x16, #32769, lsl #16
+; MACHO-NEXT:    add     x17, x17, x16
+; MACHO-NEXT:    pacdza  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 add (i64 2147483648, i64 65537)), i32 2)
@@ -180,24 +180,24 @@ define ptr @test_global_big_offset_zero_disc() {
 define ptr @test_global_big_neg_offset_zero_disc() {
 ; ELF-LABEL: test_global_big_neg_offset_zero_disc:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, :got:g
-; ELF-NEXT:    ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:    mov     x17, #-52501
-; ELF-NEXT:    movk    x17, #63652, lsl #16
-; ELF-NEXT:    add     x16, x16, x17
-; ELF-NEXT:    pacdza  x16
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, :got:g
+; ELF-NEXT:    ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:    mov     x16, #-52501
+; ELF-NEXT:    movk    x16, #63652, lsl #16
+; ELF-NEXT:    add     x17, x17, x16
+; ELF-NEXT:    pacdza  x17
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_big_neg_offset_zero_disc:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    mov     x17, #-52501
-; MACHO-NEXT:    movk    x17, #63652, lsl #16
-; MACHO-NEXT:    add     x16, x16, x17
-; MACHO-NEXT:    pacdza  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    mov     x16, #-52501
+; MACHO-NEXT:    movk    x16, #63652, lsl #16
+; MACHO-NEXT:    add     x17, x17, x16
+; MACHO-NEXT:    pacdza  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 -123456789), i32 2)
@@ -206,28 +206,28 @@ define ptr @test_global_big_neg_offset_zero_disc() {
 define ptr @test_global_huge_neg_offset_zero_disc() {
 ; ELF-LABEL: test_global_huge_neg_offset_zero_disc:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, :got:g
-; ELF-NEXT:    ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:    mov     x17, #-65536
-; ELF-NEXT:    movk    x17, #0, lsl #16
-; ELF-NEXT:    movk    x17, #0, lsl #32
-; ELF-NEXT:    movk    x17, #32768, lsl #48
-; ELF-NEXT:    add     x16, x16, x17
-; ELF-NEXT:    pacdza  x16
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, :got:g
+; ELF-NEXT:    ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:    mov     x16, #-65536
+; ELF-NEXT:    movk    x16, #0, lsl #16
+; ELF-NEXT:    movk    x16, #0, lsl #32
+; ELF-NEXT:    movk    x16, #32768, lsl #48
+; ELF-NEXT:    add     x17, x17, x16
+; ELF-NEXT:    pacdza  x17
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_huge_neg_offset_zero_disc:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    mov     x17, #-65536
-; MACHO-NEXT:    movk    x17, #0, lsl #16
-; MACHO-NEXT:    movk    x17, #0, lsl #32
-; MACHO-NEXT:    movk    x17, #32768, lsl #48
-; MACHO-NEXT:    add     x16, x16, x17
-; MACHO-NEXT:    pacdza  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    mov     x16, #-65536
+; MACHO-NEXT:    movk    x16, #0, lsl #16
+; MACHO-NEXT:    movk    x16, #0, lsl #32
+; MACHO-NEXT:    movk    x16, #32768, lsl #48
+; MACHO-NEXT:    add     x17, x17, x16
+; MACHO-NEXT:    pacdza  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 -9223372036854775808), i32 2)
@@ -236,20 +236,20 @@ define ptr @test_global_huge_neg_offset_zero_disc() {
 define ptr @test_global_disc() {
 ; ELF-LABEL: test_global_disc:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, :got:g
-; ELF-NEXT:    ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:    mov     x17, #42 // =0x2a
-; ELF-NEXT:    pacia   x16, x17
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, :got:g
+; ELF-NEXT:    ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:    mov     x16, #42 // =0x2a
+; ELF-NEXT:    pacia   x17, x16
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_disc:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    mov     x17, #42 ; =0x2a
-; MACHO-NEXT:    pacia   x16, x17
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    mov     x16, #42 ; =0x2a
+; MACHO-NEXT:    pacia   x17, x16
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr @g, i32 0, i64 42)
@@ -262,12 +262,12 @@ define ptr @test_global_addr_disc() {
 ; ELF:       // %bb.0:
 ; ELF-NEXT:    adrp x8, g.ref.da.42.addr
 ; ELF-NEXT:    add x8, x8, :lo12:g.ref.da.42.addr
-; ELF-NEXT:    adrp x16, :got:g
-; ELF-NEXT:    ldr x16, [x16, :got_lo12:g]
-; ELF-NEXT:    mov x17, x8
-; ELF-NEXT:    movk x17, #42, lsl #48
-; ELF-NEXT:    pacda x16, x17
-; ELF-NEXT:    mov x0, x16
+; ELF-NEXT:    adrp x17, :got:g
+; ELF-NEXT:    ldr x17, [x17, :got_lo12:g]
+; ELF-NEXT:    mov x16, x8
+; ELF-NEXT:    movk x16, #42, lsl #48
+; ELF-NEXT:    pacda x17, x16
+; ELF-NEXT:    mov x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_addr_disc:
@@ -276,12 +276,12 @@ define ptr @test_global_addr_disc() {
 ; MACHO-NEXT:    adrp x8, _g.ref.da.42.addr@PAGE
 ; MACHO-NEXT:   Lloh{{.*}}:
 ; MACHO-NEXT:    add x8, x8, _g.ref.da.42.addr@PAGEOFF
-; MACHO-NEXT:    adrp x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    mov x17, x8
-; MACHO-NEXT:    movk x17, #42, lsl #48
-; MACHO-NEXT:    pacda x16, x17
-; MACHO-NEXT:    mov x0, x16
+; MACHO-NEXT:    adrp x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    mov x16, x8
+; MACHO-NEXT:    movk x16, #42, lsl #48
+; MACHO-NEXT:    pacda x17, x16
+; MACHO-NEXT:    mov x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr @g, i32 2, i64 42, ptr @g.ref.da.42.addr)
@@ -290,18 +290,18 @@ define ptr @test_global_addr_disc() {
 define ptr @test_global_process_specific() {
 ; ELF-LABEL: test_global_process_specific:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, :got:g
-; ELF-NEXT:    ldr     x16, [x16, :got_lo12:g]
-; ELF-NEXT:    pacizb  x16
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, :got:g
+; ELF-NEXT:    ldr     x17, [x17, :got_lo12:g]
+; ELF-NEXT:    pacizb  x17
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_process_specific:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g@GOTPAGE
-; MACHO-NEXT:    ldr     x16, [x16, _g@GOTPAGEOFF]
-; MACHO-NEXT:    pacizb  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g@GOTPAGE
+; MACHO-NEXT:    ldr     x17, [x17, _g@GOTPAGEOFF]
+; MACHO-NEXT:    pacizb  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr @g, i32 1)
@@ -312,18 +312,18 @@ define ptr @test_global_process_specific() {
 define ptr @test_global_strong_def() {
 ; ELF-LABEL: test_global_strong_def:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x16, g_strong_def
-; ELF-NEXT:    add     x16, x16, :lo12:g_strong_def
-; ELF-NEXT:    pacdza  x16
-; ELF-NEXT:    mov     x0, x16
+; ELF-NEXT:    adrp    x17, g_strong_def
+; ELF-NEXT:    add     x17, x17, :lo12:g_strong_def
+; ELF-NEXT:    pacdza  x17
+; ELF-NEXT:    mov     x0, x17
 ; ELF-NEXT:    ret
 
 ; MACHO-LABEL: _test_global_strong_def:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x16, _g_strong_def@PAGE
-; MACHO-NEXT:    add     x16, x16, _g_strong_def@PAGEOFF
-; MACHO-NEXT:    pacdza  x16
-; MACHO-NEXT:    mov     x0, x16
+; MACHO-NEXT:    adrp    x17, _g_strong_def@PAGE
+; MACHO-NEXT:    add     x17, x17, _g_strong_def@PAGEOFF
+; MACHO-NEXT:    pacdza  x17
+; MACHO-NEXT:    mov     x0, x17
 ; MACHO-NEXT:    ret
 
   ret ptr ptrauth (ptr @g_strong_def, i32 2)

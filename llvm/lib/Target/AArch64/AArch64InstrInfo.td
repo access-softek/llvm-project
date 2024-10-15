@@ -1941,25 +1941,27 @@ let Predicates = [HasPAuth] in {
                     timm:$PACKey, 0, GPR64:$PACAddrDisc)>;
 
   // Materialize a signed global address, with adrp+add and PAC.
-  def MOVaddrPAC : Pseudo<(outs),
+  def MOVaddrPAC : Pseudo<(outs GPR64pauth:$dst),
                           (ins i64imm:$Addr, i32imm:$Key,
-                               GPR64noip:$AddrDisc, i64imm:$Disc), []>,
+                               GPR64:$AddrDisc, i64imm:$Disc, ScratchRegister:$scratch), [],
+                          "@earlyclobber $dst">,
                Sched<[WriteI, ReadI]> {
     let isReMaterializable = 1;
     let isCodeGenOnly = 1;
     let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
-    let Defs = [X16,X17];
+    let usesCustomInserter = 1;
   }
 
   // Materialize a signed global address, using a GOT load and PAC.
-  def LOADgotPAC : Pseudo<(outs),
+  def LOADgotPAC : Pseudo<(outs GPR64pauth:$dst),
                           (ins i64imm:$Addr, i32imm:$Key,
-                               GPR64noip:$AddrDisc, i64imm:$Disc), []>,
+                               GPR64:$AddrDisc, i64imm:$Disc, ScratchRegister:$scratch), [],
+                          "@earlyclobber $dst">,
                Sched<[WriteI, ReadI]> {
     let isReMaterializable = 1;
     let isCodeGenOnly = 1;
     let Size = 40; // 12 fixed + 28 variable, for pointer offset, and discriminator
-    let Defs = [X16,X17];
+    let usesCustomInserter = 1;
   }
 
   // Load a signed global address from a special $auth_ptr$ stub slot.

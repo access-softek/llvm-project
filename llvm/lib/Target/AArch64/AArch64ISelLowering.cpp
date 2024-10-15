@@ -3359,6 +3359,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::BRA:
   case AArch64::BLRA:
   case AArch64::BLRA_RVMARKER:
+  case AArch64::MOVaddrPAC:
+  case AArch64::LOADgotPAC:
     ptrauthAddScratchRegister(MI, BB);
     return BB;
   }
@@ -10229,19 +10231,22 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
   // No GOT load needed -> MOVaddrPAC
   if (!NeedsGOTLoad) {
     assert(!PtrGV->hasExternalWeakLinkage() && "extern_weak should use GOT");
+    SDValue ScratchReg = DAG.getRegister(AArch64::NoRegister, MVT::i64);
     return SDValue(
         DAG.getMachineNode(AArch64::MOVaddrPAC, DL, MVT::i64,
-                           {TPtr, Key, TAddrDiscriminator, Discriminator}),
+                           {TPtr, Key, TAddrDiscriminator, Discriminator, ScratchReg}),
         0);
   }
 
   // GOT load -> LOADgotPAC
   // Note that we disallow extern_weak refs to avoid null checks later.
-  if (!PtrGV->hasExternalWeakLinkage())
+  if (!PtrGV->hasExternalWeakLinkage()) {
+    SDValue ScratchReg = DAG.getRegister(AArch64::NoRegister, MVT::i64);
     return SDValue(
         DAG.getMachineNode(AArch64::LOADgotPAC, DL, MVT::i64,
-                           {TPtr, Key, TAddrDiscriminator, Discriminator}),
+                           {TPtr, Key, TAddrDiscriminator, Discriminator, ScratchReg}),
         0);
+  }
 
   // extern_weak ref -> LOADauthptrstatic
   return LowerPtrAuthGlobalAddressStatically(
@@ -11370,12 +11375,12 @@ SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
 
     SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
     SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+    SDValue ScratchReg = DAG.getRegister(AArch64::NoRegister, MVT::i64);
 
     SDNode *MOV =
-        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, {MVT::Other, MVT::Glue},
-                           {TargetBA, Key, AddrDisc, Disc});
-    return DAG.getCopyFromReg(SDValue(MOV, 0), DL, AArch64::X16, MVT::i64,
-                              SDValue(MOV, 1));
+        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, MVT::i64,
+                           {TargetBA, Key, AddrDisc, Disc, ScratchReg});
+    return SDValue(MOV, 0);
   }
 
   CodeModel::Model CM = getTargetMachine().getCodeModel();

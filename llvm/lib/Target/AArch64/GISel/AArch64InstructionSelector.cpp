@@ -3595,17 +3595,16 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     Function *BAFn = I.getOperand(1).getBlockAddress()->getFunction();
     if (std::optional<uint16_t> BADisc =
             STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(*BAFn)) {
-      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
-      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
       MIB.buildInstr(AArch64::MOVaddrPAC)
+          .addDef(I.getOperand(0).getReg())
           .addBlockAddress(I.getOperand(1).getBlockAddress())
           .addImm(AArch64PACKey::IA)
           .addReg(/*AddrDisc=*/AArch64::XZR)
           .addImm(*BADisc)
+          .addReg(/*ScratchReg=*/AArch64::NoRegister)
           .constrainAllUses(TII, TRI, RBI);
-      MIB.buildCopy(I.getOperand(0).getReg(), Register(AArch64::X16));
       RBI.constrainGenericRegister(I.getOperand(0).getReg(),
-                                   AArch64::GPR64RegClass, MRI);
+                                   AArch64::GPR64pauthRegClass, MRI);
       I.eraseFromParent();
       return true;
     }
@@ -6870,16 +6869,15 @@ bool AArch64InstructionSelector::selectPtrAuthGlobalValue(
   // - GOT load for non-extern_weak -> LOADgotPAC
   //   Note that we disallow extern_weak refs to avoid null checks later.
   if (!GV->hasExternalWeakLinkage()) {
-    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
-    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
     MIB.buildInstr(NeedsGOTLoad ? AArch64::LOADgotPAC : AArch64::MOVaddrPAC)
+        .addDef(DefReg)
         .addGlobalAddress(GV, Offset)
         .addImm(Key)
         .addReg(HasAddrDisc ? AddrDisc : AArch64::XZR)
         .addImm(Disc)
+        .addReg(/*ScratchReg=*/AArch64::NoRegister)
         .constrainAllUses(TII, TRI, RBI);
-    MIB.buildCopy(DefReg, Register(AArch64::X16));
-    RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
+    RBI.constrainGenericRegister(DefReg, AArch64::GPR64pauthRegClass, MRI);
     I.eraseFromParent();
     return true;
   }
