@@ -3186,6 +3186,11 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::BRA:
     NeedsScratchRegister = true;
     break;
+  case AArch64::MOVaddrPAC:
+  case AArch64::LOADgotPAC:
+    NeedsScratchRegister |= !isUInt<24>(std::abs(MI.getOperand(1).getOffset()));
+    NeedsScratchRegister |= MI.getOperand(4).getImm(); // Disc
+    break;
   default:
     break;
   }
@@ -3203,6 +3208,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MI.addOperand(ScratchOp);
     return BB;
   }
+  if (MI.getOpcode() == AArch64::MOVaddrPAC || MI.getOpcode() == AArch64::LOADgotPAC)
+    return BB;
 
   switch (MI.getOpcode()) {
   default:
@@ -11178,10 +11185,9 @@ SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
     SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
 
     SDNode *MOV =
-        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, {MVT::Other, MVT::Glue},
+        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, MVT::i64,
                            {TargetBA, Key, AddrDisc, Disc});
-    return DAG.getCopyFromReg(SDValue(MOV, 0), DL, AArch64::X16, MVT::i64,
-                              SDValue(MOV, 1));
+    return SDValue(MOV, 0);
   }
 
   CodeModel::Model CM = getTargetMachine().getCodeModel();

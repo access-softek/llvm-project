@@ -322,23 +322,23 @@ define i32 @test_direct_tailcall(ptr %arg0) #0 {
 define i32 @test_direct_call_mismatch() #0 {
 ; DARWIN-LABEL: test_direct_call_mismatch:
 ; DARWIN-NEXT:   stp x29, x30, [sp, #-16]!
-; DARWIN-NEXT:   adrp x16, _f@GOTPAGE
-; DARWIN-NEXT:   ldr x16, [x16, _f@GOTPAGEOFF]
-; DARWIN-NEXT:   mov x17, #42
-; DARWIN-NEXT:   pacia x16, x17
-; DARWIN-NEXT:   mov x17, #42
-; DARWIN-NEXT:   blrab x16, x17
+; DARWIN-NEXT:   adrp x17, _f@GOTPAGE
+; DARWIN-NEXT:   ldr x17, [x17, _f@GOTPAGEOFF]
+; DARWIN-NEXT:   mov x16, #42
+; DARWIN-NEXT:   pacia x17, x16
+; DARWIN-NEXT:   mov x16, #42
+; DARWIN-NEXT:   blrab x17, x16
 ; DARWIN-NEXT:   ldp x29, x30, [sp], #16
 ; DARWIN-NEXT:   ret
 ;
 ; ELF-LABEL: test_direct_call_mismatch:
 ; ELF-NEXT:   str x30, [sp, #-16]!
-; ELF-NEXT:   adrp x16, :got:f
-; ELF-NEXT:   ldr x16, [x16, :got_lo12:f]
-; ELF-NEXT:   mov x17, #42
-; ELF-NEXT:   pacia x16, x17
-; ELF-NEXT:   mov x17, #42
-; ELF-NEXT:   blrab x16, x17
+; ELF-NEXT:   adrp x17, :got:f
+; ELF-NEXT:   ldr x17, [x17, :got_lo12:f]
+; ELF-NEXT:   mov x16, #42
+; ELF-NEXT:   pacia x17, x16
+; ELF-NEXT:   mov x16, #42
+; ELF-NEXT:   blrab x17, x16
 ; ELF-NEXT:   ldr x30, [sp], #16
 ; ELF-NEXT:   ret
   %tmp0 = call i32 ptrauth(ptr @f, i32 0, i64 42)() [ "ptrauth"(i32 1, i64 42) ]
