@@ -37,44 +37,47 @@
 define i32 @test_indirectbr() #0 {
 ; MACHO-LABEL: test_indirectbr:
 ; MACHO:       ; %bb.0: ; %entry
-; MACHO-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; MACHO-NEXT:    adrp x16, Ltmp0@PAGE
-; MACHO-NEXT:    add x16, x16, Ltmp0@PAGEOFF
-; MACHO-NEXT:    mov x17, #34947 ; =0x8883
-; MACHO-NEXT:    pacia x16, x17
-; MACHO-NEXT:    mov x0, x16
-; MACHO-NEXT:    adrp x16, Ltmp1@PAGE
-; MACHO-NEXT:    add x16, x16, Ltmp1@PAGEOFF
-; MACHO-NEXT:    mov x17, #34947 ; =0x8883
-; MACHO-NEXT:    pacia x16, x17
-; MACHO-NEXT:    mov x1, x16
+; MACHO-NEXT:    sub sp, sp, #32
+; MACHO-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; MACHO-NEXT:    adrp x17, Ltmp0@PAGE
+; MACHO-NEXT:    add x17, x17, Ltmp0@PAGEOFF
+; MACHO-NEXT:    mov x16, #34947 ; =0x8883
+; MACHO-NEXT:    pacia x17, x16
+; MACHO-NEXT:    str x17, [sp, #8] ; 8-byte Folded Spill
+; MACHO-NEXT:    adrp x17, Ltmp1@PAGE
+; MACHO-NEXT:    add x17, x17, Ltmp1@PAGEOFF
+; MACHO-NEXT:    mov x16, #34947 ; =0x8883
+; MACHO-NEXT:    pacia x17, x16
+; MACHO-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; MACHO-NEXT:    mov x1, x17
 ; MACHO-NEXT:    bl _dummy_choose
 ; MACHO-NEXT:    mov x16, #34947 ; =0x8883
 ; MACHO-NEXT:    braa x0, x16
 ; MACHO-NEXT:  Ltmp0: ; Block address taken
 ; MACHO-NEXT:  LBB0_1: ; %bb1
 ; MACHO-NEXT:    mov w0, #1 ; =0x1
-; MACHO-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; MACHO-NEXT:    ret
+; MACHO-NEXT:    b LBB0_3
 ; MACHO-NEXT:  Ltmp1: ; Block address taken
 ; MACHO-NEXT:  LBB0_2: ; %bb2
 ; MACHO-NEXT:    mov w0, #2 ; =0x2
-; MACHO-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; MACHO-NEXT:  LBB0_3: ; %bb1
+; MACHO-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; MACHO-NEXT:    add sp, sp, #32
 ; MACHO-NEXT:    ret
 ;
 ; ELF-LABEL: test_indirectbr:
 ; ELF:       // %bb.0: // %entry
-; ELF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ELF-NEXT:    adrp x16, .Ltmp0
-; ELF-NEXT:    add x16, x16, :lo12:.Ltmp0
-; ELF-NEXT:    mov x17, #34947 // =0x8883
-; ELF-NEXT:    pacia x16, x17
-; ELF-NEXT:    mov x0, x16
-; ELF-NEXT:    adrp x16, .Ltmp1
-; ELF-NEXT:    add x16, x16, :lo12:.Ltmp1
-; ELF-NEXT:    mov x17, #34947 // =0x8883
-; ELF-NEXT:    pacia x16, x17
-; ELF-NEXT:    mov x1, x16
+; ELF-NEXT:    adrp x17, .Ltmp0
+; ELF-NEXT:    add x17, x17, :lo12:.Ltmp0
+; ELF-NEXT:    mov x16, #34947 // =0x8883
+; ELF-NEXT:    pacia x17, x16
+; ELF-NEXT:    stp x30, x17, [sp, #-16]! // 16-byte Folded Spill
+; ELF-NEXT:    adrp x17, .Ltmp1
+; ELF-NEXT:    add x17, x17, :lo12:.Ltmp1
+; ELF-NEXT:    mov x16, #34947 // =0x8883
+; ELF-NEXT:    pacia x17, x16
+; ELF-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; ELF-NEXT:    mov x1, x17
 ; ELF-NEXT:    bl dummy_choose
 ; ELF-NEXT:    mov x16, #34947 // =0x8883
 ; ELF-NEXT:    braa x0, x16
@@ -102,20 +105,20 @@ bb2:
 define ptr @test_indirectbr_other_function() #0 {
 ; MACHO-LABEL: test_indirectbr_other_function:
 ; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp x16, Ltmp0@PAGE
-; MACHO-NEXT:    add x16, x16, Ltmp0@PAGEOFF
-; MACHO-NEXT:    mov x17, #34947 ; =0x8883
-; MACHO-NEXT:    pacia x16, x17
-; MACHO-NEXT:    mov x0, x16
+; MACHO-NEXT:    adrp x17, Ltmp0@PAGE
+; MACHO-NEXT:    add x17, x17, Ltmp0@PAGEOFF
+; MACHO-NEXT:    mov x16, #34947 ; =0x8883
+; MACHO-NEXT:    pacia x17, x16
+; MACHO-NEXT:    mov x0, x17
 ; MACHO-NEXT:    ret
 ;
 ; ELF-LABEL: test_indirectbr_other_function:
 ; ELF:       // %bb.0:
-; ELF-NEXT:    adrp x16, .Ltmp0
-; ELF-NEXT:    add x16, x16, :lo12:.Ltmp0
-; ELF-NEXT:    mov x17, #34947 // =0x8883
-; ELF-NEXT:    pacia x16, x17
-; ELF-NEXT:    mov x0, x16
+; ELF-NEXT:    adrp x17, .Ltmp0
+; ELF-NEXT:    add x17, x17, :lo12:.Ltmp0
+; ELF-NEXT:    mov x16, #34947 // =0x8883
+; ELF-NEXT:    pacia x17, x16
+; ELF-NEXT:    mov x0, x17
 ; ELF-NEXT:    ret
   ret ptr blockaddress(@test_indirectbr, %bb1)
 }
@@ -126,44 +129,47 @@ define ptr @test_indirectbr_other_function() #0 {
 define i32 @test_indirectbr_2() #0 {
 ; MACHO-LABEL: test_indirectbr_2:
 ; MACHO:       ; %bb.0: ; %entry
-; MACHO-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; MACHO-NEXT:    adrp x16, Ltmp2@PAGE
-; MACHO-NEXT:    add x16, x16, Ltmp2@PAGEOFF
-; MACHO-NEXT:    mov x17, #40224 ; =0x9d20
-; MACHO-NEXT:    pacia x16, x17
-; MACHO-NEXT:    mov x0, x16
-; MACHO-NEXT:    adrp x16, Ltmp3@PAGE
-; MACHO-NEXT:    add x16, x16, Ltmp3@PAGEOFF
-; MACHO-NEXT:    mov x17, #40224 ; =0x9d20
-; MACHO-NEXT:    pacia x16, x17
-; MACHO-NEXT:    mov x1, x16
+; MACHO-NEXT:    sub sp, sp, #32
+; MACHO-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; MACHO-NEXT:    adrp x17, Ltmp2@PAGE
+; MACHO-NEXT:    add x17, x17, Ltmp2@PAGEOFF
+; MACHO-NEXT:    mov x16, #40224 ; =0x9d20
+; MACHO-NEXT:    pacia x17, x16
+; MACHO-NEXT:    str x17, [sp, #8] ; 8-byte Folded Spill
+; MACHO-NEXT:    adrp x17, Ltmp3@PAGE
+; MACHO-NEXT:    add x17, x17, Ltmp3@PAGEOFF
+; MACHO-NEXT:    mov x16, #40224 ; =0x9d20
+; MACHO-NEXT:    pacia x17, x16
+; MACHO-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; MACHO-NEXT:    mov x1, x17
 ; MACHO-NEXT:    bl _dummy_choose
 ; MACHO-NEXT:    mov x16, #40224 ; =0x9d20
 ; MACHO-NEXT:    braa x0, x16
 ; MACHO-NEXT:  Ltmp2: ; Block address taken
 ; MACHO-NEXT:  LBB2_1: ; %bb1
 ; MACHO-NEXT:    mov w0, #1 ; =0x1
-; MACHO-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; MACHO-NEXT:    ret
+; MACHO-NEXT:    b LBB2_3
 ; MACHO-NEXT:  Ltmp3: ; Block address taken
 ; MACHO-NEXT:  LBB2_2: ; %bb2
 ; MACHO-NEXT:    mov w0, #2 ; =0x2
-; MACHO-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; MACHO-NEXT:  LBB2_3: ; %bb1
+; MACHO-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; MACHO-NEXT:    add sp, sp, #32
 ; MACHO-NEXT:    ret
 ;
 ; ELF-LABEL: test_indirectbr_2:
 ; ELF:       // %bb.0: // %entry
-; ELF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ELF-NEXT:    adrp x16, .Ltmp2
-; ELF-NEXT:    add x16, x16, :lo12:.Ltmp2
-; ELF-NEXT:    mov x17, #40224 // =0x9d20
-; ELF-NEXT:    pacia x16, x17
-; ELF-NEXT:    mov x0, x16
-; ELF-NEXT:    adrp x16, .Ltmp3
-; ELF-NEXT:    add x16, x16, :lo12:.Ltmp3
-; ELF-NEXT:    mov x17, #40224 // =0x9d20
-; ELF-NEXT:    pacia x16, x17
-; ELF-NEXT:    mov x1, x16
+; ELF-NEXT:    adrp x17, .Ltmp2
+; ELF-NEXT:    add x17, x17, :lo12:.Ltmp2
+; ELF-NEXT:    mov x16, #40224 // =0x9d20
+; ELF-NEXT:    pacia x17, x16
+; ELF-NEXT:    stp x30, x17, [sp, #-16]! // 16-byte Folded Spill
+; ELF-NEXT:    adrp x17, .Ltmp3
+; ELF-NEXT:    add x17, x17, :lo12:.Ltmp3
+; ELF-NEXT:    mov x16, #40224 // =0x9d20
+; ELF-NEXT:    pacia x17, x16
+; ELF-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; ELF-NEXT:    mov x1, x17
 ; ELF-NEXT:    bl dummy_choose
 ; ELF-NEXT:    mov x16, #40224 // =0x9d20
 ; ELF-NEXT:    braa x0, x16
