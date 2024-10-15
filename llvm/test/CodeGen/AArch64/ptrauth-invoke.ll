@@ -126,8 +126,8 @@ continuebb:
 ; DARWIN-NEXT: Lloh{{.*}}:
 ; DARWIN-NEXT:         ldr x1, [x1, __ZTIPKc@GOTPAGEOFF]
 ; DARWIN-NEXT:         mov x2, #0
-; DARWIN-NEXT:         mov x17, #42
-; DARWIN-NEXT:         blrab x19, x17
+; DARWIN-NEXT:         mov x16, #42
+; DARWIN-NEXT:         blrab x19, x16
 ; DARWIN-NEXT: [[POSTCALL:L.*]]:
 ; DARWIN-NEXT: ; %bb.1:
 ; DARWIN-NEXT:         brk #0x1
@@ -169,8 +169,8 @@ continuebb:
 ; ELF-NEXT:         adrp x1, :got:_ZTIPKc
 ; ELF-NEXT:         mov x2, xzr
 ; ELF-NEXT:         ldr x1, [x1, :got_lo12:_ZTIPKc]
-; ELF-NEXT:         mov x17, #42
-; ELF-NEXT:         blrab x19, x17
+; ELF-NEXT:         mov x16, #42
+; ELF-NEXT:         blrab x19, x16
 ; ELF-NEXT: [[POSTCALL:.L.*]]:
 ; ELF-NEXT: // %bb.1:
 ; ELF-NEXT: [[LPADBB:.LBB[0-9_]+]]:
@@ -363,9 +363,8 @@ continuebb:
 ; DARWIN-SDAG-NEXT:  ldr x16, [x16, _baz@GOTPAGEOFF]
 ; DARWIN-SDAG-NEXT:  mov x17, #1234
 ; DARWIN-SDAG-NEXT:  pacia x16, x17
-; DARWIN-SDAG-NEXT:  mov x8, x16
 ; DARWIN-SDAG-NEXT:  mov x17, #2
-; DARWIN-SDAG-NEXT:  blrab x8, x17
+; DARWIN-SDAG-NEXT:  blrab x16, x17
 ; DARWIN-SDAG-NEXT: [[POSTCALL:L.*]]:
 ; DARWIN-SDAG-NEXT: ; %bb.1:
 ; DARWIN-SDAG-NEXT:  mov x19, x0
@@ -374,10 +373,9 @@ continuebb:
 ; DARWIN-GISEL-NEXT:  ldr x16, [x16, _baz@GOTPAGEOFF]
 ; DARWIN-GISEL-NEXT:  mov x17, #1234
 ; DARWIN-GISEL-NEXT:  pacia x16, x17
-; DARWIN-GISEL-NEXT:  mov x8, x16
 ; DARWIN-GISEL-NEXT: [[PRECALL:L.*]]:
 ; DARWIN-GISEL-NEXT:  mov x17, #2
-; DARWIN-GISEL-NEXT:  blrab x8, x17
+; DARWIN-GISEL-NEXT:  blrab x16, x17
 ; DARWIN-GISEL-NEXT:  mov x19, x0
 ; DARWIN-GISEL-NEXT: [[POSTCALL:L.*]]:
 
@@ -408,9 +406,8 @@ continuebb:
 ; ELF-SDAG-NEXT:  ldr x16, [x16, :got_lo12:baz]
 ; ELF-SDAG-NEXT:  mov x17, #1234
 ; ELF-SDAG-NEXT:  pacia x16, x17
-; ELF-SDAG-NEXT:  mov x8, x16
 ; ELF-SDAG-NEXT:  mov x17, #2
-; ELF-SDAG-NEXT:  blrab x8, x17
+; ELF-SDAG-NEXT:  blrab x16, x17
 ; ELF-SDAG-NEXT: [[POSTCALL:.L.*]]:
 ; ELF-SDAG-NEXT: // %bb.1:
 ; ELF-SDAG-NEXT:  mov w19, w0
@@ -419,10 +416,9 @@ continuebb:
 ; ELF-GISEL-NEXT:  ldr x16, [x16, :got_lo12:baz]
 ; ELF-GISEL-NEXT:  mov x17, #1234
 ; ELF-GISEL-NEXT:  pacia x16, x17
-; ELF-GISEL-NEXT:  mov x8, x16
 ; ELF-GISEL-NEXT: [[PRECALL:.L.*]]:
 ; ELF-GISEL-NEXT:  mov x17, #2
-; ELF-GISEL-NEXT:  blrab x8, x17
+; ELF-GISEL-NEXT:  blrab x16, x17
 ; ELF-GISEL-NEXT:  mov w19, w0
 ; ELF-GISEL-NEXT: [[POSTCALL:.L.*]]:
 

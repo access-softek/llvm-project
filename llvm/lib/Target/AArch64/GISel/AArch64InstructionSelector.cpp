@@ -2674,6 +2674,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       MI.addImm(AArch64PACKey::IA);
       MI.addImm(*BADisc);
       MI.addReg(/*AddrDisc=*/AArch64::XZR);
+      MI.addReg(/*ScratchReg=*/AArch64::NoRegister);
       I.eraseFromParent();
       return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
     }

@@ -3356,6 +3356,9 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return BB;
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI:
+  case AArch64::BRA:
+  case AArch64::BLRA:
+  case AArch64::BLRA_RVMARKER:
     ptrauthAddScratchRegister(MI, BB);
     return BB;
   }
@@ -11326,9 +11329,10 @@ SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
   SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
   SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+  SDValue ScratchReg = DAG.getRegister(AArch64::NoRegister, MVT::i64);
 
   SDNode *BrA = DAG.getMachineNode(AArch64::BRA, DL, MVT::Other,
-                                   {Dest, Key, Disc, AddrDisc, Chain});
+                                   {Dest, Key, Disc, AddrDisc, ScratchReg, Chain});
   return SDValue(BrA, 0);
 }
 

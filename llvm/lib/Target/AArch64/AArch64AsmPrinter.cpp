@@ -2047,7 +2047,8 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
 
   // X16 and X17 are implicit-def'ed by MI, and AddrDisc is not used as any
   // other input, so try to save one `mov` by setting MayUseAddrAsScratch.
-  Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17,
+  Register ScratchReg = getPtrauthScratchReg(MI);
+  Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg,
                                               /*MayUseAddrAsScratch=*/true);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 

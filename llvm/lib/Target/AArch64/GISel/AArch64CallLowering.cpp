@@ -1404,6 +1404,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                MIB->getDesc(), MIB->getOperand(CalleeOpNo + 3),
                                CalleeOpNo + 3);
     }
+    MIB.addUse(/*ScratchReg=*/AArch64::NoRegister);
   }
 
   // Tell the call which registers are clobbered.

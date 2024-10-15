@@ -851,12 +851,13 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     const MachineOperand &Key = MI.getOperand(2);
     const MachineOperand &IntDisc = MI.getOperand(3);
     const MachineOperand &AddrDisc = MI.getOperand(4);
+    const MachineOperand &ScratchReg = MI.getOperand(5);
 
     assert((Key.getImm() == AArch64PACKey::IA ||
             Key.getImm() == AArch64PACKey::IB) &&
            "Invalid auth call key");
 
-    MachineOperand Ops[] = {CallTarget, Key, IntDisc, AddrDisc};
+    MachineOperand Ops[] = {CallTarget, Key, IntDisc, AddrDisc, ScratchReg};
 
     OriginalCall = createCallWithOps(MBB, MBBI, TII, AArch64::BLRA, Ops,
                                      /*RegMaskStartIdx=*/5);
