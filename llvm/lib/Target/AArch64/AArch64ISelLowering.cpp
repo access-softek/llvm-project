@@ -3346,11 +3346,13 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
 
   case AArch64::AUT:
-    ptrauthRefineDiscriminator(BB, MI.getOperand(1), MI.getOperand(2));
+    ptrauthRefineDiscriminator(BB, MI.getOperand(3), MI.getOperand(4));
+    ptrauthAddScratchRegister(MI, BB);
     return BB;
   case AArch64::AUTPAC:
-    ptrauthRefineDiscriminator(BB, MI.getOperand(1), MI.getOperand(2));
-    ptrauthRefineDiscriminator(BB, MI.getOperand(4), MI.getOperand(5));
+    ptrauthRefineDiscriminator(BB, MI.getOperand(3), MI.getOperand(4));
+    ptrauthRefineDiscriminator(BB, MI.getOperand(6), MI.getOperand(7));
+    ptrauthAddScratchRegister(MI, BB);
     return BB;
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI:

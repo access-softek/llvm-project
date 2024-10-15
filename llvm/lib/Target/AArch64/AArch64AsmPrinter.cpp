@@ -1958,14 +1958,16 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
     break;
   }
 
-  auto AUTKey = (AArch64PACKey::ID)MI->getOperand(0).getImm();
-  uint64_t AUTDisc = MI->getOperand(1).getImm();
-  Register AUTAddrDisc = MI->getOperand(2).getReg();
+  Register PtrReg = MI->getOperand(0).getReg();
+  Register ScratchReg = getPtrauthScratchReg(MI);
+
+  auto AUTKey = (AArch64PACKey::ID)MI->getOperand(2).getImm();
+  uint64_t AUTDisc = MI->getOperand(3).getImm();
+  Register AUTAddrDisc = MI->getOperand(4).getReg();
 
   // Compute aut discriminator into x17
   assert(isUInt<16>(AUTDisc));
-  Register AUTDiscReg =
-      emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc, AArch64::X17);
+  Register AUTDiscReg = emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc, ScratchReg);
   bool AUTZero = AUTDiscReg == AArch64::XZR;
   unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
@@ -1973,8 +1975,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   //  autia x16, x17  ; if !AUTZero
   MCInst AUTInst;
   AUTInst.setOpcode(AUTOpc);
-  AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
-  AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
+  AUTInst.addOperand(MCOperand::createReg(PtrReg));
+  AUTInst.addOperand(MCOperand::createReg(PtrReg));
   if (!AUTZero)
     AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
   EmitToStreamer(*OutStreamer, AUTInst);
@@ -1989,7 +1991,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
     if (IsAUTPAC && !ShouldTrap)
       EndSym = createTempSymbol("resign_end_");
 
-    emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AUTKey,
+    emitPtrauthCheckAuthenticatedValue(PtrReg, ScratchReg, AUTKey,
                                        AArch64PAuth::AuthCheckMethod::XPAC,
                                        ShouldTrap, EndSym);
   }
@@ -2000,14 +2002,13 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   if (!IsAUTPAC)
     return;
 
-  auto PACKey = (AArch64PACKey::ID)MI->getOperand(3).getImm();
-  uint64_t PACDisc = MI->getOperand(4).getImm();
-  Register PACAddrDisc = MI->getOperand(5).getReg();
+  auto PACKey = (AArch64PACKey::ID)MI->getOperand(5).getImm();
+  uint64_t PACDisc = MI->getOperand(6).getImm();
+  Register PACAddrDisc = MI->getOperand(7).getReg();
 
   // Compute pac discriminator into x17
   assert(isUInt<16>(PACDisc));
-  Register PACDiscReg =
-      emitPtrauthDiscriminator(PACDisc, PACAddrDisc, AArch64::X17);
+  Register PACDiscReg = emitPtrauthDiscriminator(PACDisc, PACAddrDisc, ScratchReg);
   bool PACZero = PACDiscReg == AArch64::XZR;
   unsigned PACOpc = getPACOpcodeForKey(PACKey, PACZero);
 
@@ -2015,8 +2016,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   //  pacib x16, x17  ; if !PACZero
   MCInst PACInst;
   PACInst.setOpcode(PACOpc);
-  PACInst.addOperand(MCOperand::createReg(AArch64::X16));
-  PACInst.addOperand(MCOperand::createReg(AArch64::X16));
+  PACInst.addOperand(MCOperand::createReg(PtrReg));
+  PACInst.addOperand(MCOperand::createReg(PtrReg));
   if (!PACZero)
     PACInst.addOperand(MCOperand::createReg(PACDiscReg));
   EmitToStreamer(*OutStreamer, PACInst);
