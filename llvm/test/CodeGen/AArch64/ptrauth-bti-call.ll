@@ -57,9 +57,9 @@ define i32 @test_tailcall_ib_imm(i32 ()* %arg0) #0 {
 ; DARWIN-NEXT: ldr x0, [x1]
 ; DARWIN-NEXT: braa x16, x0
 ; ELF-NEXT:    bti c
-; ELF-NEXT:    ldr x1, [x1]
 ; ELF-NEXT:    mov x16, x0
-; ELF-NEXT:    braa x16, x1
+; ELF-NEXT:    ldr x0, [x1]
+; ELF-NEXT:    braa x16, x0
 define i32 @test_tailcall_ia_var(i32 ()* %arg0, i64* %arg1) #0 {
   %tmp0 = load i64, i64* %arg1
   %tmp1 = tail call i32 %arg0() [ "ptrauth"(i32 0, i64 %tmp0) ]
@@ -72,9 +72,9 @@ define i32 @test_tailcall_ia_var(i32 ()* %arg0, i64* %arg1) #0 {
 ; DARWIN-NEXT: ldr x0, [x1]
 ; DARWIN-NEXT: brab x16, x0
 ; ELF-NEXT:    bti c
-; ELF-NEXT:    ldr x1, [x1]
 ; ELF-NEXT:    mov x16, x0
-; ELF-NEXT:    brab x16, x1
+; ELF-NEXT:    ldr x0, [x1]
+; ELF-NEXT:    brab x16, x0
 define i32 @test_tailcall_ib_var(i32 ()* %arg0, i64* %arg1) #0 {
   %tmp0 = load i64, i64* %arg1
   %tmp1 = tail call i32 %arg0() [ "ptrauth"(i32 1, i64 %tmp0) ]

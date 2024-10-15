@@ -3179,6 +3179,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   switch (MI.getOpcode()) {
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI:
+  case AArch64::AUT:
+  case AArch64::AUTPAC:
     NeedsScratchRegister = true;
     break;
   default:

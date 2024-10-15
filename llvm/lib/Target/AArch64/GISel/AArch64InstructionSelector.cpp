@@ -6691,9 +6691,10 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     std::tie(PACConstDiscC, PACAddrDisc) =
         extractPtrauthBlendDiscriminators(PACDisc, MRI);
 
-    MIB.buildCopy({AArch64::X16}, {ValReg});
-    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
+    // FIXME Should I handle tied register?
     MIB.buildInstr(AArch64::AUTPAC)
+        .addDef(DstReg)
+        .addUse(ValReg)
         .addImm(AUTKey)
         .addImm(AUTConstDiscC)
         .addUse(AUTAddrDisc)
@@ -6701,9 +6702,9 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
         .constrainAllUses(TII, TRI, RBI);
-    MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
-    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    RBI.constrainGenericRegister(ValReg, AArch64::tcGPRx16x17RegClass, MRI);
+    RBI.constrainGenericRegister(DstReg, AArch64::tcGPRx16x17RegClass, MRI);
     I.eraseFromParent();
     return true;
   }
@@ -6718,16 +6719,17 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     std::tie(AUTConstDiscC, AUTAddrDisc) =
         extractPtrauthBlendDiscriminators(AUTDisc, MRI);
 
-    MIB.buildCopy({AArch64::X16}, {ValReg});
-    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
+    // FIXME Should I handle tied register?
     MIB.buildInstr(AArch64::AUT)
+        .addDef(DstReg)
+        .addUse(ValReg)
         .addImm(AUTKey)
         .addImm(AUTConstDiscC)
         .addUse(AUTAddrDisc)
         .constrainAllUses(TII, TRI, RBI);
-    MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
-    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    RBI.constrainGenericRegister(ValReg, AArch64::tcGPRx16x17RegClass, MRI);
+    RBI.constrainGenericRegister(DstReg, AArch64::tcGPRx16x17RegClass, MRI);
     I.eraseFromParent();
     return true;
   }

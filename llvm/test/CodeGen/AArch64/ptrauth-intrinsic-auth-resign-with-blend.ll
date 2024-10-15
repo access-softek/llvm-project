@@ -229,33 +229,30 @@ define i64 @test_resign_blend_and_addr(i64 %arg, i64 %arg1, i64 %arg2) {
 define i64 @test_auth_too_large_discriminator(i64 %arg, i64 %arg1) {
 ; UNCHECKED-LABEL:     test_auth_too_large_discriminator:
 ; UNCHECKED:           %bb.0:
-; UNCHECKED-NEXT:        mov w8, #65536
-; UNCHECKED-DARWIN-NEXT: bfi x1, x8, #48, #16
-; UNCHECKED-DARWIN-NEXT: mov x16, x0
-; UNCHECKED-ELF-NEXT:    mov x16, x0
-; UNCHECKED-ELF-NEXT:    bfi x1, x8, #48, #16
+; UNCHECKED-ELF-NEXT:    mov w8, #65536
+; UNCHECKED-NEXT:        mov x16, x0
+; UNCHECKED-DARWIN-NEXT: mov w8, #65536
+; UNCHECKED-NEXT:        bfi x1, x8, #48, #16
 ; UNCHECKED-NEXT:        autda x16, x1
 ; UNCHECKED-NEXT:        mov x0, x16
 ; UNCHECKED-NEXT:        ret
 ;
 ; CHECKED-LABEL: test_auth_too_large_discriminator:
 ; CHECKED:           %bb.0:
-; CHECKED-NEXT:        mov w8, #65536
-; CHECKED-DARWIN-NEXT: bfi x1, x8, #48, #16
 ; CHECKED-DARWIN-NEXT: mov x16, x0
+; CHECKED-NEXT:        mov w8, #65536
 ; CHECKED-ELF-NEXT:    mov x16, x0
-; CHECKED-ELF-NEXT:    bfi x1, x8, #48, #16
+; CHECKED-NEXT:        bfi x1, x8, #48, #16
 ; CHECKED-NEXT:        autda x16, x1
 ; CHECKED-NEXT:        mov x0, x16
 ; CHECKED-NEXT:        ret
 ;
 ; TRAP-LABEL: test_auth_too_large_discriminator:
 ; TRAP:           %bb.0:
-; TRAP-NEXT:        mov w8, #65536
-; TRAP-DARWIN-NEXT: bfi x1, x8, #48, #16
 ; TRAP-DARWIN-NEXT: mov x16, x0
+; TRAP-NEXT:        mov w8, #65536
 ; TRAP-ELF-NEXT:    mov x16, x0
-; TRAP-ELF-NEXT:    bfi x1, x8, #48, #16
+; TRAP-NEXT:        bfi x1, x8, #48, #16
 ; TRAP-NEXT:        autda x16, x1
 ; TRAP-NEXT:        mov x17, x16
 ; TRAP-NEXT:        xpacd x17

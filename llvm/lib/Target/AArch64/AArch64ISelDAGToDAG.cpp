@@ -1522,9 +1522,7 @@ void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
   std::tie(AUTConstDisc, AUTAddrDisc) =
       extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
 
-  SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
-                                         AArch64::X16, Val, SDValue());
-  SDValue Ops[] = {AUTKey, AUTConstDisc, AUTAddrDisc, X16Copy.getValue(1)};
+  SDValue Ops[] = {Val, AUTKey, AUTConstDisc, AUTAddrDisc};
 
   SDNode *AUT = CurDAG->getMachineNode(AArch64::AUT, DL, MVT::i64, Ops);
   ReplaceNode(N, AUT);
@@ -1554,11 +1552,8 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
   std::tie(PACConstDisc, PACAddrDisc) =
       extractPtrauthBlendDiscriminators(PACDisc, CurDAG);
 
-  SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
-                                         AArch64::X16, Val, SDValue());
-
-  SDValue Ops[] = {AUTKey,       AUTConstDisc, AUTAddrDisc,        PACKey,
-                   PACConstDisc, PACAddrDisc,  X16Copy.getValue(1)};
+  SDValue Ops[] = {Val, AUTKey,       AUTConstDisc, AUTAddrDisc,        PACKey,
+                   PACConstDisc, PACAddrDisc};
 
   SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
   ReplaceNode(N, AUTPAC);

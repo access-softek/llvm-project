@@ -1844,32 +1844,33 @@ let Predicates = [HasPAuth] in {
   // AUT pseudo.
   // This directly manipulates x16/x17, which are the only registers the OS
   // guarantees are safe to use for sensitive operations.
-  def AUT : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
-                   []>, Sched<[WriteI, ReadI]> {
+  def AUT : Pseudo<(outs tcGPRx16x17:$dst), (ins tcGPRx16x17:$src, i32imm:$Key, i64imm:$Disc, GPR64:$AddrDisc),
+                   [], "@earlyclobber $dst, $dst = $src">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 32;
-    let Defs = [X16,X17,NZCV];
-    let Uses = [X16];
+    let usesCustomInserter = 1;
+    let Defs = [NZCV];
   }
 
   // AUT and re-PAC a value, using different keys/data.
   // This directly manipulates x16/x17, which are the only registers the OS
   // guarantees are safe to use for sensitive operations.
   def AUTPAC
-      : Pseudo<(outs),
-               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
-                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
-               []>, Sched<[WriteI, ReadI]> {
+      : Pseudo<(outs tcGPRx16x17:$dst),
+               (ins tcGPRx16x17:$src,
+                    i32imm:$AUTKey, i64imm:$AUTDisc, GPR64:$AUTAddrDisc,
+                    i32imm:$PACKey, i64imm:$PACDisc, GPR64:$PACAddrDisc),
+               [], "@earlyclobber $dst, $dst = $src">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 48;
-    let Defs = [X16,X17,NZCV];
-    let Uses = [X16];
+    let usesCustomInserter = 1;
+    let Defs = [NZCV];
   }
 
   // Materialize a signed global address, with adrp+add and PAC.
