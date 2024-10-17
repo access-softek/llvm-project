@@ -3175,19 +3175,65 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   }
 
 
+  auto RefineDiscriminator = [BB](MachineOperand &Disc, MachineOperand &Addr) {
+    assert(Disc.getImm() == 0 && "Discriminator is already refined");
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    // Walk through the chain of copy-like instructions until we find
+    // a known signing schema, if any.
+    for (Register RawReg = Addr.getReg(); RawReg.isVirtual();) {
+      MachineInstr *DefiningMI = MRI.getVRegDef(RawReg);
+      switch (DefiningMI->getOpcode()) {
+      default:
+        return;
+      case AArch64::SUBREG_TO_REG:
+        RawReg = DefiningMI->getOperand(2).getReg();
+        break;
+      case AArch64::COPY:
+        RawReg = DefiningMI->getOperand(1).getReg();
+        if (RawReg == AArch64::XZR) {
+          Disc.setImm(0);
+          Addr.setReg(AArch64::NoRegister);
+          return;
+        }
+        break;
+      case AArch64::MOVi32imm:
+        if (!isUInt<16>(DefiningMI->getOperand(1).getImm()))
+          return;
+
+        Disc.setImm(DefiningMI->getOperand(1).getImm());
+        Addr.setReg(AArch64::NoRegister);
+        return;
+      case AArch64::PAUTH_BLEND:
+        assert(isUInt<16>(DefiningMI->getOperand(2).getImm()));
+        Disc.setImm(DefiningMI->getOperand(2).getImm());
+        Addr.setReg(DefiningMI->getOperand(1).getReg());
+        return;
+      }
+    }
+  };
+
   bool NeedsScratchRegister = false;
   switch (MI.getOpcode()) {
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI:
-  case AArch64::AUT:
-  case AArch64::AUTPAC:
+  case AArch64::BRA:
   case AArch64::BLRA:
   case AArch64::BLRA_RVMARKER:
-  case AArch64::BRA:
+    // custom call lowering
+    NeedsScratchRegister = true;
+    break;
+  case AArch64::AUT:
+    RefineDiscriminator(MI.getOperand(3), MI.getOperand(4));
+    NeedsScratchRegister = true;
+    break;
+  case AArch64::AUTPAC:
+    RefineDiscriminator(MI.getOperand(3), MI.getOperand(4));
+    RefineDiscriminator(MI.getOperand(6), MI.getOperand(7));
     NeedsScratchRegister = true;
     break;
   case AArch64::MOVaddrPAC:
   case AArch64::LOADgotPAC:
+    // RefineDiscriminator(MI.getOperand(4), MI.getOperand(3));
     NeedsScratchRegister |= !isUInt<24>(std::abs(MI.getOperand(1).getOffset()));
     NeedsScratchRegister |= MI.getOperand(4).getImm(); // Disc
     break;

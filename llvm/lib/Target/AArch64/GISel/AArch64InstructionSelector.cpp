@@ -6671,66 +6671,6 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
-  case Intrinsic::ptrauth_resign: {
-    Register DstReg = I.getOperand(0).getReg();
-    Register ValReg = I.getOperand(2).getReg();
-    uint64_t AUTKey = I.getOperand(3).getImm();
-    Register AUTDisc = I.getOperand(4).getReg();
-    uint64_t PACKey = I.getOperand(5).getImm();
-    Register PACDisc = I.getOperand(6).getReg();
-
-    Register AUTAddrDisc = AUTDisc;
-    uint16_t AUTConstDiscC = 0;
-    std::tie(AUTConstDiscC, AUTAddrDisc) =
-        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
-
-    Register PACAddrDisc = PACDisc;
-    uint16_t PACConstDiscC = 0;
-    std::tie(PACConstDiscC, PACAddrDisc) =
-        extractPtrauthBlendDiscriminators(PACDisc, MRI);
-
-    // FIXME Should I handle tied register?
-    MIB.buildInstr(AArch64::AUTPAC)
-        .addDef(DstReg)
-        .addUse(ValReg)
-        .addImm(AUTKey)
-        .addImm(AUTConstDiscC)
-        .addUse(AUTAddrDisc)
-        .addImm(PACKey)
-        .addImm(PACConstDiscC)
-        .addUse(PACAddrDisc)
-        .constrainAllUses(TII, TRI, RBI);
-
-    RBI.constrainGenericRegister(ValReg, AArch64::tcGPRx16x17RegClass, MRI);
-    RBI.constrainGenericRegister(DstReg, AArch64::tcGPRx16x17RegClass, MRI);
-    I.eraseFromParent();
-    return true;
-  }
-  case Intrinsic::ptrauth_auth: {
-    Register DstReg = I.getOperand(0).getReg();
-    Register ValReg = I.getOperand(2).getReg();
-    uint64_t AUTKey = I.getOperand(3).getImm();
-    Register AUTDisc = I.getOperand(4).getReg();
-
-    Register AUTAddrDisc = AUTDisc;
-    uint16_t AUTConstDiscC = 0;
-    std::tie(AUTConstDiscC, AUTAddrDisc) =
-        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
-
-    // FIXME Should I handle tied register?
-    MIB.buildInstr(AArch64::AUT)
-        .addDef(DstReg)
-        .addUse(ValReg)
-        .addImm(AUTKey)
-        .addImm(AUTConstDiscC)
-        .addUse(AUTAddrDisc)
-        .constrainAllUses(TII, TRI, RBI);
-
-    RBI.constrainGenericRegister(ValReg, AArch64::tcGPRx16x17RegClass, MRI);
-    RBI.constrainGenericRegister(DstReg, AArch64::tcGPRx16x17RegClass, MRI);
-    I.eraseFromParent();
-    return true;
-  }
   case Intrinsic::frameaddress:
   case Intrinsic::returnaddress: {
     MachineFunction &MF = *I.getParent()->getParent();

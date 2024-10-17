@@ -1856,6 +1856,8 @@ let Predicates = [HasPAuth] in {
     let usesCustomInserter = 1;
     let Defs = [NZCV];
   }
+  def : Pat<(int_ptrauth_auth tcGPRx16x17:$src, timm:$Key, GPR64:$AddrDisc),
+            (AUT tcGPRx16x17:$src, timm:$Key, 0, GPR64:$AddrDisc)>;
 
   // AUT and re-PAC a value, using different keys/data.
   // This directly manipulates x16/x17, which are the only registers the OS
@@ -1874,6 +1876,12 @@ let Predicates = [HasPAuth] in {
     let usesCustomInserter = 1;
     let Defs = [NZCV];
   }
+  def : Pat<(int_ptrauth_resign tcGPRx16x17:$src,
+                    timm:$AUTKey, GPR64:$AUTAddrDisc,
+                    timm:$PACKey, GPR64:$PACAddrDisc),
+            (AUTPAC tcGPRx16x17:$src,
+                    timm:$AUTKey, 0, GPR64:$AUTAddrDisc,
+                    timm:$PACKey, 0, GPR64:$PACAddrDisc)>;
 
   // Materialize a signed global address, with adrp+add and PAC.
   def MOVaddrPAC : Pseudo<(outs tcGPRx16x17:$dst),

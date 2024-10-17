@@ -354,9 +354,6 @@ public:
 
   bool tryIndexedLoad(SDNode *N);
 
-  void SelectPtrauthAuth(SDNode *N);
-  void SelectPtrauthResign(SDNode *N);
-
   bool trySelectStackSlotTagP(SDNode *N);
   void SelectTagP(SDNode *N);
 
@@ -1506,58 +1503,6 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
   return std::make_tuple(
       DAG->getTargetConstant(ConstDiscN->getZExtValue(), DL, MVT::i64),
       AddrDisc);
-}
-
-void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
-  SDLoc DL(N);
-  // IntrinsicID is operand #0
-  SDValue Val = N->getOperand(1);
-  SDValue AUTKey = N->getOperand(2);
-  SDValue AUTDisc = N->getOperand(3);
-
-  unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
-  AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
-
-  SDValue AUTAddrDisc, AUTConstDisc;
-  std::tie(AUTConstDisc, AUTAddrDisc) =
-      extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
-
-  SDValue Ops[] = {Val, AUTKey, AUTConstDisc, AUTAddrDisc};
-
-  SDNode *AUT = CurDAG->getMachineNode(AArch64::AUT, DL, MVT::i64, Ops);
-  ReplaceNode(N, AUT);
-  return;
-}
-
-void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
-  SDLoc DL(N);
-  // IntrinsicID is operand #0
-  SDValue Val = N->getOperand(1);
-  SDValue AUTKey = N->getOperand(2);
-  SDValue AUTDisc = N->getOperand(3);
-  SDValue PACKey = N->getOperand(4);
-  SDValue PACDisc = N->getOperand(5);
-
-  unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
-  unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
-
-  AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
-  PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
-
-  SDValue AUTAddrDisc, AUTConstDisc;
-  std::tie(AUTConstDisc, AUTAddrDisc) =
-      extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
-
-  SDValue PACAddrDisc, PACConstDisc;
-  std::tie(PACConstDisc, PACAddrDisc) =
-      extractPtrauthBlendDiscriminators(PACDisc, CurDAG);
-
-  SDValue Ops[] = {Val, AUTKey,       AUTConstDisc, AUTAddrDisc,        PACKey,
-                   PACConstDisc, PACAddrDisc};
-
-  SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
-  ReplaceNode(N, AUTPAC);
-  return;
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
@@ -5547,14 +5492,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       break;
     case Intrinsic::aarch64_tagp:
       SelectTagP(Node);
-      return;
-
-    case Intrinsic::ptrauth_auth:
-      SelectPtrauthAuth(Node);
-      return;
-
-    case Intrinsic::ptrauth_resign:
-      SelectPtrauthResign(Node);
       return;
 
     case Intrinsic::aarch64_neon_tbl2:
