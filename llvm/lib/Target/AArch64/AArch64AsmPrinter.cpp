@@ -165,7 +165,7 @@ public:
 
   // Emit the sequence to compute a discriminator into scratch register, or reuse AddrDisc.
   // The only register that can be cloberred is ScratchReg.
-  unsigned emitPtrauthDiscriminator(uint16_t Disc, Register AddrDisc, Register ScratchReg);
+  unsigned emitPtrauthDiscriminator(uint16_t Disc, Register AddrDisc, bool AddrDiscKilled, Register ScratchReg);
 
   // Emit the sequence for LOADauthptrstatic
   void LowerLOADauthptrstatic(const MachineInstr &MI);
@@ -1720,6 +1720,7 @@ static Register getPtrauthScratchReg(const MachineInstr *MI) {
 
 unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
                                                      Register AddrDisc,
+                                                     bool AddrDiscKilled,
                                                      Register ScratchReg) {
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
@@ -1737,7 +1738,14 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   }
 
   // If there are both, emit a blend into scratch register.
-  emitMovXReg(ScratchReg, AddrDisc);
+
+  // Check if overwriting AddrDisc in-place is correct (AddrDisc is killed) and
+  // safe (AddrDisc is either x16 or x17).
+  if (AddrDiscKilled && (AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17))
+    ScratchReg = AddrDisc;
+
+  if (ScratchReg != AddrDisc)
+    emitMovXReg(ScratchReg, AddrDisc);
   emitMOVK(ScratchReg, Disc, 48);
   return ScratchReg;
 }
@@ -1954,7 +1962,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
 
   // Compute aut discriminator into x17
   assert(isUInt<16>(AUTDisc));
-  unsigned AUTDiscReg = emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc, ScratchReg);
+  unsigned AUTDiscReg = emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc, false, ScratchReg);
   bool AUTZero = AUTDiscReg == AArch64::XZR;
   unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
@@ -1995,7 +2003,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
 
   // Compute pac discriminator into x17
   assert(isUInt<16>(PACDisc));
-  unsigned PACDiscReg = emitPtrauthDiscriminator(PACDisc, PACAddrDisc, ScratchReg);
+  unsigned PACDiscReg = emitPtrauthDiscriminator(PACDisc, PACAddrDisc, false, ScratchReg);
   bool PACZero = PACDiscReg == AArch64::XZR;
   unsigned PACOpc = getPACOpcodeForKey(PACKey, PACZero);
 
@@ -2026,10 +2034,11 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   assert(isUInt<16>(Disc));
 
   unsigned AddrDisc = MI->getOperand(3).getReg();
+  bool AddrDiscKilled = MI->getOperand(3).isKill();
 
   // Compute discriminator into x17
   Register ScratchReg = getPtrauthScratchReg(MI);
-  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg);
+  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AddrDiscKilled, ScratchReg);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
@@ -2280,7 +2289,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   unsigned DiscReg = AddrDisc;
   if (Disc != 0) {
     Register ScratchReg = getPtrauthScratchReg(&MI);
-    DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg);
+    DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, false, ScratchReg);
   }
 
   auto MIB = MCInstBuilder(getPACOpcodeForKey(Key, DiscReg == AArch64::XZR))
@@ -2493,24 +2502,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(isUInt<16>(Disc) && "Integer discriminator is too wide");
 
     Register AddrDisc = MI->getOperand(4).getReg();
+    bool AddrDiscKilled = MI->getOperand(4).isKill();
 
     Register ScratchReg = getPtrauthScratchReg(MI);
 
     emitPtrauthTailCallHardening(MI, ScratchReg);
 
-    unsigned DiscReg = AddrDisc;
-    if (Disc) {
-      if (AddrDisc != AArch64::NoRegister) {
-        if (ScratchReg != AddrDisc)
-          emitMovXReg(ScratchReg, AddrDisc);
-        emitMOVK(ScratchReg, Disc, 48);
-      } else {
-        emitMOVZ(ScratchReg, Disc, 0);
-      }
-      DiscReg = ScratchReg;
-    }
+    Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AddrDiscKilled, ScratchReg);
 
-    const bool IsZero = DiscReg == AArch64::NoRegister;
+    const bool IsZero = DiscReg == AArch64::XZR;
     const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
                                     {AArch64::BRAB, AArch64::BRABZ}};
 
