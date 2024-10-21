@@ -1754,6 +1754,15 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 // Pseudos
 
+// Dummy pseudo instruction ensuring a safe scratch register is allocated
+// for other PAuth pseudo instruction to use (with unspecified contents).
+def ALLOCATE_PAUTH_SCRATCH : Pseudo<(outs GPR64pauth:$scratch), (ins), []>,
+                             Sched<[]>;
+
+def ScratchRegister : OperandWithDefaultOps<i64, (ops (i64 zero_reg))> {
+  let MIOperandInfo = (ops GPR64pauth);
+}
+
 let Uses = [LR, SP], Defs = [LR] in {
 // Insertion point of LR signing code.
 def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;

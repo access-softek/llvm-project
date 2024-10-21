@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
@@ -3195,6 +3196,23 @@ AArch64TargetLowering::EmitAllocateZABuffer(MachineInstr &MI,
 
   BB->remove_instr(&MI);
   return BB;
+}
+
+static void ptrauthAddScratchRegister(MachineInstr &MI, MachineBasicBlock *BB) {
+  const TargetSubtargetInfo &Subtarget = MI.getMF()->getSubtarget();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
+  Register ScratchReg = MRI.createVirtualRegister(&AArch64::GPR64pauthRegClass);
+
+  BuildMI(*BB, MI.getIterator(), DL,
+          TII->get(AArch64::ALLOCATE_PAUTH_SCRATCH), ScratchReg);
+
+  MachineOperand &ScratchOp = MI.getOperand(MI.getNumExplicitOperands() - 1);
+  assert(ScratchOp.isUse() && ScratchOp.getReg() == AArch64::NoRegister);
+  ScratchOp.setIsKill();
+  ScratchOp.setReg(ScratchReg);
 }
 
 static void ptrauthRefineDiscriminator(MachineBasicBlock *BB,

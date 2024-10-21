@@ -34,6 +34,10 @@ public:
     return getEncodingValue(i);
   }
 
+  const TargetRegisterClass *
+  getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                            const MachineFunction &) const override;
+
   bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isStrictlyReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isAnyArgRegReserved(const MachineFunction &MF) const;

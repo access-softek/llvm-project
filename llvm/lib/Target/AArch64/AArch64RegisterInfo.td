@@ -221,6 +221,10 @@ def GPR64arg : RegisterClass<"AArch64", [i64], 64, (sequence "X%u", 0, 7)>;
 def GPR32all : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WZR, WSP)>;
 def GPR64all : RegisterClass<"AArch64", [i64], 64, (add GPR64common, XZR, SP)>;
 
+// Safe registers to use when expanding PAuth pseudo instructions.
+// Some kernels take special care to protect X16 and X17.
+def GPR64pauth : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+
 // For tail calls, we can't use callee-saved registers, as they are restored
 // to the saved value before the tail call, which would clobber a call address.
 // This is for indirect tail calls to store the address of the destination.

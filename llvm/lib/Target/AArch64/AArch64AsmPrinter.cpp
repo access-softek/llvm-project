@@ -1712,6 +1712,16 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   }
 }
 
+static Register getPtrauthScratchReg(const MachineInstr *MI) {
+  // Scratch register is passed as the last operand of the instruction.
+  // This operand is explicit and is always either X16 or X17.
+  unsigned ScratchOpIndex = MI->getNumExplicitOperands() - 1;
+  Register ScratchReg = MI->getOperand(ScratchOpIndex).getReg();
+  assert((ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17) &&
+         "Incorrect scratch register or none was provided");
+  return ScratchReg;
+}
+
 Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
                                                      Register AddrDisc,
                                                      Register ScratchReg,
@@ -2463,6 +2473,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutStreamer->emitCFIMTETaggedFrame();
     return;
   }
+
+  case AArch64::ALLOCATE_PAUTH_SCRATCH:
+    // Do nothing.
+    return;
 
   case AArch64::AUT:
   case AArch64::AUTPAC:

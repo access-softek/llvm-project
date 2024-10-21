@@ -518,6 +518,14 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+const TargetRegisterClass *
+  AArch64RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                            const MachineFunction &MF) const {
+  if (RC == &AArch64::GPR64pauthRegClass)
+    return &AArch64::GPR64RegClass;
+  return AArch64GenRegisterInfo::getLargestLegalSuperClass(RC, MF);
+}
+
 bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
                                         MCRegister Reg) const {
   return getReservedRegs(MF)[Reg];
