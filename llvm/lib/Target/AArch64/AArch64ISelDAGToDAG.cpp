@@ -1472,39 +1472,6 @@ void AArch64DAGToDAGISel::SelectTable(SDNode *N, unsigned NumVecs, unsigned Opc,
   ReplaceNode(N, CurDAG->getMachineNode(Opc, dl, VT, Ops));
 }
 
-static std::tuple<SDValue, SDValue>
-extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
-  SDLoc DL(Disc);
-  SDValue AddrDisc;
-  SDValue ConstDisc;
-
-  // If this is a blend, remember the constant and address discriminators.
-  // Otherwise, it's either a constant discriminator, or a non-blended
-  // address discriminator.
-  if (Disc->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-      Disc->getConstantOperandVal(0) == Intrinsic::ptrauth_blend) {
-    AddrDisc = Disc->getOperand(1);
-    ConstDisc = Disc->getOperand(2);
-  } else {
-    ConstDisc = Disc;
-  }
-
-  // If the constant discriminator (either the blend RHS, or the entire
-  // discriminator value) isn't a 16-bit constant, bail out, and let the
-  // discriminator be computed separately.
-  auto *ConstDiscN = dyn_cast<ConstantSDNode>(ConstDisc);
-  if (!ConstDiscN || !isUInt<16>(ConstDiscN->getZExtValue()))
-    return std::make_tuple(DAG->getTargetConstant(0, DL, MVT::i64), Disc);
-
-  // If there's no address discriminator, use XZR directly.
-  if (!AddrDisc)
-    AddrDisc = DAG->getRegister(AArch64::XZR, MVT::i64);
-
-  return std::make_tuple(
-      DAG->getTargetConstant(ConstDiscN->getZExtValue(), DL, MVT::i64),
-      AddrDisc);
-}
-
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   if (LD->isUnindexed())
