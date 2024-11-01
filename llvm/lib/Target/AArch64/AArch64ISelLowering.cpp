@@ -3197,6 +3197,41 @@ AArch64TargetLowering::EmitAllocateZABuffer(MachineInstr &MI,
   return BB;
 }
 
+static void ptrauthRefineDiscriminator(MachineBasicBlock *BB,
+                                       MachineOperand &Disc,
+                                       MachineOperand &Addr) {
+  assert(Disc.getImm() == 0 && "Discriminator is already refined");
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const AArch64RegisterInfo *TRI =
+      MF->getSubtarget<AArch64Subtarget>().getRegisterInfo();
+
+  Register RawDiscReg = TRI->lookThruCopyLike(Addr.getReg(), &MRI);
+  if (RawDiscReg == AArch64::XZR) {
+    Addr.setReg(AArch64::NoRegister);
+    Disc.setImm(0);
+  } else if (RawDiscReg.isPhysical()) {
+    return;
+  }
+
+  MachineInstr *DefiningMI = MRI.getVRegDef(RawDiscReg);
+  if (!DefiningMI)
+    return;
+
+  if (DefiningMI->getOpcode() == AArch64::MOVi32imm) {
+    unsigned Imm = DefiningMI->getOperand(1).getImm();
+    if (isUInt<16>(Imm)) {
+      Addr.setReg(AArch64::NoRegister);
+      Disc.setImm(Imm);
+    }
+  } else if (DefiningMI->getOpcode() == AArch64::PAUTH_BLEND) {
+    unsigned Imm = DefiningMI->getOperand(2).getImm();
+    assert(isUInt<16>(Imm));
+    Addr.setReg(DefiningMI->getOperand(1).getReg());
+    Disc.setImm(Imm);
+  }
+}
+
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -3291,6 +3326,14 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
+
+  case AArch64::AUT:
+    ptrauthRefineDiscriminator(BB, MI.getOperand(1), MI.getOperand(2));
+    return BB;
+  case AArch64::AUTPAC:
+    ptrauthRefineDiscriminator(BB, MI.getOperand(1), MI.getOperand(2));
+    ptrauthRefineDiscriminator(BB, MI.getOperand(4), MI.getOperand(5));
+    return BB;
   }
 }
 

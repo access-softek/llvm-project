@@ -1766,6 +1766,8 @@ def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 def PAUTH_BLEND : Pseudo<(outs GPR64:$disc),
                          (ins GPR64:$addr_disc, i32imm:$int_disc), []>, Sched<[]>;
 
+def IntDisc : OperandWithDefaultOps<i64, (ops (i64 0))>;
+
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
 
@@ -1891,13 +1893,15 @@ let Predicates = [HasPAuth] in {
   // AUT pseudo.
   // This directly manipulates x16/x17, which are the only registers the OS
   // guarantees are safe to use for sensitive operations.
-  def AUT : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
-                   []>, Sched<[WriteI, ReadI]> {
+  def AUT : Pseudo<(outs), (ins i32imm:$Key, IntDisc:$Disc, GPR64noip:$AddrDisc),
+                   [(set X16, (int_ptrauth_auth X16, timm:$Key, GPR64noip:$AddrDisc))]>,
+                   Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 32;
+    let usesCustomInserter = 1;
     let Defs = [X16,X17,NZCV];
     let Uses = [X16];
   }
@@ -1907,14 +1911,18 @@ let Predicates = [HasPAuth] in {
   // guarantees are safe to use for sensitive operations.
   def AUTPAC
       : Pseudo<(outs),
-               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
-                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
-               []>, Sched<[WriteI, ReadI]> {
+               (ins i32imm:$AUTKey, IntDisc:$AUTDisc, GPR64noip:$AUTAddrDisc,
+                    i32imm:$PACKey, IntDisc:$PACDisc, GPR64noip:$PACAddrDisc),
+               [(set X16, (int_ptrauth_resign X16,
+                                              timm:$AUTKey, GPR64noip:$AUTAddrDisc,
+                                              timm:$PACKey, GPR64noip:$PACAddrDisc))]>,
+               Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 48;
+    let usesCustomInserter = 1;
     let Defs = [X16,X17,NZCV];
     let Uses = [X16];
   }
