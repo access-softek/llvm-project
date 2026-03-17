@@ -868,6 +868,7 @@ unsigned DXILBitcodeWriter::getEncodedComdatSelectionKind(const Comdat &C) {
 void DXILBitcodeWriter::writeAttributeGroupTable() {
   const std::vector<ValueEnumerator::IndexAndAttrSet> &AttrGrps =
       VE.getAttributeGroups();
+  return; // WORKAROUND: DXC fails to read some integer attributes
   if (AttrGrps.empty())
     return;
 
