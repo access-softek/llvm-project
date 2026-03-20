@@ -22,7 +22,6 @@ add_llvm_target(DirectXCodeGen
   DXContainerGlobals.cpp
   DXILCBufferAccess.cpp
   DXILDataScalarization.cpp
-  DXILDebugInfo.cpp
   DXILFinalizeLinkage.cpp
   DXILForwardHandleAccesses.cpp
   DXILFlattenArrays.cpp
@@ -50,7 +49,7 @@ add_llvm_target(DirectXCodeGen
   DXILBitWriter
   DirectXDesc
   DirectXInfo
-  DirectXPointerTypeAnalysis
+  DirectXIRPasses
   FrontendHLSL
   IPO
   MC

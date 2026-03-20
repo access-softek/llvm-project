@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILValueEnumerator.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/llvm-config.h"
@@ -363,7 +364,8 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
   return Stack;
 }
 
-ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
+ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
+                                 const DXILDebugInfoResult &DebugInfo) {
   {
     DebugInfoFinder DIF;
     DIF.processModule(M);

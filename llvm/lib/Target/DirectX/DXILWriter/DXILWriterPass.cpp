@@ -12,6 +12,7 @@
 
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -49,11 +50,13 @@ public:
   StringRef getPassName() const override { return "Bitcode Writer"; }
 
   bool runOnModule(Module &M) override {
-    WriteDXILToFile(M, OS);
+    const auto &DIResult = getAnalysis<DXILDebugInfoLegacy>().getResult();
+    WriteDXILToFile(M, OS, DIResult);
     return false;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addRequired<DXILDebugInfoLegacy>();
   }
 };
 
@@ -153,7 +156,8 @@ public:
     // fail the Module Verifier if performed in an earlier pass
     legalizeLifetimeIntrinsics(M);
 
-    WriteDXILToFile(M, OS);
+    const auto &DI = getAnalysis<DXILDebugInfoLegacy>().getResult();
+    WriteDXILToFile(M, OS, DI);
 
     // We no longer need lifetime intrinsics after bitcode serialization, so we
     // simply remove them to keep the Module Verifier happy after our
@@ -173,6 +177,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addRequired<DXILDebugInfoLegacy>();
   }
 };
 } // namespace

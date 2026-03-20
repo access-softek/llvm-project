@@ -16,25 +16,16 @@
 
 using namespace llvm;
 
-PreservedAnalyses DXILDebugInfo::run(Module &M, ModuleAnalysisManager &MAM) {
-  return PreservedAnalyses::all();
+DXILDebugInfoResult DXILDebugInfo::run(Module &M, ModuleAnalysisManager &MAM) {
+  return {42};
 }
 
-namespace {
-class DXILDebugInfoLegacy : public ModulePass {
-public:
-  bool runOnModule(Module &M) override { return false; }
-
-  StringRef getPassName() const override { return "DXIL Debug Info"; }
-  DXILDebugInfoLegacy() : ModulePass(ID) {}
-
-  static char ID; // Pass identification.
-  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-  }
-};
 char DXILDebugInfoLegacy::ID = 0;
-} // end anonymous namespace
+
+bool DXILDebugInfoLegacy::runOnModule(Module &M) {
+  Result.Val = 42;
+  return false;
+}
 
 INITIALIZE_PASS_BEGIN(DXILDebugInfoLegacy, DEBUG_TYPE, "DXIL Debug Info", false,
                       false)

@@ -26,6 +26,7 @@ namespace llvm {
 class BitstreamWriter;
 class Module;
 class raw_ostream;
+struct DXILDebugInfoResult;
 
 namespace dxil {
 
@@ -50,14 +51,15 @@ public:
   ~BitcodeWriter();
 
   /// Write the specified module to the buffer specified at construction time.
-  void writeModule(const Module &M);
+  void writeModule(const Module &M, const DXILDebugInfoResult &DI);
 };
 
 /// Write the specified module to the specified raw output stream.
 ///
 /// For streams where it matters, the given stream should be in "binary"
 /// mode.
-void WriteDXILToFile(const Module &M, raw_ostream &Out);
+void WriteDXILToFile(const Module &M, raw_ostream &Out,
+                     const DXILDebugInfoResult &DI);
 
 } // namespace dxil
 

@@ -36,6 +36,7 @@ class DISubprogram;
 class Function;
 class Instruction;
 class LocalAsMetadata;
+class DXILDebugInfoResult;
 class MDNode;
 class MDTuple;
 class Metadata;
@@ -151,7 +152,8 @@ private:
   unsigned FirstInstID;
 
 public:
-  ValueEnumerator(const Module &M, Type *PrefixType);
+  ValueEnumerator(const Module &M, Type *PrefixType,
+                  const DXILDebugInfoResult &DebugInfo);
   ValueEnumerator(const ValueEnumerator &) = delete;
   ValueEnumerator &operator=(const ValueEnumerator &) = delete;
 
