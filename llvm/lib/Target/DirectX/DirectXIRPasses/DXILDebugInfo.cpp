@@ -28,13 +28,24 @@ static void dropDebugLabels(Module &M, DebugInfoFinder &DIF) {
   }
 }
 
+static void collectDISubprogramFunctions(Module &M, VERemap &Remap) {
+  for (const Function &F : M) {
+    if (const DISubprogram *SP = F.getSubprogram()) {
+      auto *FunctionMD = ConstantAsMetadata::get(const_cast<Function *>(&F));
+      Remap[SP] = FunctionMD;
+    }
+  }
+}
+
 Result run(Module &M) {
+  Result Res;
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
   dropDebugLabels(M, DIF);
+  collectDISubprogramFunctions(M, Res.Remap);
 
-  return {42};
+  return Res;
 }
 
 } // namespace DXILDebugInfo

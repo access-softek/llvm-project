@@ -741,11 +741,9 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
       }
     }
 
-    // DISubprogram gets its function changed.
-    if (auto *SP = dyn_cast<DISubprogram>(N)) {
-      if (auto *FM = getDISubprogramFunction(SP)) {
-        enumerateMetadataImpl(F, FM);
-      }
+    auto RemapIt = DebugInfo.Remap.find(N);
+    if (RemapIt != DebugInfo.Remap.end()) {
+      enumerateMetadataImpl(F, RemapIt->second);
     }
 
     // DIGlobalVariable gets an expression added.

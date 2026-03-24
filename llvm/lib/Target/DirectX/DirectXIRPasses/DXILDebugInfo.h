@@ -13,13 +13,19 @@
 #ifndef LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
 #define LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
 
+#include "llvm/ADT/DenseMap.h"
+
 namespace llvm {
 
 class Module;
+class Metadata;
 
 namespace DXILDebugInfo {
+
+using VERemap = DenseMap<const Metadata *, const Metadata *>;
+
 struct Result {
-  int Val;
+  VERemap Remap;
 };
 
 Result run(Module &M);
