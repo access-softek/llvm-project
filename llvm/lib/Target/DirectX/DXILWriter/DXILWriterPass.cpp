@@ -50,13 +50,12 @@ public:
   StringRef getPassName() const override { return "Bitcode Writer"; }
 
   bool runOnModule(Module &M) override {
-    const auto &DIResult = getAnalysis<DXILDebugInfoLegacy>().getResult();
+    const auto DIResult = DXILDebugInfo::run(M);
     WriteDXILToFile(M, OS, DIResult);
     return false;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<DXILDebugInfoLegacy>();
   }
 };
 
@@ -156,8 +155,8 @@ public:
     // fail the Module Verifier if performed in an earlier pass
     legalizeLifetimeIntrinsics(M);
 
-    const auto &DI = getAnalysis<DXILDebugInfoLegacy>().getResult();
-    WriteDXILToFile(M, OS, DI);
+    const auto DIResult = DXILDebugInfo::run(M);
+    WriteDXILToFile(M, OS, DIResult);
 
     // We no longer need lifetime intrinsics after bitcode serialization, so we
     // simply remove them to keep the Module Verifier happy after our
@@ -177,7 +176,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<DXILDebugInfoLegacy>();
   }
 };
 } // namespace

@@ -36,7 +36,6 @@ class DISubprogram;
 class Function;
 class Instruction;
 class LocalAsMetadata;
-class DXILDebugInfoResult;
 class MDNode;
 class MDTuple;
 class Metadata;
@@ -47,6 +46,10 @@ class Type;
 class Value;
 class ValueAsMetadata;
 class ValueSymbolTable;
+
+namespace DXILDebugInfo {
+struct Result;
+}
 
 namespace dxil {
 
@@ -151,9 +154,11 @@ private:
   unsigned FirstFuncConstantID;
   unsigned FirstInstID;
 
+  const DXILDebugInfo::Result &DebugInfo;
+
 public:
   ValueEnumerator(const Module &M, Type *PrefixType,
-                  const DXILDebugInfoResult &DebugInfo);
+                  const DXILDebugInfo::Result &DebugInfo);
   ValueEnumerator(const ValueEnumerator &) = delete;
   ValueEnumerator &operator=(const ValueEnumerator &) = delete;
 

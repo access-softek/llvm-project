@@ -9,29 +9,13 @@
 #include "DXILDebugInfo.h"
 #include "DirectX.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 
 #define DEBUG_TYPE "dxil-debug-info"
 
-using namespace llvm;
+namespace llvm {
+namespace DXILDebugInfo {
 
-DXILDebugInfoResult DXILDebugInfo::run(Module &M, ModuleAnalysisManager &MAM) {
-  return {42};
-}
+Result run(Module &M) { return {42}; }
 
-char DXILDebugInfoLegacy::ID = 0;
-
-bool DXILDebugInfoLegacy::runOnModule(Module &M) {
-  Result.Val = 42;
-  return false;
-}
-
-INITIALIZE_PASS_BEGIN(DXILDebugInfoLegacy, DEBUG_TYPE, "DXIL Debug Info", false,
-                      false)
-INITIALIZE_PASS_END(DXILDebugInfoLegacy, DEBUG_TYPE, "DXIL Debug Info", false,
-                    false)
-
-ModulePass *llvm::createDXILDebugInfoLegacyPass() {
-  return new DXILDebugInfoLegacy();
-}
+} // namespace DXILDebugInfo
+} // namespace llvm

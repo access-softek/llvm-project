@@ -365,7 +365,8 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
 }
 
 ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
-                                 const DXILDebugInfoResult &DebugInfo) {
+                                 const DXILDebugInfo::Result &DebugInfo)
+    : DebugInfo(DebugInfo) {
   {
     DebugInfoFinder DIF;
     DIF.processModule(M);

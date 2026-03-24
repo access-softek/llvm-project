@@ -47,12 +47,6 @@ void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 /// Pass to scalarize llvm global data into a DXIL legal form
 ModulePass *createDXILDataScalarizationLegacyPass();
 
-/// Initializer for DXIL Debug Info Pass
-void initializeDXILDebugInfoLegacyPass(PassRegistry &);
-
-/// Pass to lower Debug Info metadata to DXIL legal form
-ModulePass *createDXILDebugInfoLegacyPass();
-
 /// Initializer for DXIL Array Flatten Pass
 void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 

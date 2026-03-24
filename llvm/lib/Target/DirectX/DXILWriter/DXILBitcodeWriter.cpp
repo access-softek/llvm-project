@@ -129,14 +129,14 @@ class DXILBitcodeWriter {
   /// This maps values to their typed pointers
   PointerTypeMap PointerMap;
 
-  const DXILDebugInfoResult &DebugInfo;
+  const DXILDebugInfo::Result &DebugInfo;
 
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
   DXILBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
                     StringTableBuilder &StrtabBuilder, BitstreamWriter &Stream,
-                    const DXILDebugInfoResult &DI)
+                    const DXILDebugInfo::Result &DI)
       : I8Ty(Type::getInt8Ty(M.getContext())),
         I8PtrTy(TypedPointerType::get(I8Ty, 0)), Stream(Stream),
         StrtabBuilder(StrtabBuilder), M(M), VE(M, I8PtrTy, DI), Buffer(Buffer),
@@ -398,7 +398,7 @@ dxil::BitcodeWriter::~BitcodeWriter() { }
 
 /// Write the specified module to the specified output stream.
 void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
-                           const DXILDebugInfoResult &DI) {
+                           const DXILDebugInfo::Result &DebugInfo) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
@@ -409,7 +409,7 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
   BitcodeWriter Writer(Buffer);
-  Writer.writeModule(M, DI);
+  Writer.writeModule(M, DebugInfo);
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -430,7 +430,7 @@ void BitcodeWriter::writeBlob(unsigned Block, unsigned Record, StringRef Blob) {
 }
 
 void BitcodeWriter::writeModule(const Module &M,
-                                const DXILDebugInfoResult &DI) {
+                                const DXILDebugInfo::Result &DI) {
 
   // The Mods vector is used by irsymtab::build, which requires non-const
   // Modules in case it needs to materialize metadata. But the bitcode writer

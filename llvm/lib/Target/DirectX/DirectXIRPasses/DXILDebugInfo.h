@@ -13,44 +13,18 @@
 #ifndef LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
 #define LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
 
-#include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
-
 namespace llvm {
 
-struct ValueEnumeratorOverride {};
+class Module;
 
-struct DXILDebugInfoResult {
+namespace DXILDebugInfo {
+struct Result {
   int Val;
-  ValueEnumeratorOverride VEOverride;
 };
 
-class DXILDebugInfo : public AnalysisInfoMixin<DXILDebugInfo> {
-  friend AnalysisInfoMixin<DXILDebugInfo>;
-  static AnalysisKey Key;
+Result run(Module &M);
 
-public:
-  using Result = DXILDebugInfoResult;
-  Result run(Module &M, ModuleAnalysisManager &MAM);
-};
-
-class DXILDebugInfoLegacy : public ModulePass {
-public:
-  const DXILDebugInfoResult &getResult() { return Result; }
-  bool runOnModule(Module &M) override;
-
-  StringRef getPassName() const override { return "DXIL Debug Info"; }
-  DXILDebugInfoLegacy() : ModulePass(ID) {}
-
-  static char ID; // Pass identification.
-  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-private:
-  DXILDebugInfoResult Result;
-};
-
+} // namespace DXILDebugInfo
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DXILDEBUGINFO_H
