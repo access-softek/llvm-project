@@ -922,10 +922,12 @@ void ValueEnumerator::organizeMetadata() {
 }
 
 const Metadata *ValueEnumerator::getDXILMetadata(const Metadata *M) const {
+  if (const Metadata *Replace = DebugInfo.VEReplace.lookup(M)) {
+    return Replace;
+  }
+
   if (auto *GVE = dyn_cast_or_null<llvm::DIGlobalVariableExpression>(M))
     return GVE->getVariable();
-  if (auto *CB = dyn_cast_or_null<DICommonBlock>(M))
-    return CB->getScope();
   if (auto *SR = dyn_cast_or_null<DISubrangeType>(M)) {
     if (auto *BT = SR->getBaseType())
       return BT;

@@ -28,6 +28,15 @@ static void dropDebugLabels(Module &M, DebugInfoFinder &DIF) {
   }
 }
 
+static void dropCommonBlocks(Module &M, DebugInfoFinder &DIF,
+                             MDMap &VEReplace) {
+  for (DIScope *Scope : DIF.scopes()) {
+    if (const auto *CB = dyn_cast<DICommonBlock>(Scope)) {
+      VEReplace[CB] = CB->getScope();
+    }
+  }
+}
+
 static void collectDISubprogramFunctions(Module &M, MDMap &VEExtra) {
   for (const Function &F : M) {
     if (const DISubprogram *SP = F.getSubprogram()) {
@@ -61,6 +70,7 @@ Result run(Module &M) {
   DIF.processModule(M);
 
   dropDebugLabels(M, DIF);
+  dropCommonBlocks(M, DIF, Res.VEReplace);
   collectDISubprogramFunctions(M, Res.VEExtra);
   collectDICompileUnitSubprograms(M, DIF, Res.CUSubprograms, Res.VEExtra);
 
