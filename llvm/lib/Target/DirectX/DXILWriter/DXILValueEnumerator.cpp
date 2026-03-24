@@ -380,22 +380,6 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
       }
     }
 
-    for (const DISubprogram *SP : DIF.subprograms())
-      if (SP->getUnit())
-        CUSubprograms.insert({SP->getUnit(), SP});
-
-    for (auto It = CUSubprograms.begin(), End = CUSubprograms.end();
-         It != End;) {
-      auto *CU = It->first;
-      auto CUEnd = CUSubprograms.upper_bound(CU);
-      SmallVector<Metadata *, 16> Subprograms;
-      do
-        Subprograms.push_back(const_cast<Metadata *>(It->second));
-      while (++It != CUEnd);
-      auto *SubprogramMD = MDTuple::get(M.getContext(), Subprograms);
-      DICompileUnitSubprograms.insert({CU, SubprogramMD});
-    }
-
     for (const GlobalVariable &GV : M.globals()) {
       SmallVector<DIGlobalVariableExpression *, 4> GVEs;
       for (auto *GVE : GVEs) {
@@ -731,19 +715,13 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
       continue;
     }
 
-    // DICompileUnit and DISubprogram get emitted with their links reversed.
-    if (auto *CU = dyn_cast<DICompileUnit>(N)) {
-      if (auto *SPs = getDICompileUnitSubprograms(CU)) {
-        if (enumerateMetadataImpl(F, SPs)) {
-          Worklist.push_back(std::make_pair(SPs, SPs->op_begin()));
+    if (const Metadata *RemapMD = DebugInfo.VEExtra.lookup(N)) {
+      if (enumerateMetadataImpl(F, RemapMD)) {
+        if (const auto *NewN = dyn_cast<MDNode>(RemapMD)) {
+          Worklist.push_back(std::make_pair(NewN, NewN->op_begin()));
           continue;
-	}
+        }
       }
-    }
-
-    auto RemapIt = DebugInfo.Remap.find(N);
-    if (RemapIt != DebugInfo.Remap.end()) {
-      enumerateMetadataImpl(F, RemapIt->second);
     }
 
     // DIGlobalVariable gets an expression added.

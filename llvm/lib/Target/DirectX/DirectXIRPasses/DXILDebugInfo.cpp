@@ -28,12 +28,30 @@ static void dropDebugLabels(Module &M, DebugInfoFinder &DIF) {
   }
 }
 
-static void collectDISubprogramFunctions(Module &M, VERemap &Remap) {
+static void collectDISubprogramFunctions(Module &M, MDMap &VEExtra) {
   for (const Function &F : M) {
     if (const DISubprogram *SP = F.getSubprogram()) {
       auto *FunctionMD = ConstantAsMetadata::get(const_cast<Function *>(&F));
-      Remap[SP] = FunctionMD;
+      VEExtra[SP] = FunctionMD;
     }
+  }
+}
+
+static void collectDICompileUnitSubprograms(
+    const Module &M, const DebugInfoFinder &DIF,
+    DenseMap<const DICompileUnit *, const MDTuple *> &CUSubprograms,
+    MDMap &VEExtra) {
+
+  DenseMap<const DICompileUnit *, SmallVector<Metadata *, 16>> CUSub;
+  for (DISubprogram *SP : DIF.subprograms()) {
+    if (const DICompileUnit *CU = SP->getUnit())
+      CUSub[CU].push_back(SP);
+  }
+
+  for (auto &[CU, Subprograms] : CUSub) {
+    auto *SubprogramsMD = MDTuple::get(M.getContext(), Subprograms);
+    CUSubprograms[CU] = SubprogramsMD;
+    VEExtra[CU] = SubprogramsMD;
   }
 }
 
@@ -43,7 +61,8 @@ Result run(Module &M) {
   DIF.processModule(M);
 
   dropDebugLabels(M, DIF);
-  collectDISubprogramFunctions(M, Res.Remap);
+  collectDISubprogramFunctions(M, Res.VEExtra);
+  collectDICompileUnitSubprograms(M, DIF, Res.CUSubprograms, Res.VEExtra);
 
   return Res;
 }

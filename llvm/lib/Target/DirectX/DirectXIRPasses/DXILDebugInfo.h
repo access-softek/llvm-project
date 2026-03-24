@@ -19,13 +19,22 @@ namespace llvm {
 
 class Module;
 class Metadata;
+class DICompileUnit;
+class MDTuple;
 
 namespace DXILDebugInfo {
 
-using VERemap = DenseMap<const Metadata *, const Metadata *>;
+using MDMap = DenseMap<const Metadata *, const Metadata *>;
 
 struct Result {
-  VERemap Remap;
+  /// Enumerate extra metadata when Key is encountered in ValueEnumerator.
+  MDMap VEExtra;
+
+  /// Completely replace one metadata with another in ValueEnumerator.
+  MDMap VEReplace;
+
+  /// Reverse mapping from DICompileUnit to DISubprogram it contains.
+  DenseMap<const DICompileUnit *, const MDTuple *> CUSubprograms;
 };
 
 Result run(Module &M);
