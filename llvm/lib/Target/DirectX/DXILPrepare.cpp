@@ -217,15 +217,6 @@ public:
           }
         }
       }
-      for (DISubprogram *SP : DIF.subprograms()) {
-        if (MDTuple *RN = cast_or_null<MDTuple>(SP->getRawRetainedNodes())) {
-          SmallVector<Metadata *> MDs(RN->operands());
-          MDs.erase(std::remove_if(MDs.begin(), MDs.end(),
-                                   [](Metadata *M) { return isa<DILabel>(M); }),
-                    MDs.end());
-          SP->replaceRetainedNodes(MDTuple::get(M.getContext(), MDs));
-        }
-      }
     }
 
     M.convertFromNewDbgValues();
