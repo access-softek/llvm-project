@@ -8,6 +8,7 @@
 
 #include "DXILDebugInfo.h"
 #include "DirectX.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Module.h"
 
@@ -34,6 +35,27 @@ static void dropCommonBlocks(Module &M, DebugInfoFinder &DIF,
     if (const auto *CB = dyn_cast<DICommonBlock>(Scope)) {
       VEReplace[CB] = CB->getScope();
     }
+  }
+}
+
+static void dropSubrangeTypes(Module &M, DebugInfoFinder &DIF,
+                              MDMap &VEReplace) {
+  for (DIType *Ty : DIF.types()) {
+    auto *SR = dyn_cast<DISubrangeType>(Ty);
+    if (!SR)
+      continue;
+
+    if (auto *BT = SR->getBaseType()) {
+      VEReplace[SR] = BT;
+      continue;
+    }
+
+    auto *BasicTy = DIBasicType::get(
+        SR->getContext(), dwarf::DW_TAG_base_type, SR->getName(),
+        SR->getSizeInBits(), SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
+        SR->getNumExtraInhabitants(), /*DataSizeInBits=*/0, SR->getFlags());
+
+    VEReplace[SR] = BasicTy;
   }
 }
 
@@ -71,6 +93,7 @@ Result run(Module &M) {
 
   dropDebugLabels(M, DIF);
   dropCommonBlocks(M, DIF, Res.VEReplace);
+  dropSubrangeTypes(M, DIF, Res.VEReplace);
   collectDISubprogramFunctions(M, Res.VEExtra);
   collectDICompileUnitSubprograms(M, DIF, Res.CUSubprograms, Res.VEExtra);
 
