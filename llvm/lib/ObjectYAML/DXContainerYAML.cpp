@@ -561,6 +561,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("RootSignature", P.RootSignature);
   IO.mapOptional("DebugName", P.DebugName);
   IO.mapOptional("CompilerVersion", P.CompilerVersion);
+  IO.mapOptional("SourceInfo", P.SourceInfo);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -701,6 +702,121 @@ void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
     IO &IO, dxbc::ComparisonFunc &Value) {
   for (const auto &E : dxbc::getComparisonFuncs())
     IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<llvm::dxbc::SourceInfo::SectionType>::enumeration(
+    IO &IO, llvm::dxbc::SourceInfo::SectionType &Value) {
+  for (const auto &E : dxbc::SourceInfo::getSectionTypes())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<
+    llvm::dxbc::SourceInfo::Contents::CompressionType>::
+    enumeration(IO &IO,
+                llvm::dxbc::SourceInfo::Contents::CompressionType &Value) {
+  for (const auto &E : dxbc::SourceInfo::Contents::getCompressionTypes())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void MappingTraits<dxbc::SourceInfo::Header>::mapping(
+    IO &IO, dxbc::SourceInfo::Header &H) {
+  IO.mapRequired("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapRequired("Flags", H.Flags);
+  IO.mapRequired("SectionCount", H.SectionCount);
+}
+
+void MappingTraits<dxbc::SourceInfo::SectionHeader>::mapping(
+    IO &IO, dxbc::SourceInfo::SectionHeader &H) {
+  IO.mapRequired("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapRequired("Flags", H.Flags);
+  IO.mapRequired("Type", H.Type);
+}
+
+void MappingTraits<object::DirectX::SourceInfo::SourceNames::Header>::mapping(
+    IO &IO, object::DirectX::SourceInfo::SourceNames::Header &H) {
+  IO.mapRequired("Flags", H.Flags);
+  IO.mapRequired("Count", H.Count);
+  IO.mapRequired("EntriesSizeInBytes", H.EntriesSizeInBytes);
+}
+
+void MappingTraits<dxbc::SourceInfo::Names::Entry>::mapping(
+    IO &IO, dxbc::SourceInfo::Names::Entry &E) {
+  IO.mapRequired("AlignedSizeInBytes", E.AlignedSizeInBytes);
+  IO.mapRequired("Flags", E.Flags);
+  IO.mapRequired("NameSizeInBytes", E.NameSizeInBytes);
+  IO.mapRequired("ContentSizeInBytes", E.ContentSizeInBytes);
+}
+
+void MappingTraits<object::DirectX::SourceInfo::SourceNames::Entry>::mapping(
+    IO &IO, object::DirectX::SourceInfo::SourceNames::Entry &E) {
+  IO.mapRequired("Header", E.Parameters);
+  IO.mapRequired("FileName", E.FileName);
+}
+
+void MappingTraits<object::DirectX::SourceInfo::SourceNames>::mapping(
+    IO &IO, object::DirectX::SourceInfo::SourceNames &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Entries", S.Entries);
+}
+
+void MappingTraits<dxbc::SourceInfo::Contents::Header>::mapping(
+    IO &IO, dxbc::SourceInfo::Contents::Header &H) {
+  IO.mapRequired("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapRequired("Flags", H.Flags);
+  IO.mapRequired("Type", H.Type);
+  IO.mapRequired("EntriesSizeInBytes", H.EntriesSizeInBytes);
+  IO.mapRequired("UncompressedEntriesSizeInBytes",
+                 H.UncompressedEntriesSizeInBytes);
+  IO.mapRequired("Count", H.Count);
+}
+
+void MappingTraits<dxbc::SourceInfo::Contents::Entry>::mapping(
+    IO &IO, dxbc::SourceInfo::Contents::Entry &E) {
+  IO.mapRequired("AlignedSizeInBytes", E.AlignedSizeInBytes);
+  IO.mapRequired("Flags", E.Flags);
+  IO.mapRequired("ContentSizeInBytes", E.ContentSizeInBytes);
+}
+
+void MappingTraits<object::DirectX::SourceInfo::SourceContents::Entry>::mapping(
+    IO &IO, object::DirectX::SourceInfo::SourceContents::Entry &E) {
+  IO.mapRequired("Header", E.Parameters);
+  IO.mapRequired("FileContent", E.FileContent);
+}
+
+void MappingTraits<object::DirectX::SourceInfo::SourceContents>::mapping(
+    IO &IO, object::DirectX::SourceInfo::SourceContents &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Entries", S.Entries);
+}
+
+void MappingTraits<dxbc::SourceInfo::Args::Header>::mapping(
+    IO &IO, dxbc::SourceInfo::Args::Header &H) {
+  IO.mapRequired("Flags", H.Flags);
+  IO.mapRequired("SizeInBytes", H.SizeInBytes);
+  IO.mapRequired("Count", H.Count);
+}
+
+void MappingTraits<object::DirectX::SourceInfo::ProgramArgs::Entry>::mapping(
+    IO &IO, object::DirectX::SourceInfo::ProgramArgs::Entry &E) {
+  IO.mapRequired("Arg", E.first);
+  IO.mapRequired("Value", E.second);
+}
+
+void MappingTraits<object::DirectX::SourceInfo::ProgramArgs>::mapping(
+    IO &IO, object::DirectX::SourceInfo::ProgramArgs &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Args", S.Args);
+}
+
+void MappingTraits<object::DirectX::SourceInfo>::mapping(
+    IO &IO, object::DirectX::SourceInfo &S) {
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Names", S.Names);
+  IO.mapRequired("Contents", S.Contents);
+  IO.mapRequired("Args", S.Args);
 }
 
 } // namespace yaml
@@ -952,6 +1068,14 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
           Version->Parameters.CommitCount,
           Version->Parameters.ContentSizeInBytes, Version->CommitSha.str(),
           Version->CustomVersionString.str()});
+      break;
+    }
+    case dxbc::PartType::SRCI: {
+      std::optional<object::DirectX::SourceInfo> SourceInfo =
+          Container.getSourceInfo();
+      assert(SourceInfo && "Since we are iterating and found a SRCI part, this "
+                           "should never not have a value");
+      NewPart.SourceInfo.emplace(*SourceInfo);
       break;
     }
     case dxbc::PartType::RTS0:

@@ -461,6 +461,59 @@ struct CompilerVersion {
   StringRef CustomVersionString;
 };
 
+struct SourceInfo {
+  struct Section {
+    dxbc::SourceInfo::SectionHeader GenericHeader;
+  };
+
+  struct SourceContents : public Section {
+    struct Entry {
+      dxbc::SourceInfo::Contents::Entry Parameters;
+      std::string FileContent;
+    };
+
+    dxbc::SourceInfo::Contents::Header Parameters;
+    SmallVector<Entry> Entries;
+  };
+
+  struct SourceNames : public Section {
+    struct Header {
+      uint32_t Flags;
+      uint32_t Count;
+      uint16_t EntriesSizeInBytes;
+
+      Header() {}
+      Header(const dxbc::SourceInfo::Names::HeaderOnDisk &H);
+
+      void swapBytes() {
+        sys::swapByteOrder(Flags);
+        sys::swapByteOrder(Count);
+        sys::swapByteOrder(EntriesSizeInBytes);
+      }
+    };
+
+    struct Entry {
+      dxbc::SourceInfo::Names::Entry Parameters;
+      StringRef FileName;
+    };
+
+    Header Parameters;
+    SmallVector<Entry> Entries;
+  };
+
+  struct ProgramArgs : public Section {
+    using Entry = std::pair<StringRef, StringRef>;
+
+    dxbc::SourceInfo::Args::Header Parameters;
+    SmallVector<Entry> Args;
+  };
+
+  dxbc::SourceInfo::Header Parameters;
+  SourceNames Names;
+  SourceContents Contents;
+  ProgramArgs Args;
+};
+
 } // namespace DirectX
 
 class DXContainer {
@@ -485,6 +538,7 @@ private:
   DirectX::Signature PatchConstantSignature;
   std::optional<ILDNData> DebugName;
   std::optional<DirectX::CompilerVersion> VersionInfo;
+  std::optional<DirectX::SourceInfo> SourceInfo;
 
   Error parseHeader();
   Error parsePartOffsets();
@@ -496,6 +550,7 @@ private:
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
   Error parseCompilerVersionInfo(StringRef Part);
+  Error parseSourceInfo(StringRef Part);
   friend class PartIterator;
 
 public:
@@ -604,6 +659,10 @@ public:
   const std::optional<DirectX::CompilerVersion> &
   getCompilerVersionInfo() const {
     return VersionInfo;
+  }
+
+  const std::optional<DirectX::SourceInfo> &getSourceInfo() const {
+    return SourceInfo;
   }
 };
 

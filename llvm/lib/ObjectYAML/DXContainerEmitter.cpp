@@ -14,6 +14,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/MC/DXContainerSourceInfo.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
@@ -311,6 +312,15 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
     }
     case dxbc::PartType::Unknown:
       break; // Skip any handling for unrecognized parts.
+    case dxbc::PartType::SRCI: {
+      if (!P.SourceInfo.has_value())
+        continue;
+      mcdxbc::SourceInfo SourceInfo;
+      SourceInfo.BaseData = *P.SourceInfo;
+      SourceInfo.finalize();
+      SourceInfo.write(OS);
+      break;
+    }
     case dxbc::PartType::RTS0:
       if (!P.RootSignature.has_value())
         continue;
