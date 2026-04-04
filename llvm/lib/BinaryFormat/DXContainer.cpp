@@ -151,6 +151,17 @@ ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
   return ArrayRef(SigComponentTypes);
 }
 
+static const EnumEntry<SourceInfo::SectionType> SectionNames[] = {
+#define SOURCE_INFO_TYPE(Num, Val) {#Val, SourceInfo::SectionType::Val},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
+  if (Type > dxbc::SourceInfo::SectionType::Last)
+    return StringRef();
+  return ArrayRef(SectionNames)[static_cast<size_t>(Type)].Name;
+}
+
 static const EnumEntry<RootFlags> RootFlagNames[] = {
 #define ROOT_SIGNATURE_FLAG(Val, Enum) {#Enum, RootFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"

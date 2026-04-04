@@ -461,6 +461,50 @@ struct CompilerVersion {
   StringRef CustomVersionString;
 };
 
+struct SourceInfo {
+  struct SourceContents {
+    struct Entry {
+      dxbc::SourceInfo::Contents::Entry Parameters;
+      std::string FileContent;
+    };
+
+    dxbc::SourceInfo::Contents::Header Parameters;
+    SmallVector<Entry> Entries;
+  };
+
+  struct SourceNames {
+    struct Header {
+      /// Reserved, must be zero.
+      uint32_t Flags;
+      /// The number of data entries.
+      uint32_t Count;
+      /// The total size of the data entries following this header. Each entry is 4-byte aligned.
+      uint16_t EntriesSizeInBytes;
+
+      Header() {}
+      Header(const dxbc::SourceInfo::Names::HeaderOnDisk &H);
+    };
+
+    struct Entry {
+      dxbc::SourceInfo::Names::Entry Parameters;
+      StringRef FileName;
+    };
+
+    Header Parameters;
+    SmallVector<Entry> Entries;
+  };
+
+  struct ProgramArgs {
+    dxbc::SourceInfo::Args::Header Parameters;
+    SmallVector<std::pair<StringRef, StringRef>> Args;
+  };
+
+  dxbc::SourceInfo::Header Parameters;
+  SourceNames Names;
+  SourceContents Contents;
+  ProgramArgs Args;
+};
+
 } // namespace DirectX
 
 class DXContainer {
@@ -485,6 +529,7 @@ private:
   DirectX::Signature PatchConstantSignature;
   std::optional<ILDNData> DebugName;
   std::optional<DirectX::CompilerVersion> VersionInfo;
+  std::optional<DirectX::SourceInfo> SourceInfo;
 
   Error parseHeader();
   Error parsePartOffsets();
@@ -496,6 +541,7 @@ private:
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
   Error parseCompilerVersionInfo(StringRef Part);
+  Error parseSourceInfo(StringRef Part);
   friend class PartIterator;
 
 public:
@@ -605,6 +651,8 @@ public:
   getCompilerVersionInfo() const {
     return VersionInfo;
   }
+
+  const std::optional<DirectX::SourceInfo> &getSourceInfo() const { return SourceInfo; }
 };
 
 class LLVM_ABI DXContainerObjectFile : public ObjectFile {
