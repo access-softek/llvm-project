@@ -462,7 +462,11 @@ struct CompilerVersion {
 };
 
 struct SourceInfo {
-  struct SourceContents {
+  struct Section {
+    dxbc::SourceInfo::SectionHeader GenericHeader;
+  };
+
+  struct SourceContents : public Section {
     struct Entry {
       dxbc::SourceInfo::Contents::Entry Parameters;
       std::string FileContent;
@@ -472,13 +476,14 @@ struct SourceInfo {
     SmallVector<Entry> Entries;
   };
 
-  struct SourceNames {
+  struct SourceNames : public Section {
     struct Header {
       /// Reserved, must be zero.
       uint32_t Flags;
       /// The number of data entries.
       uint32_t Count;
-      /// The total size of the data entries following this header. Each entry is 4-byte aligned.
+      /// The total size of the data entries following this header. Each entry
+      /// is 4-byte aligned.
       uint16_t EntriesSizeInBytes;
 
       Header() {}
@@ -494,7 +499,7 @@ struct SourceInfo {
     SmallVector<Entry> Entries;
   };
 
-  struct ProgramArgs {
+  struct ProgramArgs : public Section {
     dxbc::SourceInfo::Args::Header Parameters;
     SmallVector<std::pair<StringRef, StringRef>> Args;
   };
@@ -652,7 +657,9 @@ public:
     return VersionInfo;
   }
 
-  const std::optional<DirectX::SourceInfo> &getSourceInfo() const { return SourceInfo; }
+  const std::optional<DirectX::SourceInfo> &getSourceInfo() const {
+    return SourceInfo;
+  }
 };
 
 class LLVM_ABI DXContainerObjectFile : public ObjectFile {

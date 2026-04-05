@@ -82,25 +82,31 @@ bool llvm::dxbc::isValidBorderColor(uint32_t V) {
   return false;
 }
 
-bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
-  using FlagT = dxbc::RootDescriptorFlags;
-  uint32_t LargestValue =
+template <typename FlagT>
+static bool isValidFlags(std::underlying_type_t<FlagT> V) {
+  decltype(V) LargestValue =
       llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
   return V < NextPowerOf2(LargestValue);
+}
+
+bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
+  return isValidFlags<dxbc::RootDescriptorFlags>(V);
 }
 
 bool llvm::dxbc::isValidDescriptorRangeFlags(uint32_t V) {
-  using FlagT = dxbc::DescriptorRangeFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::DescriptorRangeFlags>(V);
 }
 
 bool llvm::dxbc::isValidStaticSamplerFlags(uint32_t V) {
-  using FlagT = dxbc::StaticSamplerFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::StaticSamplerFlags>(V);
+}
+
+bool llvm::dxbc::isValidCompilerVersionFlags(uint32_t V) {
+  return isValidFlags<dxbc::CompilerVersionFlags>(V);
+}
+
+bool llvm::dxbc::SourceInfo::Contents::isValidCompressionType(uint16_t V) {
+  return isValidFlags<dxbc::SourceInfo::Contents::CompressionType>(V);
 }
 
 dxbc::PartType dxbc::parsePartType(StringRef S) {
@@ -159,7 +165,7 @@ static const EnumEntry<SourceInfo::SectionType> SectionNames[] = {
 StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
   if (Type > dxbc::SourceInfo::SectionType::Last)
     return StringRef();
-  return ArrayRef(SectionNames)[static_cast<size_t>(Type)].Name;
+  return ArrayRef(SectionNames)[to_underlying(Type)].Name;
 }
 
 static const EnumEntry<RootFlags> RootFlagNames[] = {

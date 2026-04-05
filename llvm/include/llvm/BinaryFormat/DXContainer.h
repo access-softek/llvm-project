@@ -860,28 +860,31 @@ struct SectionHeader {
   }
 };
 
-static_assert(sizeof(SectionHeader) == 8, "SourceInfo::SectionHeader size incorrect.");
+static_assert(sizeof(SectionHeader) == 8,
+              "SourceInfo::SectionHeader size incorrect.");
 
 namespace Names {
 
-LLVM_PACKED(
-    struct HeaderOnDisk {
-      /// Reserved, must be zero.
-      uint32_t Flags;
-      /// The number of data entries.
-      uint32_t Count;
-      /// The total size of the data entries following this header. Each entry is 4-byte aligned.
-      uint16_t EntriesSizeInBytes;
-  });
+LLVM_PACKED(struct HeaderOnDisk {
+  /// Reserved, must be zero.
+  uint32_t Flags;
+  /// The number of data entries.
+  uint32_t Count;
+  /// The total size of the data entries following this header. Each entry is
+  /// 4-byte padded.
+  uint16_t EntriesSizeInBytes;
+});
 
-static_assert(sizeof(HeaderOnDisk) == 10, "SourceInfo::Names::HeaderOnDisk size incorrect.");
+static_assert(sizeof(HeaderOnDisk) == 10,
+              "SourceInfo::Names::HeaderOnDisk size incorrect.");
 
 struct Entry {
   /// Size of entry, including this header. Aligned to a 4-byte boundary.
   uint32_t AlignedSizeInBytes;
   /// Reserved, must be set to zero.
   uint32_t Flags;
-  /// Size of the file name following this header, including the null terminator, excluding entry padding.
+  /// Size of the file name following this header, including the null
+  /// terminator, excluding entry padding.
   uint32_t NameSizeInBytes;
   /// Size of the file content, including the null terminator.
   uint32_t ContentSizeInBytes;
@@ -905,8 +908,10 @@ enum class CompressionType : uint16_t {
   None = 0,
   Zlib = 1,
 
-  Last = Zlib,
+  LLVM_MARK_AS_BITMASK_ENUM(Zlib)
 };
+
+bool isValidCompressionType(uint16_t V);
 
 struct Header {
   /// Size of the section including this header. Aligned to a 4-byte boundary.
@@ -919,7 +924,8 @@ struct Header {
   /// Aligned to a 4-byte boundary if Type is None.
   /// Doesn’t have to be aligned otherwise.
   uint32_t EntriesSizeInBytes;
-  /// Total size of the data entries when uncompressed. Aligned to a 4-byte boundary.
+  /// Total size of the data entries when uncompressed. Aligned to a 4-byte
+  /// boundary.
   uint32_t UncompressedEntriesSizeInBytes;
   /// The number of data entries.
   uint32_t Count;
@@ -934,19 +940,23 @@ struct Header {
   }
 };
 
-static_assert(sizeof(Header) == 20, "SourceInfo::Contents::Header size incorrect.");
+static_assert(sizeof(Header) == 20,
+              "SourceInfo::Contents::Header size incorrect.");
 
 struct Entry {
   /// Size of entry, including this header. Aligned to a 4-byte boundary.
   uint32_t AlignedSizeInBytes;
   /// Reserved, must be zero.
   uint32_t Flags;
-  /// Size of the file contents following this header, including the null terminator, excluding entry padding.
+  /// Size of the file contents following this header, including the null
+  /// terminator, excluding entry padding.
   uint32_t ContentSizeInBytes;
-  /// Followed by a string of length ContentSizeInBytes-1 with HLSL source file content.
+  /// Followed by a string of length ContentSizeInBytes-1 with HLSL source file
+  /// content.
   /// TODO always followed, or may be followed?
   /// Entry is aligned to 4-bytes (in uncompressed form).
-  /// Entries of this section must be stored in the same order as the entries of the Names section.
+  /// Entries of this section must be stored in the same order as the entries of
+  /// the Names section.
 
   void swapBytes() {
     sys::swapByteOrder(AlignedSizeInBytes);
@@ -955,7 +965,8 @@ struct Entry {
   }
 };
 
-static_assert(sizeof(Entry) == 12, "SourceInfo::Contents::Entry size incorrect.");
+static_assert(sizeof(Entry) == 12,
+              "SourceInfo::Contents::Entry size incorrect.");
 
 } // namespace Contents
 
@@ -964,13 +975,15 @@ namespace Args {
 struct Header {
   /// Reserved, must be zero.
   uint32_t Flags;
-  /// Length of all argument pairs, including their null terminators, not including this header.
+  /// Length of all argument pairs, including their null terminators, not
+  /// including this header.
   uint32_t SizeInBytes;
   /// Number of arguments.
   uint32_t Count;
-  /// Followed by Count argument pairs, representing command line arguments of the HLSL compiler invocation.
-  /// Each pair consists of argument name and argument value null-terminated strings.
-  /// Padding is not applied to the pairs.
+  /// Followed by Count argument pairs, representing command line arguments of
+  /// the HLSL compiler invocation. Each pair consists of argument name and
+  /// argument value null-terminated strings. Padding is not applied to the
+  /// pairs.
 
   void swapBytes() {
     sys::swapByteOrder(Flags);
@@ -979,7 +992,8 @@ struct Header {
   }
 };
 
-static_assert(sizeof(Header) == 12, "SourceInfo::Contents::Entry size incorrect.");
+static_assert(sizeof(Header) == 12,
+              "SourceInfo::Contents::Entry size incorrect.");
 
 } // namespace Args
 
@@ -991,6 +1005,8 @@ enum class CompilerVersionFlags : uint32_t {
 
   LLVM_MARK_AS_BITMASK_ENUM(Internal)
 };
+
+bool isValidCompilerVersionFlags(uint32_t V);
 
 struct CompilerVersionHeader {
   uint16_t Major;

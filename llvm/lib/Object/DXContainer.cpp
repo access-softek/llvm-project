@@ -63,8 +63,8 @@ static Error readInteger(StringRef Buffer, const char *Src, T &Val,
 }
 
 /// Read a null-terminated string at the position Src from Buffer, with maximum
-/// byte size of MaxSize (including the null-terminator). Advance Src by the number
-/// of bytes read.
+/// byte size of MaxSize (including the null-terminator). Advance Src by the
+/// number of bytes read.
 static Error readString(StringRef Buffer, const char *&Src, size_t MaxSize,
                         StringRef &Val, Twine Desc) {
   if (readOutOfBounds(Buffer, Src, MaxSize))
@@ -199,6 +199,9 @@ Error DXContainer::parseCompilerVersionInfo(StringRef Part) {
     return Err;
   Current += sizeof(Header);
 
+  if (!dxbc::isValidCompilerVersionFlags(to_underlying(Header.Flags)))
+    return parseFailed("Incorrect shader compiler version flags combination");
+
   StringRef CommitSha;
   const char *Prev = Current;
   if (Error Err = readString(Part, Current, Header.ContentSizeInBytes,
@@ -215,83 +218,104 @@ Error DXContainer::parseCompilerVersionInfo(StringRef Part) {
   return Error::success();
 }
 
-DirectX::SourceInfo::SourceNames::Header::Header(const dxbc::SourceInfo::Names::HeaderOnDisk &H) {
+DirectX::SourceInfo::SourceNames::Header::Header(
+    const dxbc::SourceInfo::Names::HeaderOnDisk &H) {
   const auto *HPtr = reinterpret_cast<const uint8_t *>(&H);
   Flags = support::endian::read32le(HPtr);
   Count = support::endian::read32le(HPtr + 4);
   EntriesSizeInBytes = support::endian::read16le(HPtr + 8);
 }
 
-static Error parseNames(StringRef Section, DirectX::SourceInfo::SourceNames &Names) {
-  using namespace dxbc::SourceInfo;
-
+static Error parseNames(StringRef Section,
+                        DirectX::SourceInfo::SourceNames &Names) {
   const char *Current = Section.begin();
-  Names::HeaderOnDisk HeaderOnDisk;
-  if (Error Err = readStruct<decltype(HeaderOnDisk), false>(Section, Current, HeaderOnDisk))
+  dxbc::SourceInfo::Names::HeaderOnDisk HeaderOnDisk;
+  if (Error Err = readStruct<decltype(HeaderOnDisk), false>(Section, Current,
+                                                            HeaderOnDisk))
     return Err;
   Current += sizeof(HeaderOnDisk);
 
-  DirectX::SourceInfo::SourceNames::Header Header(HeaderOnDisk);
-  if (Header.Flags)
+  Names.Parameters = HeaderOnDisk;
+  if (Names.Parameters.Flags)
     return parseFailed("SRCI Names header flags must be zero");
-  if (Current + Header.EntriesSizeInBytes > Section.end())
-    return parseFailed("SRCI Names section content ends beyond the section boundary");
+  if (Current + Names.Parameters.EntriesSizeInBytes > Section.end())
+    return parseFailed(
+        "SRCI Names section content ends beyond the section boundary");
 
-  Names.Entries.reserve(Header.Count);
-
-  for (uint32_t I : seq(Header.Count)) {
+  Names.Entries.reserve(Names.Parameters.Count);
+  for (auto I : llvm::seq(Names.Parameters.Count)) {
     auto &Entry = Names.Entries.emplace_back();
     if (Error Err = readStruct(Section, Current, Entry.Parameters))
-        return Err;
+      return Err;
 
     const char *Next = Current + Entry.Parameters.AlignedSizeInBytes;
     if (Next > Section.end())
-      return parseFailed(formatv("SRCI Names entry {0} ends beyond the section boundary", I));
+      return parseFailed(
+          formatv("SRCI Names entry {0} ends beyond the section boundary", I));
     if (Entry.Parameters.Flags)
       // TODO remove offset
-      return parseFailed(formatv("SRCI Names entry {0} flags must be zero {1}", I, Current - Section.begin()));
+      return parseFailed(formatv("SRCI Names entry {0} flags must be zero {1}",
+                                 I, Current - Section.begin()));
 
-    const char *FileName = Current + sizeof(Entry);
-    if (Error Err = readString(Section, FileName, Entry.Parameters.NameSizeInBytes, Entry.FileName, Twine("SRCI Names entry ") + Twine(I) + Twine(" file name")))
+    const char *FileName = Current + sizeof(Entry.Parameters);
+    if (Error Err = readString(
+            Section, FileName, Entry.Parameters.NameSizeInBytes, Entry.FileName,
+            Twine("SRCI Names entry ") + Twine(I) + Twine(" file name")))
       return Err;
     if (FileName > Next)
-      return parseFailed(formatv("SRCI Names entry {0} file name size exceeded entry size", I));
+      return parseFailed(formatv(
+          "SRCI Names entry {0} file name size exceeded entry size", I));
     Current = Next;
   }
 
   return Error::success();
 }
 
-static Error parseContents(StringRef Section, DirectX::SourceInfo::SourceContents &Contents) {
-  using namespace dxbc::SourceInfo;
+static Error parseContents(StringRef Section,
+                           DirectX::SourceInfo::SourceContents &Contents) {
+  using dxbc::SourceInfo::Contents::CompressionType;
 
   const char *Current = Section.begin();
   if (Error Err = readStruct(Section, Current, Contents.Parameters))
     return Err;
-  Current += sizeof(Header);
+  Current += sizeof(Contents.Parameters);
 
   if (Section.begin() + Contents.Parameters.EntriesSizeInBytes > Section.end())
-    return parseFailed(formatv("SRCI Contents section ends beyond the section boundary"));
+    return parseFailed(
+        formatv("SRCI Contents section ends beyond the section boundary"));
   if (Contents.Parameters.Flags)
     return parseFailed("SRCI Contents header flags must be zero");
   if (Current + Contents.Parameters.EntriesSizeInBytes > Section.end())
-    return parseFailed(formatv("SRCI Contents entries end beyond the section boundary", Section));
+    return parseFailed(formatv(
+        "SRCI Contents entries end beyond the section boundary", Section));
 
   SmallVector<uint8_t> UncompressedEntriesData;
   switch (Contents.Parameters.Type) {
-  case Contents::CompressionType::None: {
-    if (Contents.Parameters.EntriesSizeInBytes != Contents.Parameters.UncompressedEntriesSizeInBytes)
-      return parseFailed("SRCI Contents is not compressed, but compressed size doesn't match uncompressed size in section header");
+  case CompressionType::None: {
+    if (Contents.Parameters.EntriesSizeInBytes !=
+        Contents.Parameters.UncompressedEntriesSizeInBytes)
+      return parseFailed("SRCI Contents is not compressed, but compressed size "
+                         "doesn't match uncompressed size in section header");
     break;
   }
-  case Contents::CompressionType::Zlib: {
-    if (!llvm::compression::zlib::isAvailable())
-      return parseFailed("SRCI Contents is compressed with Zlib, but this tool is copmiled without it");
-    if (Error Err = compression::zlib::decompress(ArrayRef(reinterpret_cast<const uint8_t *>(Current), Contents.Parameters.EntriesSizeInBytes), UncompressedEntriesData, Contents.Parameters.UncompressedEntriesSizeInBytes))
-        return Err;
-    if (UncompressedEntriesData.size() != Contents.Parameters.UncompressedEntriesSizeInBytes)
-      return parseFailed("SRCI Contents uncompressed size from header does not match with actual content size");
-    Section = StringRef(reinterpret_cast<const char *>(UncompressedEntriesData.data()), UncompressedEntriesData.size());
+  case CompressionType::Zlib: {
+    if (!compression::zlib::isAvailable())
+      return parseFailed(formatv(
+          "SRCI Contents is compressed with Zlib, but {0}",
+          compression::getReasonIfUnsupported(compression::Format::Zlib)));
+    if (Error Err = compression::zlib::decompress(
+            ArrayRef(reinterpret_cast<const uint8_t *>(Current),
+                     Contents.Parameters.EntriesSizeInBytes),
+            UncompressedEntriesData,
+            Contents.Parameters.UncompressedEntriesSizeInBytes))
+      return Err;
+    if (UncompressedEntriesData.size() !=
+        Contents.Parameters.UncompressedEntriesSizeInBytes)
+      return parseFailed("SRCI Contents uncompressed size from header does not "
+                         "match with actual content size");
+    Section = StringRef(
+        reinterpret_cast<const char *>(UncompressedEntriesData.data()),
+        UncompressedEntriesData.size());
     Current = Section.begin();
     break;
   }
@@ -300,92 +324,167 @@ static Error parseContents(StringRef Section, DirectX::SourceInfo::SourceContent
   }
 
   Contents.Entries.reserve(Contents.Parameters.Count);
-  for (uint32_t I : seq(Contents.Parameters.Count)) {
-    Contents.Entries.emplace_back();
-    auto &Entry = Contents.Entries.back();
+  for (auto I : llvm::seq(Contents.Parameters.Count)) {
+    auto &Entry = Contents.Entries.emplace_back();
     if (Error Err = readStruct(Section, Current, Entry.Parameters))
       return Err;
 
     const char *Next = Current + Entry.Parameters.AlignedSizeInBytes;
     if (Next > Section.end())
-      return parseFailed(formatv("SRCI Contents entry {0} ends beyond the section boundary", I));
+      return parseFailed(formatv(
+          "SRCI Contents entry {0} ends beyond the section boundary", I));
     if (Entry.Parameters.Flags)
-      return parseFailed(formatv("SRCI Contents entry {0} flags must be zero", I));
+      return parseFailed(
+          formatv("SRCI Contents entry {0} flags must be zero", I));
 
-    const char *FileContentPtr = Current + sizeof(Entry);
+    const char *FileContentPtr = Current + sizeof(Entry.Parameters);
+    const char *FileContentEndPtr = FileContentPtr;
     StringRef FileContent;
-    if (Error Err = readString(Section, FileContentPtr, Entry.Parameters.ContentSizeInBytes, FileContent, Twine("SRCI Contents entry ") + Twine(I) + Twine(" file content")))
+    if (Error Err = readString(Section, FileContentEndPtr,
+                               Entry.Parameters.ContentSizeInBytes, FileContent,
+                               Twine("SRCI Contents entry ") + Twine(I) +
+                                   Twine(" file content")))
       return Err;
-    if (FileContentPtr > Next)
-      return parseFailed(formatv("SRCI Content entry {0} file content size exceeded entry size", I));
+    if (FileContentEndPtr - FileContentPtr != Entry.Parameters.ContentSizeInBytes)
+      return parseFailed(formatv("File size from header does not match content size in SRCI Content entry {0}", I));
+    if (FileContentEndPtr > Next)
+      return parseFailed(formatv(
+          "SRCI Content entry {0} file content size exceeded entry size", I));
     Current = Next;
   }
 
   return Error::success();
 }
 
+static Error parseArgs(StringRef Section,
+                       DirectX::SourceInfo::ProgramArgs &Args) {
+  const char *Current = Section.begin();
+  if (Error Err = readStruct(Section, Current, Args.Parameters))
+    return Err;
+  Current += sizeof(Args.Parameters);
+
+  if (Args.Parameters.Flags)
+    return parseFailed("SRCI Args header flags must be zero");
+  if (Current + Args.Parameters.SizeInBytes > Section.end())
+    return parseFailed(
+        formatv("SRCI Args entries end beyond the section boundary", Section));
+
+  Args.Args.reserve(Args.Parameters.Count);
+  for (auto I : llvm::seq(Args.Parameters.Count)) {
+    auto &Entry = Args.Args.emplace_back();
+    if (Error Err =
+            readString(Section, Current, Section.end() - Current, Entry.first,
+                       Twine("SRCI Args entry ") + Twine(I) + Twine(" name")))
+      return Err;
+    if (Error Err =
+            readString(Section, Current, Section.end() - Current, Entry.second,
+                       Twine("SRCI Args entry ") + Twine(I) + Twine(" value")))
+      return Err;
+  }
+
+  return Error::success();
+}
+
+static Error
+parseSourceInfoSection(const dxbc::SourceInfo::SectionHeader &Header,
+                       StringRef SectionData, DirectX::SourceInfo &SourceInfo) {
+  using dxbc::SourceInfo::SectionType;
+  switch (Header.Type) {
+  case SectionType::SourceNames: {
+    SourceInfo.Names.GenericHeader = Header;
+    if (Error Err = parseNames(SectionData, SourceInfo.Names))
+      return Err;
+    break;
+  }
+  case SectionType::SourceContents: {
+    SourceInfo.Contents.GenericHeader = Header;
+    if (Error Err = parseContents(SectionData, SourceInfo.Contents))
+      return Err;
+    break;
+  }
+  case SectionType::Args: {
+    SourceInfo.Args.GenericHeader = Header;
+    if (Error Err = parseArgs(SectionData, SourceInfo.Args))
+      return Err;
+    break;
+  }
+  default:
+    llvm_unreachable("Unknown SRCI section type");
+  }
+
+  return Error::success();
+}
+
 Error DXContainer::parseSourceInfo(StringRef Part) {
+  using dxbc::SourceInfo::SectionType;
+
   if (SourceInfo)
     return parseFailed("More than one SRCI part is present in the file");
-  const char *Current = Part.begin();
-  dxbc::SourceInfo::Header Header;
-  if (Error Err = readStruct(Part, Current, Header))
-    return Err;
-  Current += sizeof(Header);
+  SourceInfo.emplace();
 
-  if (Header.AlignedSizeInBytes != Part.size())
-    return parseFailed("Size field in SRCI header does not match SRCI part size");
-  if (Header.Flags)
+  const char *Current = Part.begin();
+  if (Error Err = readStruct(Part, Current, SourceInfo->Parameters))
+    return Err;
+  Current += sizeof(SourceInfo->Parameters);
+
+  if (SourceInfo->Parameters.AlignedSizeInBytes != Part.size())
+    return parseFailed(
+        "Size field in SRCI header does not match SRCI part size");
+  if (SourceInfo->Parameters.Flags)
     return parseFailed("SRCI header flags must be zero");
-  if (Header.SectionCount != 3)
+  if (SourceInfo->Parameters.SectionCount != 3)
     return parseFailed("SRCI part must contain 3 sections");
 
-  SourceInfo.emplace();
-  SourceInfo->Parameters = Header;
-  bool HasNames = false;
-  bool HasContents = false;
-  bool HasArgs = false;
-  for (uint32_t Section = 0; Section < Header.SectionCount; ++Section) {
+  bool IsSectionPresent[to_underlying(SectionType::Last) + 1];
+  std::fill(IsSectionPresent,
+            IsSectionPresent +
+                sizeof(IsSectionPresent) / sizeof(*IsSectionPresent),
+            false);
+  for (uint32_t Section = 0; Section < SourceInfo->Parameters.SectionCount;
+       ++Section) {
     dxbc::SourceInfo::SectionHeader SectionHeader;
     if (Error Err = readStruct(Part, Current, SectionHeader))
       return Err;
 
-    StringRef SectionName = dxbc::SourceInfo::getSectionName(SectionHeader.Type);
+    StringRef SectionName =
+        dxbc::SourceInfo::getSectionName(SectionHeader.Type);
     if (Current + SectionHeader.AlignedSizeInBytes > Part.end())
-      return parseFailed(formatv("SRCI section {0} (#{1}) extends beyond the part boundary", SectionName, Section));
+      return parseFailed(
+          formatv("SRCI section {0} (#{1}) extends beyond the part boundary",
+                  SectionName, Section));
     if (SectionHeader.Flags)
-      return parseFailed(formatv("SRCI section {0} (#{1}) header flags must be zero", SectionName, Section));
+      return parseFailed(
+          formatv("SRCI section {0} (#{1}) header flags must be zero",
+                  SectionName, Section));
 
-    llvm::errs() << "Section offset " << Current + sizeof(SectionHeader) - Part.begin() << "\n";
-    StringRef SectionData = Part.substr(Current + sizeof(SectionHeader) - Part.begin(), SectionHeader.AlignedSizeInBytes);
-    switch (SectionHeader.Type) {
-    case dxbc::SourceInfo::SectionType::SourceNames: {
-      if (HasNames)
-        return parseFailed("More than one Names section is present in SRCI part");
-      if (Error Err = parseNames(SectionData, SourceInfo->Names))
-        return Err;
-      HasNames = true;
-      break;
-    }
-    case dxbc::SourceInfo::SectionType::SourceContents: {
-      if (HasContents)
-        return parseFailed("More than one Contents section is present in SRCI part");
-      if (Error Err = parseContents(SectionData, SourceInfo->Contents))
-        return Err;
-      HasContents = true;
-      break;
-    }
-    default:
-                                                     // TODO
-      // return parseFailed(formatv("Unknown SRCI section type {0}", static_cast<uint16_t>(SectionHeader.Type)));
-      break;
-    }
+    size_t SectionTypeIdx = to_underlying(SectionHeader.Type);
+    if (SectionHeader.Type > SectionType::Last)
+      return parseFailed(
+          formatv("Unknown SRCI section type {0}", SectionTypeIdx));
+    if (IsSectionPresent[SectionTypeIdx])
+      return parseFailed(formatv(
+          "More than one {0} section is present in SRCI part", SectionName));
+    IsSectionPresent[SectionTypeIdx] = true;
+
+    llvm::errs() << "Section offset "
+                 << Current + sizeof(SectionHeader) - Part.begin() << "\n";
+    if (Error Err = parseSourceInfoSection(
+            SectionHeader,
+            Part.substr(Current + sizeof(SectionHeader) - Part.begin(),
+                        SectionHeader.AlignedSizeInBytes),
+            *SourceInfo))
+      return Err;
     Current += SectionHeader.AlignedSizeInBytes;
   }
 
-  // TODO
-  // if (Contents.Parameters.Count != Names.Parameters.Count)
-  //   return parseFailed(formatv("SRCI Contents entries count is not equal to SRCI Names entries count", Section));
+  if (SourceInfo->Contents.Parameters.Count !=
+      SourceInfo->Names.Parameters.Count)
+    return parseFailed(
+        "SRCI Contents entries count is not equal to SRCI Names entries count");
+
+  for (auto I : llvm::seq(SourceInfo->Contents.Parameters.Count))
+    if (SourceInfo->Contents.Entries[I].Parameters.ContentSizeInBytes != SourceInfo->Names.Entries[I].Parameters.ContentSizeInBytes)
+      return parseFailed(formatv("Content size for {0} in SRCI Contents section does not match with size in SRCI Names section"));
 
   return Error::success();
 }
