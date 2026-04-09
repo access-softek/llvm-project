@@ -157,17 +157,6 @@ ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
   return ArrayRef(SigComponentTypes);
 }
 
-static const EnumEntry<SourceInfo::SectionType> SectionNames[] = {
-#define SOURCE_INFO_TYPE(Num, Val) {#Val, SourceInfo::SectionType::Val},
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
-  if (Type > dxbc::SourceInfo::SectionType::Last)
-    return StringRef();
-  return ArrayRef(SectionNames)[to_underlying(Type)].Name;
-}
-
 static const EnumEntry<RootFlags> RootFlagNames[] = {
 #define ROOT_SIGNATURE_FLAG(Val, Enum) {#Enum, RootFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -314,4 +303,28 @@ static const EnumEntry<PSV::ResourceKind> ResourceKindNames[] = {
 
 ArrayRef<EnumEntry<PSV::ResourceKind>> PSV::getResourceKinds() {
   return ArrayRef(ResourceKindNames);
+}
+
+static const EnumEntry<SourceInfo::SectionType> SectionNames[] = {
+#define SOURCE_INFO_TYPE(Num, Val) {#Val, SourceInfo::SectionType::Val},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SourceInfo::SectionType>> SourceInfo::getSectionTypes() {
+  return ArrayRef(SectionNames);
+}
+
+StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
+  if (Type > dxbc::SourceInfo::SectionType::Last)
+    return StringRef();
+  return getSectionTypes()[to_underlying(Type)].Name;
+}
+
+static const EnumEntry<SourceInfo::Contents::CompressionType> CompressionTypes[] = {
+#define COMPRESSION_TYPE(Num, Val) {#Val, SourceInfo::Contents::CompressionType::Val},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SourceInfo::Contents::CompressionType>> SourceInfo::Contents::getCompressionTypes() {
+  return ArrayRef(CompressionTypes);
 }

@@ -317,6 +317,7 @@ struct Part {
   std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
   std::optional<DebugName> DebugName;
   std::optional<CompilerVersion> CompilerVersion;
+  std::optional<object::DirectX::SourceInfo> SourceInfo;
 };
 
 struct Object {
@@ -338,6 +339,9 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterLocationYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StaticSamplerYamlDesc)
+LLVM_YAML_IS_SEQUENCE_VECTOR(object::DirectX::SourceInfo::SourceNames::Entry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(object::DirectX::SourceInfo::SourceContents::Entry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(object::DirectX::SourceInfo::ProgramArgs::Entry)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -353,6 +357,8 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::StaticBorderColor)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::TextureAddressMode)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ComparisonFunc)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SourceInfo::SectionType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SourceInfo::Contents::CompressionType)
 
 namespace llvm {
 
@@ -460,6 +466,62 @@ template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml> {
 template <> struct MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc> {
   LLVM_ABI static void mapping(IO &IO,
                                llvm::DXContainerYAML::StaticSamplerYamlDesc &S);
+};
+
+template <> struct MappingTraits<dxbc::SourceInfo::Header> {
+  LLVM_ABI static void mapping(IO &IO, dxbc::SourceInfo::Header &H);
+};
+
+template <> struct MappingTraits<dxbc::SourceInfo::SectionHeader> {
+  LLVM_ABI static void mapping(IO &IO, dxbc::SourceInfo::SectionHeader &H);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo::SourceNames::Header> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo::SourceNames::Header &H);
+};
+
+template <> struct MappingTraits<dxbc::SourceInfo::Names::Entry> {
+  LLVM_ABI static void mapping(IO &IO, dxbc::SourceInfo::Names::Entry &E);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo::SourceNames::Entry> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo::SourceNames::Entry &E);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo::SourceNames> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo::SourceNames &S);
+};
+
+template <> struct MappingTraits<dxbc::SourceInfo::Contents::Header> {
+  LLVM_ABI static void mapping(IO &IO, dxbc::SourceInfo::Contents::Header &H);
+};
+
+template <> struct MappingTraits<dxbc::SourceInfo::Contents::Entry> {
+  LLVM_ABI static void mapping(IO &IO, dxbc::SourceInfo::Contents::Entry &E);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo::SourceContents::Entry> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo::SourceContents::Entry &E);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo::SourceContents> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo::SourceContents &S);
+};
+
+template <> struct MappingTraits<dxbc::SourceInfo::Args::Header> {
+  LLVM_ABI static void mapping(IO &IO, dxbc::SourceInfo::Args::Header &H);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo::ProgramArgs::Entry> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo::ProgramArgs::Entry &E);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo::ProgramArgs> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo::ProgramArgs &S);
+};
+
+template <> struct MappingTraits<object::DirectX::SourceInfo> {
+  LLVM_ABI static void mapping(IO &IO, object::DirectX::SourceInfo &S);
 };
 
 } // namespace yaml

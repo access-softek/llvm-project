@@ -841,9 +841,11 @@ static_assert(sizeof(Header) == 8, "SourceInfo::Header size incorrect.");
 #define SOURCE_INFO_TYPE(Num, Val) Val = Num,
 enum class SectionType : uint16_t {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+
   Last = Args,
 };
 
+LLVM_ABI ArrayRef<EnumEntry<SectionType>> getSectionTypes();
 LLVM_ABI StringRef getSectionName(SectionType Type);
 
 struct SectionHeader {
@@ -904,13 +906,14 @@ static_assert(sizeof(Entry) == 16, "SourceInfo::Names::Entry size incorrect.");
 
 namespace Contents {
 
+#define COMPRESSION_TYPE(Num, Val) Val = Num,
 enum class CompressionType : uint16_t {
-  None = 0,
-  Zlib = 1,
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 
   LLVM_MARK_AS_BITMASK_ENUM(Zlib)
 };
 
+LLVM_ABI ArrayRef<EnumEntry<CompressionType>> getCompressionTypes();
 bool isValidCompressionType(uint16_t V);
 
 struct Header {

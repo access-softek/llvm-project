@@ -350,6 +350,9 @@ static Error parseContents(StringRef Section,
     if (FileContentEndPtr > Next)
       return parseFailed(formatv(
           "SRCI Content entry {0} file content size exceeded entry size", I));
+
+    Entry.FileContent = std::string(FileContent.data(), Entry.Parameters.ContentSizeInBytes - 1);
+
     Current = Next;
   }
 

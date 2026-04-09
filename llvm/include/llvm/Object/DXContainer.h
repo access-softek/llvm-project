@@ -500,8 +500,10 @@ struct SourceInfo {
   };
 
   struct ProgramArgs : public Section {
+    using Entry = std::pair<StringRef, StringRef>;
+
     dxbc::SourceInfo::Args::Header Parameters;
-    SmallVector<std::pair<StringRef, StringRef>> Args;
+    SmallVector<Entry> Args;
   };
 
   dxbc::SourceInfo::Header Parameters;

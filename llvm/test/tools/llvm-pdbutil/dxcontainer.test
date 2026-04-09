@@ -15,7 +15,7 @@
 # CHECK:   Stream 2 (  0 bytes): [TPI Stream]
 # CHECK:   Stream 3 (  0 bytes): [DBI Stream]
 # CHECK:   Stream 4 (  0 bytes): [IPI Stream]
-# CHECK:   Stream 5 (440 bytes): [DXContainer Stream]
+# CHECK:   Stream 5 (140 bytes): [DXContainer Stream]
 
 # CHECK:                      DirectX Container
 # CHECK: ============================================================
@@ -23,13 +23,12 @@
 # CHECK:   Version:
 # CHECK:     Major: 1
 # CHECK:     Minor: 0
-# CHECK:   FileSize: 1768
-# CHECK:   PartCount: 4
+# CHECK:   FileSize: 140
+# CHECK:   PartCount: 3
 # CHECK:   Parts:
 # CHECK:     ILDN | offset = 52, size = 16
 # CHECK:     HASH | offset = 76, size = 20
-# CHECK:     SRCI | offset = 104, size = 292
-# CHECK:     ILDB | offset = 404, size = 28
+# CHECK:     ILDB | offset = 104, size = 28
 
 ---
 MSF:
@@ -44,7 +43,7 @@ MSF:
   DirectoryBlocks: [ 6 ]
   NumStreams:      6
   FileSize:        3584
-StreamSizes:     [ 0, 52, 0, 0, 0, 440 ]
+StreamSizes:     [ 0, 52, 0, 0, 0, 140 ]
 StreamMap:
   - Stream:          [  ]
   - Stream:          [ 5 ]
@@ -67,9 +66,9 @@ DXContainerStream:
       Version:
         Major:           1
         Minor:           0
-      FileSize:        1768
-      PartCount:       4
-      PartOffsets:     [ 52, 76, 104, 404 ]
+      FileSize:        140
+      PartCount:       3
+      PartOffsets:     [ 52, 76, 104 ]
     Parts:
       - Name:            ILDN
         Size:            16
@@ -84,8 +83,6 @@ DXContainerStream:
           Digest:          [ 0xAB, 0x20, 0xC9, 0x15, 0x53, 0xF9, 0x22,
                              0x7F, 0x40, 0x45, 0x45, 0x4D, 0x27, 0x5D,
                              0x98, 0xD6 ]
-      - Name:            SRCI
-        Size:            292
       - Name:            ILDB
         Size:            28
         Program:
