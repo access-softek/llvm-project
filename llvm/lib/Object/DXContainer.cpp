@@ -288,6 +288,9 @@ static Error parseContents(StringRef Section,
   if (Current + Contents.Parameters.EntriesSizeInBytes > Section.end())
     return parseFailed(formatv(
         "SRCI Contents entries end beyond the section boundary", Section));
+  if (!dxbc::SourceInfo::Contents::isValidCompressionType(
+          to_underlying(Contents.Parameters.Type)))
+    return parseFailed("SRCI Contents section uses unknown compression type");
 
   SmallVector<uint8_t> UncompressedEntriesData;
   switch (Contents.Parameters.Type) {
@@ -319,8 +322,6 @@ static Error parseContents(StringRef Section,
     Current = Section.begin();
     break;
   }
-  default:
-    return parseFailed("SRCI Contents section uses unknown compression type");
   }
 
   Contents.Entries.reserve(Contents.Parameters.Count);
@@ -411,8 +412,6 @@ parseSourceInfoSection(const dxbc::SourceInfo::SectionHeader &Header,
       return Err;
     break;
   }
-  default:
-    llvm_unreachable("Unknown SRCI section type");
   }
 
   return Error::success();
@@ -438,7 +437,9 @@ Error DXContainer::parseSourceInfo(StringRef Part) {
   if (SourceInfo->Parameters.SectionCount != 3)
     return parseFailed("SRCI part must contain 3 sections");
 
-  bool IsSectionPresent[to_underlying(SectionType::Last) + 1];
+  bool IsSectionPresent[to_underlying(
+                            SectionType::LLVM_BITMASK_LARGEST_ENUMERATOR) +
+                        1];
   std::fill(IsSectionPresent,
             IsSectionPresent +
                 sizeof(IsSectionPresent) / sizeof(*IsSectionPresent),
@@ -461,7 +462,7 @@ Error DXContainer::parseSourceInfo(StringRef Part) {
                   SectionName, Section));
 
     size_t SectionTypeIdx = to_underlying(SectionHeader.Type);
-    if (SectionHeader.Type > SectionType::Last)
+    if (!dxbc::SourceInfo::isValidSectionType(SectionTypeIdx))
       return parseFailed(
           formatv("Unknown SRCI section type {0}", SectionTypeIdx));
     if (IsSectionPresent[SectionTypeIdx])

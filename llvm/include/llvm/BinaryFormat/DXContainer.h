@@ -842,10 +842,11 @@ static_assert(sizeof(Header) == 8, "SourceInfo::Header size incorrect.");
 enum class SectionType : uint16_t {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 
-  Last = Args,
+  LLVM_MARK_AS_BITMASK_ENUM(Args)
 };
 
 LLVM_ABI ArrayRef<EnumEntry<SectionType>> getSectionTypes();
+LLVM_ABI bool isValidSectionType(uint16_t V);
 LLVM_ABI StringRef getSectionName(SectionType Type);
 
 struct SectionHeader {

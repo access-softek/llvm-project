@@ -89,6 +89,13 @@ static bool isValidFlags(std::underlying_type_t<FlagT> V) {
   return V < NextPowerOf2(LargestValue);
 }
 
+template <typename EnumT>
+static bool isValidEnumValue(std::underlying_type_t<EnumT> V) {
+  decltype(V) LargestValue =
+      llvm::to_underlying(EnumT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V <= LargestValue;
+}
+
 bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
   return isValidFlags<dxbc::RootDescriptorFlags>(V);
 }
@@ -106,7 +113,11 @@ bool llvm::dxbc::isValidCompilerVersionFlags(uint32_t V) {
 }
 
 bool llvm::dxbc::SourceInfo::Contents::isValidCompressionType(uint16_t V) {
-  return isValidFlags<dxbc::SourceInfo::Contents::CompressionType>(V);
+  return isValidEnumValue<CompressionType>(V);
+}
+
+bool SourceInfo::isValidSectionType(uint16_t V) {
+  return isValidEnumValue<SourceInfo::SectionType>(V);
 }
 
 dxbc::PartType dxbc::parsePartType(StringRef S) {
@@ -315,9 +326,10 @@ ArrayRef<EnumEntry<SourceInfo::SectionType>> SourceInfo::getSectionTypes() {
 }
 
 StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
-  if (Type > dxbc::SourceInfo::SectionType::Last)
+  auto V = to_underlying(Type);
+  if (!isValidSectionType(V))
     return StringRef();
-  return getSectionTypes()[to_underlying(Type)].Name;
+  return getSectionTypes()[V].Name;
 }
 
 static const EnumEntry<SourceInfo::Contents::CompressionType> CompressionTypes[] = {
