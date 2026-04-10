@@ -10,6 +10,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
@@ -34,14 +35,20 @@ void SourceInfo::finalize() {
 
 template <typename StructT>
 static void writeStruct(raw_ostream &OS, const StructT &S) {
+  static_assert(std::is_class<StructT>() && "This method must be used for writing structure types.");
+  OS.write(reinterpret_cast<const char*>(&S), sizeof(StructT));
 }
 
 void SourceInfo::write(raw_ostream &OS) const {
   assert(IsFinalized && "SourceInfo::finalize must be called before SourceInfo::write");
 
-  OS.write(reinterpret_cast<const char *>(&BaseData.Parameters), sizeof(BaseData.Parameters));
+  writeStruct(OS, BaseData.Parameters);
 
   auto &Names = BaseData.Names;
-  OS.write(reinterpret_cast<const char *>(&Names.GenericHeader), sizeof
+  writeStruct(OS, Names.GenericHeader);
+  dxbc::HeaderOnDisk NamesHeader = { Names.Parameters.Flags, Names.Parameters.Count, Names.Parameters.EntriesSizeInBytes };
+  // TODO swap bytes
+  writeStruct(OS, NamesHeader);
+  // OS.write(reinterpret_cast<const char *>(&Names.GenericHeader), sizeof
   // TODO
 }
