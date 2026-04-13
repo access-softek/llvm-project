@@ -45,7 +45,7 @@ static void writePadding(raw_ostream &OS, uint64_t Prev) {
 void SourceInfo::finalize() {
   IsFinalized = true;
 
-  // Compress Contents right now, to calculate compressed size.
+  // Compress Contents right here, to calculate compressed size.
   CompressedContents.clear();
   SmallString<256> Data;
   {
