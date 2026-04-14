@@ -1,3 +1,5 @@
+# REQUIRES: zlib
+
 # RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
 # RUN: llvm-pdbutil pdb2yaml --all %t.pdb > %t.yaml
 # RUN: llvm-pdbutil yaml2pdb %t.yaml --pdb=%t.yaml.pdb

@@ -11,6 +11,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Testing/Support/Error.h"
@@ -487,6 +488,9 @@ TEST(DXCFile, ParseVERSPart) {
 //              'C:\llvm\build\dxc\tools\clang\test\DXC\Output\fd_zs.test.tmp.dxo_fd'
 // ...
 TEST(DXCFile, ParseSRCIPart) {
+  if (!compression::zlib::isAvailable())
+    GTEST_SKIP() << "Test skipped because zlib is not available.";
+
   uint8_t Buffer[] = {
       0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,

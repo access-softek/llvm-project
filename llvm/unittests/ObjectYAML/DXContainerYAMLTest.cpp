@@ -10,6 +10,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -654,6 +655,9 @@ TEST(DXCFile, ParseVERSPart) {
 }
 
 TEST(DXCFile, ParseSRCIPart) {
+  if (!compression::zlib::isAvailable())
+    GTEST_SKIP() << "Test skipped because zlib is not available.";
+
   SmallString<128> Storage;
 
   // First read a fully explicit yaml with all sizes and offsets provided
