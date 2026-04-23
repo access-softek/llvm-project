@@ -1,4 +1,8 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/mov.bin | FileCheck %s
+// RUN: mlir-translate --export-dxsa-bin %s -o %t.bin
+// RUN: mlir-translate --import-dxsa-bin %t.bin | FileCheck %s
+// RUN: diff %t.bin %S/inputs/mov.bin
+
 // mov r0.x, l(3.000000)
 
 // CHECK: module {
