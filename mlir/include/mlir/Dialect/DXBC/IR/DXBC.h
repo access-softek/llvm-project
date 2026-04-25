@@ -21,6 +21,14 @@
 #include "mlir/Dialect/DXBC/IR/DXBCOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
+// DXBC Dialect Enum Attributes
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/DXBC/IR/DXBCOpsEnums.h.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/DXBC/IR/DXBCOpsAttributes.h.inc"
+
+//===----------------------------------------------------------------------===//
 // DXBC Dialect Operations
 //===----------------------------------------------------------------------===//
 

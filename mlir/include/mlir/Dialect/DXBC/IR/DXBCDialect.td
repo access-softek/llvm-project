@@ -29,6 +29,7 @@ def DXBCDialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+  let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // DXBC_DIALECT_TD

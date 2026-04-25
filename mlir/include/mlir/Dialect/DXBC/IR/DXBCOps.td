@@ -11,6 +11,56 @@
 
 include "mlir/Dialect/DXBC/IR/DXBCDialect.td"
 include "mlir/Dialect/DXBC/IR/DXBCTypes.td"
+include "mlir/IR/EnumAttr.td"
+
+//===----------------------------------------------------------------------===//
+// DXBC enum definitions
+//===----------------------------------------------------------------------===//
+
+// Global shader flags for 'dcl_globalFlags' instruction.
+def DXBC_GlobalFlags_None               : I32BitEnumAttrCaseNone<"none">;
+// D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED
+def DXBC_GlobalFlags_RefactoringAllowed : I32BitEnumAttrCaseBit<"refactoringAllowed", 11>;
+// D3D11_SB_GLOBAL_FLAG_ENABLE_DOUBLE_PRECISION_FLOAT_OPS
+def DXBC_GlobalFlags_DoublePrecision    : I32BitEnumAttrCaseBit<"enableDoublePrecision", 12>;
+// D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL
+def DXBC_GlobalFlags_ForceEarlyDepth    : I32BitEnumAttrCaseBit<"forceEarlyDepth", 13>;
+// D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS
+def DXBC_GlobalFlags_RawStructured      : I32BitEnumAttrCaseBit<"enableRawStructured", 14>;
+// D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION
+def DXBC_GlobalFlags_SkipOptimization   : I32BitEnumAttrCaseBit<"skipOptimization", 15>;
+// D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION
+def DXBC_GlobalFlags_MinPrecision       : I32BitEnumAttrCaseBit<"enableMinPrecision", 16>;
+// D3D11_1_SB_GLOBAL_FLAG_ENABLE_DOUBLE_EXTENSIONS
+def DXBC_GlobalFlags_DoubleExtensions   : I32BitEnumAttrCaseBit<"enableDoubleExtensions", 17>;
+// D3D11_1_SB_GLOBAL_FLAG_ENABLE_SHADER_EXTENSIONS
+def DXBC_GlobalFlags_ShaderExtensions   : I32BitEnumAttrCaseBit<"enableShaderExtensions", 18>;
+// D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND
+def DXBC_GlobalFlags_AllResourcesBound  : I32BitEnumAttrCaseBit<"allResourcesBound", 19>;
+
+def DXBC_GlobalFlags : I32BitEnumAttr<
+    "GlobalFlags", "global shader flags", [
+      DXBC_GlobalFlags_None,
+      DXBC_GlobalFlags_RefactoringAllowed,
+      DXBC_GlobalFlags_DoublePrecision,
+      DXBC_GlobalFlags_ForceEarlyDepth,
+      DXBC_GlobalFlags_RawStructured,
+      DXBC_GlobalFlags_SkipOptimization,
+      DXBC_GlobalFlags_MinPrecision,
+      DXBC_GlobalFlags_DoubleExtensions,
+      DXBC_GlobalFlags_ShaderExtensions,
+      DXBC_GlobalFlags_AllResourcesBound
+    ]> {
+  let separator = "|";
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def DXBC_GlobalFlagsAttr :
+    EnumAttr<DXBCDialect, DXBC_GlobalFlags, "global_flags"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 //===----------------------------------------------------------------------===//
 // DXBC op definitions
@@ -92,6 +142,13 @@ def DXBC_Instruction : DXBC_Op<"instruction"> {
   let arguments = (ins Variadic<DXBC_OperandType>:$operands, StrAttr:$mnemonic);
   let results = (outs);
   let assemblyFormat = "$mnemonic $operands attr-dict";
+}
+
+def DXBC_DclGlobalFlags : DXBC_Op<"dcl_global_flags"> {
+  let summary = "declares global shader flags";
+  let arguments = (ins DXBC_GlobalFlagsAttr:$flags);
+  let assemblyFormat = "$flags attr-dict";
+  let hasVerifier = 1;
 }
 
 #endif // DXBC_OPS

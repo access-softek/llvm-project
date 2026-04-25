@@ -1,0 +1,3 @@
+// RUN: not mlir-translate --import-dxbc-bin %S/inputs/dcl_global_flags_none.bin 2>&1 | FileCheck %s
+
+// CHECK: 'dxbc.dcl_global_flags' op expected at least one global flag to be set
