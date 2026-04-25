@@ -500,8 +500,16 @@ public:
     return dxsa::Instruction::create(builder, loc, operands,
                                      builder.getStringAttr(name));
   }
+
   Module buildModule(ArrayRef<Instruction> instructions, FileLineColLoc loc) {
     return module;
+  }
+
+  Instruction buildDclGlobalFlags(uint32_t flags, FileLineColLoc loc) {
+    auto flagsAttr = dxsa::GlobalFlagsAttr::get(
+        builder.getContext(),
+        static_cast<dxsa::GlobalFlags>(flags));
+    return dxsa::DclGlobalFlags::create(builder, loc, flagsAttr);
   }
 
 private:
@@ -821,6 +829,14 @@ public:
       return failure();
     }
 
+    uint32_t opcodeToken = *token;
+
+    if (opcode == D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS) {
+      if (failed(verifyInstructionLength(beginOffset, length)))
+        return failure();
+      return builder.buildDclGlobalFlags(DECODE_D3D10_SB_GLOBAL_FLAGS(opcodeToken), loc);
+    }
+
     unsigned numOperands = instrInfo[opcode].numOperands;
 
     SmallVector<Operand, 8> operands;
@@ -831,11 +847,8 @@ public:
       operands.push_back(*operand);
     }
 
-    size_t endOffset = currentTokenOffset;
-    if (((endOffset - beginOffset) / 4) != length) {
-      emitError(getLocation(), "instruction length mismatch");
+    if (failed(verifyInstructionLength(beginOffset, length)))
       return failure();
-    }
 
     return builder.buildInstruction(instrInfo[opcode].name, operands, modifier,
                                     loc);
@@ -852,6 +865,14 @@ public:
       instructions.push_back(*inst);
     }
     return builder.buildModule(instructions, loc);
+  }
+
+  LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length) {
+    if (((currentTokenOffset - beginOffset) / 4) != length) {
+      emitError(getLocation(), "instruction length mismatch");
+      return failure();
+    }
+    return success();
   }
 
 private:

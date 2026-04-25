@@ -10,12 +10,14 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::dxsa;
 
 #include "mlir/Dialect/DXSA/IR/DXSAOpsDialect.cpp.inc"
+#include "mlir/Dialect/DXSA/IR/DXSAOpsEnums.cpp.inc"
 
 void DXSADialect::initialize() {
   addOperations<
@@ -26,6 +28,20 @@ void DXSADialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/DXSA/IR/DXSAOpsTypes.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/DXSA/IR/DXSAOpsAttributes.cpp.inc"
+      >();
+}
+
+//===----------------------------------------------------------------------===//
+// DclGlobalFlags
+//===----------------------------------------------------------------------===//
+
+LogicalResult DclGlobalFlags::verify() {
+  if (getFlags() == GlobalFlags::none)
+    return emitOpError("expected at least one global flag to be set");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -34,6 +50,13 @@ void DXSADialect::initialize() {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/DXSA/IR/DXSAOps.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// TableGen'd attribute method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/DXSA/IR/DXSAOpsAttributes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // TableGen'd type method definitions

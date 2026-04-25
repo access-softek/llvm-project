@@ -21,6 +21,14 @@
 #include "mlir/Dialect/DXSA/IR/DXSAOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
+// DXSA Dialect Enum Attributes
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/DXSA/IR/DXSAOpsEnums.h.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/DXSA/IR/DXSAOpsAttributes.h.inc"
+
+//===----------------------------------------------------------------------===//
 // DXSA Dialect Operations
 //===----------------------------------------------------------------------===//
 

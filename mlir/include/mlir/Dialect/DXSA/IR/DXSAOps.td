@@ -11,6 +11,56 @@
 
 include "mlir/Dialect/DXSA/IR/DXSADialect.td"
 include "mlir/Dialect/DXSA/IR/DXSATypes.td"
+include "mlir/IR/EnumAttr.td"
+
+//===----------------------------------------------------------------------===//
+// DXSA enum definitions
+//===----------------------------------------------------------------------===//
+
+// Global shader flags for 'dcl_globalFlags' instruction.
+def DXSA_GlobalFlags_None               : I32BitEnumAttrCaseNone<"none">;
+// D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED
+def DXSA_GlobalFlags_RefactoringAllowed : I32BitEnumAttrCaseBit<"refactoringAllowed", 11>;
+// D3D11_SB_GLOBAL_FLAG_ENABLE_DOUBLE_PRECISION_FLOAT_OPS
+def DXSA_GlobalFlags_DoublePrecision    : I32BitEnumAttrCaseBit<"enableDoublePrecision", 12>;
+// D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL
+def DXSA_GlobalFlags_ForceEarlyDepth    : I32BitEnumAttrCaseBit<"forceEarlyDepth", 13>;
+// D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS
+def DXSA_GlobalFlags_RawStructured      : I32BitEnumAttrCaseBit<"enableRawStructured", 14>;
+// D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION
+def DXSA_GlobalFlags_SkipOptimization   : I32BitEnumAttrCaseBit<"skipOptimization", 15>;
+// D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION
+def DXSA_GlobalFlags_MinPrecision       : I32BitEnumAttrCaseBit<"enableMinPrecision", 16>;
+// D3D11_1_SB_GLOBAL_FLAG_ENABLE_DOUBLE_EXTENSIONS
+def DXSA_GlobalFlags_DoubleExtensions   : I32BitEnumAttrCaseBit<"enableDoubleExtensions", 17>;
+// D3D11_1_SB_GLOBAL_FLAG_ENABLE_SHADER_EXTENSIONS
+def DXSA_GlobalFlags_ShaderExtensions   : I32BitEnumAttrCaseBit<"enableShaderExtensions", 18>;
+// D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND
+def DXSA_GlobalFlags_AllResourcesBound  : I32BitEnumAttrCaseBit<"allResourcesBound", 19>;
+
+def DXSA_GlobalFlags : I32BitEnumAttr<
+    "GlobalFlags", "global shader flags", [
+      DXSA_GlobalFlags_None,
+      DXSA_GlobalFlags_RefactoringAllowed,
+      DXSA_GlobalFlags_DoublePrecision,
+      DXSA_GlobalFlags_ForceEarlyDepth,
+      DXSA_GlobalFlags_RawStructured,
+      DXSA_GlobalFlags_SkipOptimization,
+      DXSA_GlobalFlags_MinPrecision,
+      DXSA_GlobalFlags_DoubleExtensions,
+      DXSA_GlobalFlags_ShaderExtensions,
+      DXSA_GlobalFlags_AllResourcesBound
+    ]> {
+  let separator = "|";
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def DXSA_GlobalFlagsAttr :
+    EnumAttr<DXSADialect, DXSA_GlobalFlags, "global_flags"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 //===----------------------------------------------------------------------===//
 // DXSA op definitions
@@ -92,6 +142,13 @@ def DXSA_Instruction : DXSA_Op<"instruction"> {
   let arguments = (ins Variadic<DXSA_OperandType>:$operands, StrAttr:$mnemonic);
   let results = (outs);
   let assemblyFormat = "$mnemonic $operands attr-dict";
+}
+
+def DXSA_DclGlobalFlags : DXSA_Op<"dcl_global_flags"> {
+  let summary = "declares global shader flags";
+  let arguments = (ins DXSA_GlobalFlagsAttr:$flags);
+  let assemblyFormat = "$flags attr-dict";
+  let hasVerifier = 1;
 }
 
 #endif // DXSA_OPS

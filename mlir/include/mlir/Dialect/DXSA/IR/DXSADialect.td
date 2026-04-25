@@ -29,6 +29,7 @@ def DXSADialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+  let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // DXSA_DIALECT_TD
