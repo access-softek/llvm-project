@@ -1,4 +1,5 @@
 add_mlir_translation_library(MLIRTargetDXSA
+  AsmPrinter.cpp
   BinaryParser.cpp
   BinaryWriter.cpp
   TranslateRegistration.cpp

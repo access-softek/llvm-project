@@ -21,6 +21,10 @@ OwningOpRef<ModuleOp> importDxsaBinaryToModule(llvm::SourceMgr &source,
                                                MLIRContext *context);
 /// Encode \p source to DXSA binary.
 LogicalResult exportModuleToDxsaBinary(ModuleOp source, raw_ostream &output);
+
+/// Print \p source to DXSA text assembly.
+LogicalResult exportModuleToDxsa(ModuleOp source, raw_ostream &output);
+
 } // namespace mlir::dxsa
 
 #endif // MLIR_TARGET_DXSA_BINARYPARSER_H

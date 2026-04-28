@@ -32,4 +32,13 @@ void registerToDxsaBinTranslation() {
       },
       [](DialectRegistry &registry) { registry.insert<dxsa::DXSADialect>(); }};
 }
+
+void registerToDxsaTranslation() {
+  TranslateFromMLIRRegistration registration{
+      "export-dxsa", "Translate MLIR to DXSA",
+      [](ModuleOp source, raw_ostream &output) {
+        return dxsa::exportModuleToDxsa(source, output);
+      },
+      [](DialectRegistry &registry) { registry.insert<dxsa::DXSADialect>(); }};
+}
 } // namespace mlir

@@ -24,6 +24,7 @@ void registerFromWasmTranslation();
 void registerFromDxsaBinTranslation();
 void registerToCppTranslation();
 void registerToDxsaBinTranslation();
+void registerToDxsaTranslation();
 void registerToLLVMIRTranslation();
 void registerToSPIRVTranslation();
 
@@ -43,6 +44,7 @@ inline void registerAllTranslations() {
     registerFromDxsaBinTranslation();
     registerToCppTranslation();
     registerToDxsaBinTranslation();
+    registerToDxsaTranslation();
     registerToLLVMIRTranslation();
     registerToSPIRVTranslation();
     smt::registerExportSMTLIBTranslation();
