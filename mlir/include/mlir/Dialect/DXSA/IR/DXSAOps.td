@@ -151,4 +151,11 @@ def DXSA_DclGlobalFlags : DXSA_Op<"dcl_global_flags"> {
   let hasVerifier = 1;
 }
 
+def DXSA_DclTemps : DXSA_Op<"dcl_temps"> {
+  let summary = "declares the number of temporary registers";
+  let arguments = (ins ConfinedAttr<I32Attr,
+      [IntPositive, IntMaxValue<4096>]>:$count);
+  let assemblyFormat = [{ $count attr-dict }];
+}
+
 #endif // DXSA_OPS

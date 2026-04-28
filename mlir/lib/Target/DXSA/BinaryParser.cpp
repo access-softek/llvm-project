@@ -505,11 +505,15 @@ public:
     return module;
   }
 
-  Instruction buildDclGlobalFlags(uint32_t flags, FileLineColLoc loc) {
+  Instruction buildDclGlobalFlags(uint32_t flags, Location loc) {
     auto flagsAttr = dxsa::GlobalFlagsAttr::get(
-        builder.getContext(),
-        static_cast<dxsa::GlobalFlags>(flags));
+        builder.getContext(), static_cast<dxsa::GlobalFlags>(flags));
     return dxsa::DclGlobalFlags::create(builder, loc, flagsAttr);
+  }
+
+  Instruction buildDclTemps(uint32_t count, Location loc) {
+    return dxsa::DclTemps::create(builder, loc,
+                                  builder.getI32IntegerAttr(count));
   }
 
 private:
@@ -804,6 +808,48 @@ public:
                                 getLocation());
   }
 
+  FailureOr<Instruction> parseDclGlobalFlags(uint32_t opcodeToken,
+                                             Location loc) {
+    return builder.buildDclGlobalFlags(
+        DECODE_D3D10_SB_GLOBAL_FLAGS(opcodeToken), loc);
+  }
+
+  FailureOr<Instruction> parseDclTemps(Location loc) {
+    auto countToken = parseToken();
+    if (failed(countToken))
+      return failure();
+    auto count = *countToken;
+    if (count == 0) {
+      emitError(getLocation(), "temp register count cannot be zero");
+      return failure();
+    }
+    if (count > 4096) {
+      emitError(getLocation(), "invalid temp register count: ")
+          << count << " (max 4096)";
+      return failure();
+    }
+    return builder.buildDclTemps(count, loc);
+  }
+
+  OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
+                                          Instruction &out) {
+    FailureOr<Instruction> result;
+    switch (DECODE_D3D10_SB_OPCODE_TYPE(opcodeToken)) {
+    case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
+      result = parseDclGlobalFlags(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_TEMPS:
+      result = parseDclTemps(loc);
+      break;
+    default:
+      return std::nullopt;
+    }
+    if (failed(result))
+      return failure();
+    out = *result;
+    return success();
+  }
+
   FailureOr<Instruction> parseInstruction() {
     size_t beginOffset = currentTokenOffset;
     Token token = parseToken();
@@ -829,12 +875,16 @@ public:
       return failure();
     }
 
-    uint32_t opcodeToken = *token;
+    auto opcodeToken = *token;
 
-    if (opcode == D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS) {
+    Instruction dclInstruction;
+    auto parseResult = parseDclInstruction(opcodeToken, loc, dclInstruction);
+    if (parseResult.has_value()) {
+      if (failed(*parseResult))
+        return failure();
       if (failed(verifyInstructionLength(beginOffset, length)))
         return failure();
-      return builder.buildDclGlobalFlags(DECODE_D3D10_SB_GLOBAL_FLAGS(opcodeToken), loc);
+      return dclInstruction;
     }
 
     unsigned numOperands = instrInfo[opcode].numOperands;
