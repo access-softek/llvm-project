@@ -30,8 +30,7 @@ static FailureOr<uint32_t> getIndexRepresentation(Operation *op) {
   if (auto imm = dyn_cast<dxsa::IndexImm>(op)) {
     auto attr = dyn_cast<IntegerAttr>(imm.getImm());
     if (!attr) {
-      emitError(op->getLoc(), "invalid immediate index");
-      return failure();
+      return emitError(op->getLoc(), "invalid immediate index");
     }
 
     if (attr.getType().isInteger(32)) {
@@ -42,8 +41,7 @@ static FailureOr<uint32_t> getIndexRepresentation(Operation *op) {
       return D3D10_SB_OPERAND_INDEX_IMMEDIATE64;
     }
 
-    emitError(op->getLoc(), "invalid immediate index type");
-    return failure();
+    return emitError(op->getLoc(), "invalid immediate index type");
   }
 
   if (isa<dxsa::IndexRel>(op)) {
@@ -54,8 +52,7 @@ static FailureOr<uint32_t> getIndexRepresentation(Operation *op) {
     return D3D10_SB_OPERAND_INDEX_IMMEDIATE32_PLUS_RELATIVE;
   }
 
-  emitError(op->getLoc(), "invalid index type");
-  return failure();
+  return emitError(op->getLoc(), "invalid index type");
 }
 
 class Writer {
@@ -67,8 +64,7 @@ public:
   LogicalResult emitModule(ModuleOp source) {
     Region &region = source.getRegion();
     if (!region.hasOneBlock()) {
-      emitError(region.getLoc(), "region should contain only one block");
-      return failure();
+      return emitError(region.getLoc(), "region should contain only one block");
     }
 
     for (auto &op : region.front()) {
@@ -90,8 +86,7 @@ public:
 
     auto opcodeIt = opcodeMap.find(inst.getMnemonic());
     if (opcodeIt == opcodeMap.end()) {
-      emitError(inst.getLoc(), "unknown mnemonic");
-      return failure();
+      return emitError(inst.getLoc(), "unknown mnemonic");
     }
 
     // First token is an opcode and length. Length is unknown until we
@@ -103,8 +98,7 @@ public:
     for (Value value : inst.getOperands()) {
       Operation *op = value.getDefiningOp();
       if (!op) {
-        emitError(value.getLoc(), "undefined operand");
-        return failure();
+        return emitError(value.getLoc(), "undefined operand");
       }
 
       if (auto operand = dyn_cast<dxsa::Operand>(*op)) {
@@ -121,8 +115,7 @@ public:
         continue;
       }
 
-      emitError(op->getLoc(), "unexpected operand kind");
-      return failure();
+      return emitError(op->getLoc(), "unexpected operand kind");
     }
 
     // Fixup instruction length after all operands are accumulated in
@@ -164,8 +157,7 @@ public:
           values.push_back(v.getZExtValue());
         }
         if (values.size() != 4) {
-          emitError(op.getLoc(), "invalid number of swizzle values");
-          return failure();
+          return emitError(op.getLoc(), "invalid number of swizzle values");
         }
         token |= ENCODE_D3D10_SB_OPERAND_4_COMPONENT_SELECTION_MODE(
             D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
@@ -181,8 +173,7 @@ public:
       break;
     }
     default: {
-      emitError(op.getLoc(), "invalid number of components");
-      return failure();
+      return emitError(op.getLoc(), "invalid number of components");
     }
     }
 
@@ -193,8 +184,7 @@ public:
     for (Value value : op.getOperands()) {
       Operation *index = value.getDefiningOp();
       if (!index) {
-        emitError(value.getLoc(), "index must be defined");
-        return failure();
+        return emitError(value.getLoc(), "index must be defined");
       }
 
       FailureOr<uint32_t> repr = getIndexRepresentation(index);
@@ -211,8 +201,7 @@ public:
     for (Value value : op.getOperands()) {
       Operation *index = value.getDefiningOp();
       if (!index) {
-        emitError(value.getLoc(), "index must be defined");
-        return failure();
+        return emitError(value.getLoc(), "index must be defined");
       }
 
       if (auto indexImm = dyn_cast<dxsa::IndexImm>(*index)) {
@@ -236,8 +225,7 @@ public:
         continue;
       }
 
-      emitError(value.getLoc(), "invalid index type");
-      return failure();
+      return emitError(value.getLoc(), "invalid index type");
     }
 
     return success();
@@ -249,7 +237,7 @@ public:
   LogicalResult emitOperandImm(dxsa::OperandImm op) {
     auto attr = dyn_cast<DenseIntElementsAttr>(op.getImm());
     if (!attr) {
-      emitError(op.getLoc(), "invalid immediate operand");
+      return emitError(op.getLoc(), "invalid immediate operand");
     }
 
     uint32_t token = 0;
@@ -260,8 +248,7 @@ public:
     } else if (elementType.isInteger(64)) {
       token |= ENCODE_D3D10_SB_OPERAND_TYPE(D3D10_SB_OPERAND_TYPE_IMMEDIATE64);
     } else {
-      emitError(op.getLoc(), "invalid immediate operand type");
-      return failure();
+      return emitError(op.getLoc(), "invalid immediate operand type");
     }
 
     // Split immediates into tokens. 32 bit immediate values are
@@ -283,9 +270,8 @@ public:
       token |=
           ENCODE_D3D10_SB_OPERAND_NUM_COMPONENTS(D3D10_SB_OPERAND_4_COMPONENT);
     } else {
-      emitError(op.getLoc(),
-                "immediate operand should be either 1- or 4- component");
-      return failure();
+      return emitError(op.getLoc(),
+                       "immediate operand should be either 1- or 4- component");
     }
 
     buffer.push_back(token);
@@ -301,8 +287,7 @@ public:
   LogicalResult emitIndexImm(dxsa::IndexImm op) {
     auto attr = dyn_cast<IntegerAttr>(op.getImm());
     if (!attr) {
-      emitError(op.getLoc(), "invalid immediate index");
-      return failure();
+      return emitError(op.getLoc(), "invalid immediate index");
     }
 
     uint64_t value = attr.getInt();
@@ -317,22 +302,19 @@ public:
       return success();
     }
 
-    emitError(op.getLoc(), "invalid type of an immediate index");
-    return failure();
+    return emitError(op.getLoc(), "invalid type of an immediate index");
   }
 
   // Emit an operand used as an index.
   LogicalResult emitIndexRel(dxsa::IndexRel index) {
     Operation *def = index.getOperand().getDefiningOp();
     if (!def) {
-      emitError(index.getLoc(), "index must be defined");
-      return failure();
+      return emitError(index.getLoc(), "index must be defined");
     }
 
     auto operand = dyn_cast<dxsa::Operand>(*def);
     if (!operand) {
-      emitError(def->getLoc(), "invalid index relative operand");
-      return failure();
+      return emitError(def->getLoc(), "invalid index relative operand");
     }
 
     // Recursively emit an operand, which may also have other indices.
@@ -343,14 +325,12 @@ public:
   LogicalResult emitIndexRelImm(dxsa::IndexRelImm index) {
     Operation *def = index.getOperand().getDefiningOp();
     if (!def) {
-      emitError(index.getLoc(), "index must be defined");
-      return failure();
+      return emitError(index.getLoc(), "index must be defined");
     }
 
     auto operand = dyn_cast<dxsa::Operand>(*def);
     if (!operand) {
-      emitError(def->getLoc(), "invalid index relative operand");
-      return failure();
+      return emitError(def->getLoc(), "invalid index relative operand");
     }
 
     if (failed(emitOperand(operand))) {
