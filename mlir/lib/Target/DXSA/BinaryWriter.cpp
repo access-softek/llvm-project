@@ -5,6 +5,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/EndianStream.h"
@@ -101,21 +102,17 @@ public:
         return emitError(value.getLoc(), "undefined operand");
       }
 
-      if (auto operand = dyn_cast<dxsa::Operand>(*op)) {
-        if (failed(emitOperand(operand))) {
-          return failure();
-        }
-        continue;
+      auto result =
+          llvm::TypeSwitch<Operation &, LogicalResult>(*op)
+              .Case<dxsa::Operand>([this](auto op) { return emitOperand(op); })
+              .Case<dxsa::OperandImm>(
+                  [this](auto op) { return emitOperandImm(op); })
+              .Default([this](auto &op) {
+                return emitError(op.getLoc(), "unexpected operand kind");
+              });
+      if (failed(result)) {
+        return result;
       }
-
-      if (auto operand = dyn_cast<dxsa::OperandImm>(*op)) {
-        if (failed(emitOperandImm(operand))) {
-          return failure();
-        }
-        continue;
-      }
-
-      return emitError(op->getLoc(), "unexpected operand kind");
     }
 
     // Fixup instruction length after all operands are accumulated in
@@ -204,28 +201,20 @@ public:
         return emitError(value.getLoc(), "index must be defined");
       }
 
-      if (auto indexImm = dyn_cast<dxsa::IndexImm>(*index)) {
-        if (failed(emitIndexImm(indexImm))) {
-          return failure();
-        }
-        continue;
-      }
+      auto result = llvm::TypeSwitch<Operation &, LogicalResult>(*index)
+                        .Case<dxsa::IndexImm>(
+                            [this](auto op) { return emitIndexImm(op); })
+                        .Case<dxsa::IndexRel>(
+                            [this](auto op) { return emitIndexRel(op); })
+                        .Case<dxsa::IndexRelImm>(
+                            [this](auto op) { return emitIndexRelImm(op); })
+                        .Default([this](auto &op) {
+                          return emitError(op.getLoc(), "invalid index type");
+                        });
 
-      if (auto indexRel = dyn_cast<dxsa::IndexRel>(*index)) {
-        if (failed(emitIndexRel(indexRel))) {
-          return failure();
-        }
-        continue;
+      if (failed(result)) {
+        return result;
       }
-
-      if (auto indexRelImm = dyn_cast<dxsa::IndexRelImm>(*index)) {
-        if (failed(emitIndexRelImm(indexRelImm))) {
-          return failure();
-        }
-        continue;
-      }
-
-      return emitError(value.getLoc(), "invalid index type");
     }
 
     return success();
