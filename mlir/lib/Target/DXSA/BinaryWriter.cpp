@@ -69,6 +69,9 @@ public:
     }
 
     for (auto &op : region.front()) {
+      // Only handle instructions. Skip operands and indices - they
+      // are emitted by emitInstruction for instructions that use
+      // them.
       if (auto inst = dyn_cast<dxsa::Instruction>(op)) {
         if (failed(emitInstruction(inst))) {
           return failure();
