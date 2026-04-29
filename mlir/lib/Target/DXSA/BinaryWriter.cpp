@@ -150,7 +150,7 @@ public:
         token |= ENCODE_D3D10_SB_OPERAND_4_COMPONENT_MASK(*mask);
       } else if (auto swizzle = op.getSwizzle()) {
         SmallVector<uint32_t, 4> values;
-        for (APInt v : *swizzle) {
+        for (const APInt &v : *swizzle) {
           values.push_back(v.getZExtValue());
         }
         if (values.size() != 4) {
@@ -244,7 +244,7 @@ public:
     // encoded as is, and 64 bit immediates are split into high and
     // low 32 bit parts.
     SmallVector<uint32_t, 4> values;
-    for (APInt v : attr) {
+    for (const APInt &v : attr) {
       uint64_t bits = v.getZExtValue();
       if (v.getBitWidth() == 64) {
         values.push_back(bits >> 32);
@@ -264,9 +264,7 @@ public:
     }
 
     buffer.push_back(token);
-    for (uint32_t v : values) {
-      buffer.push_back(v);
-    }
+    llvm::append_range(buffer, values);
 
     return success();
   }
