@@ -509,9 +509,8 @@ public:
     return module;
   }
 
-  Instruction buildDclGlobalFlags(uint32_t flags, Location loc) {
-    auto flagsAttr = dxbc::GlobalFlagsAttr::get(
-        builder.getContext(), static_cast<dxbc::GlobalFlags>(flags));
+  Instruction buildDclGlobalFlags(dxbc::GlobalFlags flags, Location loc) {
+    auto flagsAttr = dxbc::GlobalFlagsAttr::get(builder.getContext(), flags);
     return dxbc::DclGlobalFlags::create(builder, loc, flagsAttr);
   }
 
@@ -824,8 +823,31 @@ public:
 
   FailureOr<Instruction> parseDclGlobalFlags(uint32_t opcodeToken,
                                              Location loc) {
-    return builder.buildDclGlobalFlags(
-        DECODE_D3D10_SB_GLOBAL_FLAGS(opcodeToken), loc);
+    auto raw = DECODE_D3D10_SB_GLOBAL_FLAGS(opcodeToken);
+    if (raw == 0) {
+      emitError(loc, "expected at least one global flag to be set");
+      return failure();
+    }
+    auto flags = static_cast<dxbc::GlobalFlags>(0);
+    if (raw & D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED)
+      flags |= dxbc::GlobalFlags::refactoringAllowed;
+    if (raw & D3D11_SB_GLOBAL_FLAG_ENABLE_DOUBLE_PRECISION_FLOAT_OPS)
+      flags |= dxbc::GlobalFlags::enableDoublePrecisionFloatOps;
+    if (raw & D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL)
+      flags |= dxbc::GlobalFlags::forceEarlyDepthStencil;
+    if (raw & D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS)
+      flags |= dxbc::GlobalFlags::enableRawAndStructuredBuffers;
+    if (raw & D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION)
+      flags |= dxbc::GlobalFlags::skipOptimization;
+    if (raw & D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION)
+      flags |= dxbc::GlobalFlags::enableMinimumPrecision;
+    if (raw & D3D11_1_SB_GLOBAL_FLAG_ENABLE_DOUBLE_EXTENSIONS)
+      flags |= dxbc::GlobalFlags::enableDoubleExtensions;
+    if (raw & D3D11_1_SB_GLOBAL_FLAG_ENABLE_SHADER_EXTENSIONS)
+      flags |= dxbc::GlobalFlags::enableShaderExtensions;
+    if (raw & D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND)
+      flags |= dxbc::GlobalFlags::allResourcesBound;
+    return builder.buildDclGlobalFlags(flags, loc);
   }
 
   FailureOr<Instruction> parseDclTemps(Location loc) {

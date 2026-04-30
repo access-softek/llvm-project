@@ -18,37 +18,26 @@ include "mlir/IR/EnumAttr.td"
 //===----------------------------------------------------------------------===//
 
 // Global shader flags for 'dcl_globalFlags' instruction.
-def DXBC_GlobalFlags_None               : I32BitEnumAttrCaseNone<"none">;
-// D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED
-def DXBC_GlobalFlags_RefactoringAllowed : I32BitEnumAttrCaseBit<"refactoringAllowed", 11>;
-// D3D11_SB_GLOBAL_FLAG_ENABLE_DOUBLE_PRECISION_FLOAT_OPS
-def DXBC_GlobalFlags_DoublePrecision    : I32BitEnumAttrCaseBit<"enableDoublePrecision", 12>;
-// D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL
-def DXBC_GlobalFlags_ForceEarlyDepth    : I32BitEnumAttrCaseBit<"forceEarlyDepth", 13>;
-// D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS
-def DXBC_GlobalFlags_RawStructured      : I32BitEnumAttrCaseBit<"enableRawStructured", 14>;
-// D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION
-def DXBC_GlobalFlags_SkipOptimization   : I32BitEnumAttrCaseBit<"skipOptimization", 15>;
-// D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION
-def DXBC_GlobalFlags_MinPrecision       : I32BitEnumAttrCaseBit<"enableMinPrecision", 16>;
-// D3D11_1_SB_GLOBAL_FLAG_ENABLE_DOUBLE_EXTENSIONS
-def DXBC_GlobalFlags_DoubleExtensions   : I32BitEnumAttrCaseBit<"enableDoubleExtensions", 17>;
-// D3D11_1_SB_GLOBAL_FLAG_ENABLE_SHADER_EXTENSIONS
-def DXBC_GlobalFlags_ShaderExtensions   : I32BitEnumAttrCaseBit<"enableShaderExtensions", 18>;
-// D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND
-def DXBC_GlobalFlags_AllResourcesBound  : I32BitEnumAttrCaseBit<"allResourcesBound", 19>;
+def DXBC_GlobalFlags_RefactoringAllowed            : I32BitEnumAttrCaseBit<"refactoringAllowed",            0>;
+def DXBC_GlobalFlags_EnableDoublePrecisionFloatOps : I32BitEnumAttrCaseBit<"enableDoublePrecisionFloatOps", 1>;
+def DXBC_GlobalFlags_ForceEarlyDepthStencil        : I32BitEnumAttrCaseBit<"forceEarlyDepthStencil",        2>;
+def DXBC_GlobalFlags_EnableRawAndStructuredBuffers : I32BitEnumAttrCaseBit<"enableRawAndStructuredBuffers", 3>;
+def DXBC_GlobalFlags_SkipOptimization              : I32BitEnumAttrCaseBit<"skipOptimization",              4>;
+def DXBC_GlobalFlags_EnableMinimumPrecision        : I32BitEnumAttrCaseBit<"enableMinimumPrecision",        5>;
+def DXBC_GlobalFlags_EnableDoubleExtensions        : I32BitEnumAttrCaseBit<"enableDoubleExtensions",        6>;
+def DXBC_GlobalFlags_EnableShaderExtensions        : I32BitEnumAttrCaseBit<"enableShaderExtensions",        7>;
+def DXBC_GlobalFlags_AllResourcesBound             : I32BitEnumAttrCaseBit<"allResourcesBound",             8>;
 
 def DXBC_GlobalFlags : I32BitEnumAttr<
     "GlobalFlags", "global shader flags", [
-      DXBC_GlobalFlags_None,
       DXBC_GlobalFlags_RefactoringAllowed,
-      DXBC_GlobalFlags_DoublePrecision,
-      DXBC_GlobalFlags_ForceEarlyDepth,
-      DXBC_GlobalFlags_RawStructured,
+      DXBC_GlobalFlags_EnableDoublePrecisionFloatOps,
+      DXBC_GlobalFlags_ForceEarlyDepthStencil,
+      DXBC_GlobalFlags_EnableRawAndStructuredBuffers,
       DXBC_GlobalFlags_SkipOptimization,
-      DXBC_GlobalFlags_MinPrecision,
-      DXBC_GlobalFlags_DoubleExtensions,
-      DXBC_GlobalFlags_ShaderExtensions,
+      DXBC_GlobalFlags_EnableMinimumPrecision,
+      DXBC_GlobalFlags_EnableDoubleExtensions,
+      DXBC_GlobalFlags_EnableShaderExtensions,
       DXBC_GlobalFlags_AllResourcesBound
     ]> {
   let separator = "|";
@@ -146,9 +135,18 @@ def DXBC_Instruction : DXBC_Op<"instruction"> {
 
 def DXBC_DclGlobalFlags : DXBC_Op<"dcl_global_flags"> {
   let summary = "declares global shader flags";
+  let description = [{
+    The `dxbc.dcl_global_flags` operation declares a set of flags that
+    affect the entire shader.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_global_flags <refactoringAllowed|forceEarlyDepthStencil>
+    ```
+  }];
   let arguments = (ins DXBC_GlobalFlagsAttr:$flags);
   let assemblyFormat = "$flags attr-dict";
-  let hasVerifier = 1;
 }
 
 def DXBC_DclTemps : DXBC_Op<"dcl_temps"> {
