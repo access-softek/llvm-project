@@ -470,6 +470,9 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
 
+  if (LangOpts.Kernel)
+    Options.TrapUnreachable = true;
+
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
   case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:
     Options.SwiftAsyncFramePointer =
