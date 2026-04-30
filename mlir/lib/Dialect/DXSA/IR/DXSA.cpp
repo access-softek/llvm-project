@@ -35,16 +35,6 @@ void DXSADialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// DclGlobalFlags
-//===----------------------------------------------------------------------===//
-
-LogicalResult DclGlobalFlags::verify() {
-  if (getFlags() == GlobalFlags::none)
-    return emitOpError("expected at least one global flag to be set");
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

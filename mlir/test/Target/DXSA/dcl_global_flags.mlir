@@ -4,14 +4,14 @@
 
 // CHECK:      module {
 // CHECK-NEXT:   dxsa.dcl_global_flags <refactoringAllowed>
-// CHECK-NEXT:   dxsa.dcl_global_flags <enableDoublePrecision>
-// CHECK-NEXT:   dxsa.dcl_global_flags <forceEarlyDepth>
-// CHECK-NEXT:   dxsa.dcl_global_flags <enableRawStructured>
+// CHECK-NEXT:   dxsa.dcl_global_flags <enableDoublePrecisionFloatOps>
+// CHECK-NEXT:   dxsa.dcl_global_flags <forceEarlyDepthStencil>
+// CHECK-NEXT:   dxsa.dcl_global_flags <enableRawAndStructuredBuffers>
 // CHECK-NEXT:   dxsa.dcl_global_flags <skipOptimization>
-// CHECK-NEXT:   dxsa.dcl_global_flags <enableMinPrecision>
+// CHECK-NEXT:   dxsa.dcl_global_flags <enableMinimumPrecision>
 // CHECK-NEXT:   dxsa.dcl_global_flags <enableDoubleExtensions>
 // CHECK-NEXT:   dxsa.dcl_global_flags <enableShaderExtensions>
 // CHECK-NEXT:   dxsa.dcl_global_flags <allResourcesBound>
 // CHECK-NEXT:   dxsa.dcl_global_flags <refactoringAllowed|skipOptimization|allResourcesBound>
-// CHECK-NEXT:   dxsa.dcl_global_flags <refactoringAllowed|enableDoublePrecision|forceEarlyDepth|enableRawStructured|skipOptimization|enableMinPrecision|enableDoubleExtensions|enableShaderExtensions|allResourcesBound>
+// CHECK-NEXT:   dxsa.dcl_global_flags <refactoringAllowed|enableDoublePrecisionFloatOps|forceEarlyDepthStencil|enableRawAndStructuredBuffers|skipOptimization|enableMinimumPrecision|enableDoubleExtensions|enableShaderExtensions|allResourcesBound>
 // CHECK-NEXT: }
