@@ -1563,7 +1563,8 @@ bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
     return false;
-
+  if (RMWI->isVolatile())
+    return false;
   AtomicRMWInst::BinOp Op = RMWI->getOperation();
   switch (Op) {
   case AtomicRMWInst::Add:
