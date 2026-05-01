@@ -934,6 +934,13 @@ public:
         builder.getI32IntegerAttr(numComponents));
   }
 
+  Instruction buildDclThreadGroup(uint32_t x, uint32_t y, uint32_t z,
+                                  Location loc) {
+    return dxbc::DclThreadGroup::create(
+        builder, loc, builder.getI32IntegerAttr(x),
+        builder.getI32IntegerAttr(y), builder.getI32IntegerAttr(z));
+  }
+
 private:
   MLIRContext *context;
   OpBuilder builder;
@@ -1969,6 +1976,16 @@ public:
     return builder.buildDclIndexableTemp(*id, *size, *numComponents, loc);
   }
 
+  FailureOr<Instruction> parseDclThreadGroup(Location loc) {
+    auto x = parseToken();
+    FAILURE_IF_FAILED(x);
+    auto y = parseToken();
+    FAILURE_IF_FAILED(y);
+    auto z = parseToken();
+    FAILURE_IF_FAILED(z);
+    return builder.buildDclThreadGroup(*x, *y, *z, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -2071,6 +2088,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_INDEXABLE_TEMP:
       result = parseDclIndexableTemp(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_THREAD_GROUP:
+      result = parseDclThreadGroup(loc);
       break;
     default:
       return std::nullopt;

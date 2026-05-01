@@ -1328,4 +1328,26 @@ def DXBC_DclIndexableTemp : DXBC_Op<"dcl_indexable_temp"> {
   let assemblyFormat = "`x` `<` $id `>` `` `[` $size `]` (`,` $num_components^)? attr-dict";
 }
 
+def DXBC_DclThreadGroup : DXBC_Op<"dcl_thread_group"> {
+  let summary = "declares compute shader thread group dimensions";
+  let description = [{
+    The `dxbc.dcl_thread_group` operation declares the `$x`, `$y` and `$z`
+    dimensions of a compute shader thread group.
+
+    The product `$x` * `$y` * `$z` must not exceed 1024.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_thread_group <x = 1, y = 1, z = 1>
+    ```
+  }];
+  let arguments = (ins
+      ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<1024>]>:$x,
+      ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<1024>]>:$y,
+      ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<64>]>:$z);
+  let assemblyFormat = "` ` `<` `x` `=` $x `,` `y` `=` $y `,` `z` `=` $z `>` attr-dict";
+  let hasVerifier = 1;
+}
+
 #endif // DXBC_OPS
