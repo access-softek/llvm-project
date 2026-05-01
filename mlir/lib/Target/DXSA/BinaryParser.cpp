@@ -19,7 +19,11 @@
 
 #include <optional>
 
-#include "d3d12TokenizedProgramFormat.hpp"
+// d3d12TokenizedProgramFormat.hpp references the `UINT` type in some DECODE_*
+// macros. Mirror the Windows SDK alias (`typedef unsigned int UINT`) to use the
+// header without modification.
+using UINT = unsigned int;
+#include "d3d12TokenizedProgramFormat.hpp" // NOLINT
 
 #define DEBUG_TYPE "import-dxsa-bin"
 
@@ -516,6 +520,16 @@ public:
                                   builder.getI32IntegerAttr(count));
   }
 
+  Instruction buildDclInputControlPointCount(uint32_t count, Location loc) {
+    return dxsa::DclInputControlPointCount::create(
+        builder, loc, builder.getI32IntegerAttr(count));
+  }
+
+  Instruction buildDclOutputControlPointCount(uint32_t count, Location loc) {
+    return dxsa::DclOutputControlPointCount::create(
+        builder, loc, builder.getI32IntegerAttr(count));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -831,6 +845,30 @@ public:
     return builder.buildDclTemps(count, loc);
   }
 
+  FailureOr<Instruction> parseDclInputControlPointCount(uint32_t opcodeToken,
+                                                        Location loc) {
+    auto count = DECODE_D3D11_SB_INPUT_CONTROL_POINT_COUNT(opcodeToken);
+    if (count == 0) {
+      emitError(loc, "input control point count cannot be zero");
+      return failure();
+    }
+    if (count > 32) {
+      emitError(loc, "input control point count must be <= 32, got ") << count;
+      return failure();
+    }
+    return builder.buildDclInputControlPointCount(count, loc);
+  }
+
+  FailureOr<Instruction> parseDclOutputControlPointCount(uint32_t opcodeToken,
+                                                         Location loc) {
+    auto count = DECODE_D3D11_SB_OUTPUT_CONTROL_POINT_COUNT(opcodeToken);
+    if (count > 32) {
+      emitError(loc, "output control point count must be <= 32, got ") << count;
+      return failure();
+    }
+    return builder.buildDclOutputControlPointCount(count, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -840,6 +878,12 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_TEMPS:
       result = parseDclTemps(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_INPUT_CONTROL_POINT_COUNT:
+      result = parseDclInputControlPointCount(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_OUTPUT_CONTROL_POINT_COUNT:
+      result = parseDclOutputControlPointCount(opcodeToken, loc);
       break;
     default:
       return std::nullopt;

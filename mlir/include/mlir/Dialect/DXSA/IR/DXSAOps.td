@@ -158,4 +158,44 @@ def DXSA_DclTemps : DXSA_Op<"dcl_temps"> {
   let assemblyFormat = [{ $count attr-dict }];
 }
 
+def DXSA_DclInputControlPointCount :
+    DXSA_Op<"dcl_input_control_point_count"> {
+  let summary = "declares the hull shader input control point count";
+  let description = [{
+    The `dxsa.dcl_input_control_point_count` operation declares the number of
+    input control points for the hull shader.
+
+    The count must be in [1, 32].
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_input_control_point_count 3
+    ```
+  }];
+  let arguments = (ins ConfinedAttr<I32Attr,
+      [IntPositive, IntMaxValue<32>]>:$count);
+  let assemblyFormat = [{ $count attr-dict }];
+}
+
+def DXSA_DclOutputControlPointCount :
+    DXSA_Op<"dcl_output_control_point_count"> {
+  let summary = "declares the hull shader output control point count";
+  let description = [{
+    The `dxsa.dcl_output_control_point_count` operation declares the number
+    of output control points for the hull shader.
+
+    The count must be in [0, 32].
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_output_control_point_count 4
+    ```
+  }];
+  let arguments = (ins ConfinedAttr<I32Attr,
+      [IntNonNegative, IntMaxValue<32>]>:$count);
+  let assemblyFormat = [{ $count attr-dict }];
+}
+
 #endif // DXSA_OPS
