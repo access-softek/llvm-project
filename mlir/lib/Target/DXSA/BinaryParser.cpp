@@ -926,6 +926,14 @@ public:
                                         toAttr(ubound), toAttr(space));
   }
 
+  Instruction buildDclIndexableTemp(uint32_t id, uint32_t size,
+                                    uint32_t numComponents, Location loc) {
+    return dxsa::DclIndexableTemp::create(
+        builder, loc, builder.getI32IntegerAttr(id),
+        builder.getI32IntegerAttr(size),
+        builder.getI32IntegerAttr(numComponents));
+  }
+
 private:
   MLIRContext *context;
   OpBuilder builder;
@@ -1965,6 +1973,16 @@ public:
     return builder.buildDclResourceRaw(id, lbound, ubound, space, loc);
   }
 
+  FailureOr<Instruction> parseDclIndexableTemp(Location loc) {
+    auto id = parseToken();
+    FAILURE_IF_FAILED(id);
+    auto size = parseToken();
+    FAILURE_IF_FAILED(size);
+    auto numComponents = parseToken();
+    FAILURE_IF_FAILED(numComponents);
+    return builder.buildDclIndexableTemp(*id, *size, *numComponents, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -2064,6 +2082,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_RESOURCE_RAW:
       result = parseDclResourceRaw(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_INDEXABLE_TEMP:
+      result = parseDclIndexableTemp(loc);
       break;
     default:
       return std::nullopt;
