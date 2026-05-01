@@ -40,6 +40,18 @@ static void printHexTokens(OpAsmPrinter &printer, Operation *,
                            DenseI32ArrayAttr attr);
 
 //===----------------------------------------------------------------------===//
+// DclThreadGroup
+//===----------------------------------------------------------------------===//
+
+LogicalResult DclThreadGroup::verify() {
+  constexpr int64_t maxTotalThreads = 1024;
+  if (auto total = getX() * getY() * getZ(); total > maxTotalThreads)
+    return emitOpError("thread group size x*y*z must be <= ")
+           << maxTotalThreads << ", got " << total;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

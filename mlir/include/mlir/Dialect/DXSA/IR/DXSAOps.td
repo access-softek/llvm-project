@@ -1322,4 +1322,26 @@ def DXSA_DclResourceRaw : DXSA_Op<"dcl_resource_raw"> {
   let hasVerifier = 1;
 }
 
+def DXSA_DclThreadGroup : DXSA_Op<"dcl_thread_group"> {
+  let summary = "declares compute shader thread group dimensions";
+  let description = [{
+    The `dxsa.dcl_thread_group` operation declares the `$x`, `$y` and `$z`
+    dimensions of a compute shader thread group.
+
+    The product `$x` * `$y` * `$z` must not exceed 1024.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_thread_group <x = 1, y = 1, z = 1>
+    ```
+  }];
+  let arguments = (ins
+      ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<1024>]>:$x,
+      ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<1024>]>:$y,
+      ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<64>]>:$z);
+  let assemblyFormat = "` ` `<` `x` `=` $x `,` `y` `=` $y `,` `z` `=` $z `>` attr-dict";
+  let hasVerifier = 1;
+}
+
 #endif // DXSA_OPS
