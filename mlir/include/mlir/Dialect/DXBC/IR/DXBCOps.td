@@ -1300,4 +1300,32 @@ def DXBC_DclResourceRaw : DXBC_Op<"dcl_resource_raw"> {
   let hasVerifier = 1;
 }
 
+def DXBC_DclIndexableTemp : DXBC_Op<"dcl_indexable_temp"> {
+  let summary = "declares a temporary register array";
+  let description = [{
+    The `dxbc.dcl_indexable_temp` operation declares a temporary register array.
+    Each temporary register array to be used in the shader must be declared.
+    - `$id` identifies the `x#` register being declared.
+    - `$size` is an integer that defines how many elements are in
+    this array of 32-bit 4-component indexable temp storage that is being declared.
+    - `$num_components` is the number of components (1..4) used per element;
+    omitted from the textual form when equal to 4.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_indexable_temp x<0>[1], 1
+    dxbc.dcl_indexable_temp x<1>[23], 2
+    dxbc.dcl_indexable_temp x<7>[4096]
+    ```
+  }];
+  let arguments = (ins
+      I32Attr:$id,
+      ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<4096>]>:$size,
+      DefaultValuedAttr<
+          ConfinedAttr<I32Attr, [IntPositive, IntMaxValue<4>]>,
+          "4">:$num_components);
+  let assemblyFormat = "`x` `<` $id `>` `` `[` $size `]` (`,` $num_components^)? attr-dict";
+}
+
 #endif // DXBC_OPS
