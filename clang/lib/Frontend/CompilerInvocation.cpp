@@ -4075,8 +4075,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // Set the handler, if one is specified.
     Opts.OverflowHandler =
         std::string(Args.getLastArgValue(OPT_ftrapv_handler));
-  }
-  else if (Args.hasArg(OPT_fwrapv))
+  } else if (Args.hasArg(OPT_fwrapv) || Opts.Kernel)
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
 
   Opts.MSCompatibilityVersion = 0;
