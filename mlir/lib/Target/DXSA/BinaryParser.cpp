@@ -597,6 +597,14 @@ public:
                                        systemValueNameAttr);
   }
 
+  Instruction buildDclInput(Operand operand, Location loc) {
+    return dxsa::DclInput::create(builder, loc, operand);
+  }
+
+  Instruction buildDclOutput(Operand operand, Location loc) {
+    return dxsa::DclOutput::create(builder, loc, operand);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1076,6 +1084,20 @@ public:
     return builder.buildDclInputPsSgv(*operand, *systemValueName, loc);
   }
 
+  FailureOr<Instruction> parseDclInput(Location loc) {
+    auto operand = parseOperand();
+    if (failed(operand))
+      return failure();
+    return builder.buildDclInput(*operand, loc);
+  }
+
+  FailureOr<Instruction> parseDclOutput(Location loc) {
+    auto operand = parseOperand();
+    if (failed(operand))
+      return failure();
+    return builder.buildDclOutput(*operand, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1115,6 +1137,12 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_INPUT_PS_SGV:
       result = parseDclInputPsSgv(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_INPUT:
+      result = parseDclInput(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_OUTPUT:
+      result = parseDclOutput(loc);
       break;
     default:
       return std::nullopt;

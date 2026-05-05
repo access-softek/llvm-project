@@ -534,4 +534,41 @@ def DXSA_DclInputPsSgv : DXSA_Op<"dcl_input_ps_sgv"> {
   let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
+def DXSA_DclInput : DXSA_Op<"dcl_input"> {
+  let summary = "declares a shader input register";
+  let description = [{
+    The `dxsa.dcl_input` operation declares a shader input register.
+
+    The register operand can be either an indexed input register
+    or a special scalar input.
+
+    Example:
+
+    ```mlir
+
+    dxsa.dcl_input %v0
+    ```
+  }];
+  let arguments = (ins DXSA_OperandType:$operand);
+  let assemblyFormat = "$operand attr-dict";
+}
+
+def DXSA_DclOutput : DXSA_Op<"dcl_output"> {
+  let summary = "declares a shader output register";
+  let description = [{
+    The `dxsa.dcl_output` operation declares a shader output register.
+
+    The register operand can be either an indexed output register
+    or a special scalar output.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_output %o0
+    ```
+  }];
+  let arguments = (ins DXSA_OperandType:$operand);
+  let assemblyFormat = "$operand attr-dict";
+}
+
 #endif // DXSA_OPS
