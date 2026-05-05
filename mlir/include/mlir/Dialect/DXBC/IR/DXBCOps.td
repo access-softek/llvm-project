@@ -534,4 +534,41 @@ def DXBC_DclInputPsSgv : DXBC_Op<"dcl_input_ps_sgv"> {
   let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
+def DXBC_DclInput : DXBC_Op<"dcl_input"> {
+  let summary = "declares a shader input register";
+  let description = [{
+    The `dxbc.dcl_input` operation declares a shader input register.
+
+    The register operand can be either an indexed input register
+    or a special scalar input.
+
+    Example:
+
+    ```mlir
+
+    dxbc.dcl_input %v0
+    ```
+  }];
+  let arguments = (ins DXBC_OperandType:$operand);
+  let assemblyFormat = "$operand attr-dict";
+}
+
+def DXBC_DclOutput : DXBC_Op<"dcl_output"> {
+  let summary = "declares a shader output register";
+  let description = [{
+    The `dxbc.dcl_output` operation declares a shader output register.
+
+    The register operand can be either an indexed output register
+    or a special scalar output.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_output %o0
+    ```
+  }];
+  let arguments = (ins DXBC_OperandType:$operand);
+  let assemblyFormat = "$operand attr-dict";
+}
+
 #endif // DXBC_OPS
