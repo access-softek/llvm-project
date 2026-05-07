@@ -51,6 +51,28 @@ def DXBC_GlobalFlagsAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def DXBC_TessellatorOutputPrimitiveType_OutputPoint       : I32EnumAttrCase<"output_point",        1>;
+def DXBC_TessellatorOutputPrimitiveType_OutputLine        : I32EnumAttrCase<"output_line",         2>;
+def DXBC_TessellatorOutputPrimitiveType_OutputTriangleCw  : I32EnumAttrCase<"output_triangle_cw",  3>;
+def DXBC_TessellatorOutputPrimitiveType_OutputTriangleCcw : I32EnumAttrCase<"output_triangle_ccw", 4>;
+
+def DXBC_TessellatorOutputPrimitiveType : I32EnumAttr<
+    "TessellatorOutputPrimitiveType", "tessellator output primitive type", [
+      DXBC_TessellatorOutputPrimitiveType_OutputPoint,
+      DXBC_TessellatorOutputPrimitiveType_OutputLine,
+      DXBC_TessellatorOutputPrimitiveType_OutputTriangleCw,
+      DXBC_TessellatorOutputPrimitiveType_OutputTriangleCcw
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_TessellatorOutputPrimitiveTypeAttr :
+    EnumAttr<DXBCDialect, DXBC_TessellatorOutputPrimitiveType,
+             "tessellator_output_primitive_type"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC op definitions
 //===----------------------------------------------------------------------===//
@@ -194,6 +216,23 @@ def DXBC_DclOutputControlPointCount :
   let arguments = (ins ConfinedAttr<I32Attr,
       [IntNonNegative, IntMaxValue<32>]>:$count);
   let assemblyFormat = [{ $count attr-dict }];
+}
+
+def DXBC_DclTessellatorOutputPrimitive
+    : DXBC_Op<"dcl_tessellator_output_primitive"> {
+  let summary = "declares the tessellator output primitive type";
+  let description = [{
+    The `dxbc.dcl_tessellator_output_primitive` operation declares the
+    tessellator output primitive type.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_tessellator_output_primitive output_triangle_cw
+    ```
+  }];
+  let arguments = (ins DXBC_TessellatorOutputPrimitiveTypeAttr:$type);
+  let assemblyFormat = "$type attr-dict";
 }
 
 #endif // DXBC_OPS
