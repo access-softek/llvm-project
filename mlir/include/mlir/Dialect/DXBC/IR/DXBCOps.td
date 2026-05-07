@@ -51,6 +51,25 @@ def DXBC_GlobalFlagsAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def DXBC_TessellatorDomain_Isoline : I32EnumAttrCase<"domain_isoline", 1>;
+def DXBC_TessellatorDomain_Tri     : I32EnumAttrCase<"domain_tri",     2>;
+def DXBC_TessellatorDomain_Quad    : I32EnumAttrCase<"domain_quad",    3>;
+
+def DXBC_TessellatorDomain : I32EnumAttr<
+    "TessellatorDomain", "tessellator domain", [
+      DXBC_TessellatorDomain_Isoline,
+      DXBC_TessellatorDomain_Tri,
+      DXBC_TessellatorDomain_Quad
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_TessellatorDomainAttr :
+    EnumAttr<DXBCDialect, DXBC_TessellatorDomain, "tessellator_domain"> {
+  let assemblyFormat = "$value";
+}
+
 def DXBC_TessellatorOutputPrimitiveType_OutputPoint       : I32EnumAttrCase<"output_point",        1>;
 def DXBC_TessellatorOutputPrimitiveType_OutputLine        : I32EnumAttrCase<"output_line",         2>;
 def DXBC_TessellatorOutputPrimitiveType_OutputTriangleCw  : I32EnumAttrCase<"output_triangle_cw",  3>;
@@ -236,6 +255,23 @@ def DXBC_DclOutputControlPointCount :
   let arguments = (ins ConfinedAttr<I32Attr,
       [IntNonNegative, IntMaxValue<32>]>:$count);
   let assemblyFormat = [{ $count attr-dict }];
+}
+
+def DXBC_DclTessellatorDomain : DXBC_Op<"dcl_tessellator_domain"> {
+  let summary = "declares the tessellator domain";
+  let description = [{
+    The `dxbc.dcl_tessellator_domain` operation declares the tessellator
+    domain.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_tessellator_domain domain_quad
+    ```
+  }];
+
+  let arguments = (ins DXBC_TessellatorDomainAttr:$domain);
+  let assemblyFormat = "$domain attr-dict";
 }
 
 def DXBC_DclTessellatorOutputPrimitive
