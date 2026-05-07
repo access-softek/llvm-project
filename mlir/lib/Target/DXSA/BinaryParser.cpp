@@ -529,6 +529,13 @@ public:
         builder, loc, builder.getI32IntegerAttr(count));
   }
 
+  Instruction buildDclTessellatorDomain(dxsa::TessellatorDomain domain,
+                                        Location loc) {
+    auto domainAttr =
+        dxsa::TessellatorDomainAttr::get(builder.getContext(), domain);
+    return dxsa::DclTessellatorDomain::create(builder, loc, domainAttr);
+  }
+
   Instruction buildDclTessellatorOutputPrimitive(
       dxsa::TessellatorOutputPrimitiveType outputPrimitiveType, Location loc) {
     auto outputPrimitiveTypeAttr =
@@ -908,6 +915,15 @@ public:
     return builder.buildDclOutputControlPointCount(count, loc);
   }
 
+  FailureOr<Instruction> parseDclTessellatorDomain(uint32_t opcodeToken,
+                                                   Location loc) {
+    auto rawDomain = DECODE_D3D11_SB_TESS_DOMAIN(opcodeToken);
+    auto domain = dxsa::symbolizeTessellatorDomain(rawDomain);
+    if (!domain)
+      return emitError(loc, "unknown tessellator domain: ") << rawDomain;
+    return builder.buildDclTessellatorDomain(*domain, loc);
+  }
+
   FailureOr<Instruction>
   parseDclTessellatorOutputPrimitive(uint32_t opcodeToken, Location loc) {
     auto rawOutputPrimitiveType =
@@ -948,6 +964,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_OUTPUT_CONTROL_POINT_COUNT:
       result = parseDclOutputControlPointCount(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_TESS_DOMAIN:
+      result = parseDclTessellatorDomain(opcodeToken, loc);
       break;
     case D3D11_SB_OPCODE_DCL_TESS_OUTPUT_PRIMITIVE:
       result = parseDclTessellatorOutputPrimitive(opcodeToken, loc);
