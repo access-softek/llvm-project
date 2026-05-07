@@ -529,6 +529,15 @@ public:
         builder, loc, builder.getI32IntegerAttr(count));
   }
 
+  Instruction buildDclTessellatorOutputPrimitive(
+      dxsa::TessellatorOutputPrimitiveType outputPrimitiveType, Location loc) {
+    auto outputPrimitiveTypeAttr =
+        dxsa::TessellatorOutputPrimitiveTypeAttr::get(builder.getContext(),
+                                                      outputPrimitiveType);
+    return dxsa::DclTessellatorOutputPrimitive::create(builder, loc,
+                                                       outputPrimitiveTypeAttr);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -891,6 +900,19 @@ public:
     return builder.buildDclOutputControlPointCount(count, loc);
   }
 
+  FailureOr<Instruction>
+  parseDclTessellatorOutputPrimitive(uint32_t opcodeToken, Location loc) {
+    auto rawOutputPrimitiveType =
+        DECODE_D3D11_SB_TESS_OUTPUT_PRIMITIVE(opcodeToken);
+    auto outputPrimitiveType =
+        dxsa::symbolizeTessellatorOutputPrimitiveType(rawOutputPrimitiveType);
+    if (!outputPrimitiveType)
+      return emitError(loc, "unknown tessellator output primitive type: ")
+             << rawOutputPrimitiveType;
+    return builder.buildDclTessellatorOutputPrimitive(*outputPrimitiveType,
+                                                      loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -906,6 +928,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_OUTPUT_CONTROL_POINT_COUNT:
       result = parseDclOutputControlPointCount(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_TESS_OUTPUT_PRIMITIVE:
+      result = parseDclTessellatorOutputPrimitive(opcodeToken, loc);
       break;
     default:
       return std::nullopt;

@@ -51,6 +51,28 @@ def DXSA_GlobalFlagsAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def DXSA_TessellatorOutputPrimitiveType_OutputPoint       : I32EnumAttrCase<"output_point",        1>;
+def DXSA_TessellatorOutputPrimitiveType_OutputLine        : I32EnumAttrCase<"output_line",         2>;
+def DXSA_TessellatorOutputPrimitiveType_OutputTriangleCw  : I32EnumAttrCase<"output_triangle_cw",  3>;
+def DXSA_TessellatorOutputPrimitiveType_OutputTriangleCcw : I32EnumAttrCase<"output_triangle_ccw", 4>;
+
+def DXSA_TessellatorOutputPrimitiveType : I32EnumAttr<
+    "TessellatorOutputPrimitiveType", "tessellator output primitive type", [
+      DXSA_TessellatorOutputPrimitiveType_OutputPoint,
+      DXSA_TessellatorOutputPrimitiveType_OutputLine,
+      DXSA_TessellatorOutputPrimitiveType_OutputTriangleCw,
+      DXSA_TessellatorOutputPrimitiveType_OutputTriangleCcw
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_TessellatorOutputPrimitiveTypeAttr :
+    EnumAttr<DXSADialect, DXSA_TessellatorOutputPrimitiveType,
+             "tessellator_output_primitive_type"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXSA op definitions
 //===----------------------------------------------------------------------===//
@@ -194,6 +216,23 @@ def DXSA_DclOutputControlPointCount :
   let arguments = (ins ConfinedAttr<I32Attr,
       [IntNonNegative, IntMaxValue<32>]>:$count);
   let assemblyFormat = [{ $count attr-dict }];
+}
+
+def DXSA_DclTessellatorOutputPrimitive
+    : DXSA_Op<"dcl_tessellator_output_primitive"> {
+  let summary = "declares the tessellator output primitive type";
+  let description = [{
+    The `dxsa.dcl_tessellator_output_primitive` operation declares the
+    tessellator output primitive type.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_tessellator_output_primitive output_triangle_cw
+    ```
+  }];
+  let arguments = (ins DXSA_TessellatorOutputPrimitiveTypeAttr:$type);
+  let assemblyFormat = "$type attr-dict";
 }
 
 #endif // DXSA_OPS
