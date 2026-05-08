@@ -28,32 +28,24 @@ static void initOpcodeMap(OpcodeMap &opcodes) {
 }
 
 static FailureOr<uint32_t> getIndexRepresentation(Operation *op) {
-  if (auto imm = dyn_cast<dxsa::IndexImm>(op)) {
-    auto attr = dyn_cast<IntegerAttr>(imm.getImm());
-    if (!attr) {
-      return emitError(op->getLoc(), "invalid immediate index");
-    }
-
-    if (attr.getType().isInteger(32)) {
-      return D3D10_SB_OPERAND_INDEX_IMMEDIATE32;
-    }
-
-    if (attr.getType().isInteger(64)) {
-      return D3D10_SB_OPERAND_INDEX_IMMEDIATE64;
-    }
-
-    return emitError(op->getLoc(), "invalid immediate index type");
-  }
-
-  if (isa<dxsa::IndexRel>(op)) {
-    return D3D10_SB_OPERAND_INDEX_RELATIVE;
-  }
-
-  if (isa<dxsa::IndexRelImm>(op)) {
-    return D3D10_SB_OPERAND_INDEX_IMMEDIATE32_PLUS_RELATIVE;
-  }
-
-  return emitError(op->getLoc(), "invalid index type");
+  return llvm::TypeSwitch<Operation &, FailureOr<uint32_t>>(*op)
+      .Case<dxsa::IndexImm>([](auto imm) {
+        auto attr = cast<IntegerAttr>(imm.getImm());
+        auto type = cast<IntegerType>(attr.getType());
+        if (type.getWidth() == 32) {
+          return D3D10_SB_OPERAND_INDEX_IMMEDIATE32;
+        }
+        assert(type.getWidth() == 64 && "invalid index type");
+        return D3D10_SB_OPERAND_INDEX_IMMEDIATE64;
+      })
+      .Case<dxsa::IndexRel>(
+          [](auto imm) { return D3D10_SB_OPERAND_INDEX_RELATIVE; })
+      .Case<dxsa::IndexRelImm>([](auto imm) {
+        return D3D10_SB_OPERAND_INDEX_IMMEDIATE32_PLUS_RELATIVE;
+      })
+      .Default([](auto &op) {
+        return emitError(op.getLoc(), "invalid index type");
+      });
 }
 
 class Writer {
@@ -183,9 +175,7 @@ public:
     uint32_t dim = 0;
     for (Value value : op.getOperands()) {
       Operation *index = value.getDefiningOp();
-      if (!index) {
-        return emitError(value.getLoc(), "index must be defined");
-      }
+      assert(index && "undefined index");
 
       FailureOr<uint32_t> repr = getIndexRepresentation(index);
       if (failed(repr)) {
@@ -200,17 +190,15 @@ public:
     // Indices follow the operand token.
     for (Value value : op.getOperands()) {
       Operation *index = value.getDefiningOp();
-      if (!index) {
-        return emitError(value.getLoc(), "index must be defined");
-      }
+      assert(index && "undefined index");
 
       auto result = llvm::TypeSwitch<Operation &, LogicalResult>(*index)
                         .Case<dxsa::IndexImm>(
-                            [this](auto op) { return emitIndexImm(op); })
+                            [this](auto &op) { return emitIndexImm(op); })
                         .Case<dxsa::IndexRel>(
-                            [this](auto op) { return emitIndexRel(op); })
+                            [this](auto &op) { return emitIndexRel(op); })
                         .Case<dxsa::IndexRelImm>(
-                            [this](auto op) { return emitIndexRelImm(op); })
+                            [this](auto &op) { return emitIndexRelImm(op); })
                         .Default([this](auto &op) {
                           return emitError(op.getLoc(), "invalid index type");
                         });
@@ -227,20 +215,16 @@ public:
   // operands do not have indices. They are encoded as an operand
   // followed by N immediate values for each component.
   LogicalResult emitOperandImm(dxsa::OperandImm op) {
-    auto attr = dyn_cast<DenseIntElementsAttr>(op.getImm());
-    if (!attr) {
-      return emitError(op.getLoc(), "invalid immediate operand");
-    }
+    auto attr = cast<DenseIntElementsAttr>(op.getImm());
 
     uint32_t token = 0;
 
-    Type elementType = attr.getType().getElementType();
-    if (elementType.isInteger(32)) {
+    auto elementType = cast<IntegerType>(attr.getType().getElementType());
+    if (elementType.getWidth() == 32) {
       token |= ENCODE_D3D10_SB_OPERAND_TYPE(D3D10_SB_OPERAND_TYPE_IMMEDIATE32);
-    } else if (elementType.isInteger(64)) {
-      token |= ENCODE_D3D10_SB_OPERAND_TYPE(D3D10_SB_OPERAND_TYPE_IMMEDIATE64);
     } else {
-      return emitError(op.getLoc(), "invalid immediate operand type");
+      assert(elementType.getWidth() == 64 && "invalid immediate");
+      token |= ENCODE_D3D10_SB_OPERAND_TYPE(D3D10_SB_OPERAND_TYPE_IMMEDIATE64);
     }
 
     // Split immediates into tokens. 32 bit immediate values are
@@ -275,10 +259,7 @@ public:
   // Emit an immediate index. Its type is encoded into the operand, so
   // here we only emit the value as tokens.
   LogicalResult emitIndexImm(dxsa::IndexImm op) {
-    auto attr = dyn_cast<IntegerAttr>(op.getImm());
-    if (!attr) {
-      return emitError(op.getLoc(), "invalid immediate index");
-    }
+    auto attr = cast<IntegerAttr>(op.getImm());
 
     uint64_t value = attr.getInt();
     if (attr.getType().isInteger(32)) {
@@ -297,15 +278,7 @@ public:
 
   // Emit an operand used as an index.
   LogicalResult emitIndexRel(dxsa::IndexRel index) {
-    Operation *def = index.getOperand().getDefiningOp();
-    if (!def) {
-      return emitError(index.getLoc(), "index must be defined");
-    }
-
-    auto operand = dyn_cast<dxsa::Operand>(*def);
-    if (!operand) {
-      return emitError(def->getLoc(), "invalid index relative operand");
-    }
+    auto operand = cast<dxsa::Operand>(index.getOperand().getDefiningOp());
 
     // Recursively emit an operand, which may also have other indices.
     return emitOperand(operand);
@@ -313,15 +286,7 @@ public:
 
   // Emit an index as an operand + a 32 bit immediate offset.
   LogicalResult emitIndexRelImm(dxsa::IndexRelImm index) {
-    Operation *def = index.getOperand().getDefiningOp();
-    if (!def) {
-      return emitError(index.getLoc(), "index must be defined");
-    }
-
-    auto operand = dyn_cast<dxsa::Operand>(*def);
-    if (!operand) {
-      return emitError(def->getLoc(), "invalid index relative operand");
-    }
+    auto operand = cast<dxsa::Operand>(index.getOperand().getDefiningOp());
 
     if (failed(emitOperand(operand))) {
       return failure();
