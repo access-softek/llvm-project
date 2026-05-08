@@ -134,6 +134,35 @@ def DXBC_TessellatorPartitioningModeAttr :
   let assemblyFormat = "$value";
 }
 
+def DXBC_InputPrimitive_Point        : I32EnumAttrCase<"point",         1>;
+def DXBC_InputPrimitive_Line         : I32EnumAttrCase<"line",          2>;
+def DXBC_InputPrimitive_Triangle     : I32EnumAttrCase<"triangle",      3>;
+def DXBC_InputPrimitive_LineAdj      : I32EnumAttrCase<"line_adj",      6>;
+def DXBC_InputPrimitive_TriangleAdj  : I32EnumAttrCase<"triangle_adj",  7>;
+foreach i = !range(1, 33) in {
+  def DXBC_InputPrimitive_Patch#i :
+      I32EnumAttrCase<"patch" # i, !add(i, 7)>;
+}
+
+def DXBC_InputPrimitive : I32EnumAttr<
+    "InputPrimitive", "geometry shader input primitive type",
+    !listconcat(
+      [DXBC_InputPrimitive_Point,
+       DXBC_InputPrimitive_Line,
+       DXBC_InputPrimitive_Triangle,
+       DXBC_InputPrimitive_LineAdj,
+       DXBC_InputPrimitive_TriangleAdj],
+      !foreach(i, !range(1, 33),
+        !cast<I32EnumAttrCase>("DXBC_InputPrimitive_Patch" # i)))> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_InputPrimitiveAttr :
+    EnumAttr<DXBCDialect, DXBC_InputPrimitive, "input_primitive"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC op definitions
 //===----------------------------------------------------------------------===//
@@ -344,6 +373,22 @@ def DXBC_DclTessellatorPartitioning
   }];
   let arguments = (ins DXBC_TessellatorPartitioningModeAttr:$partitioningMode);
   let assemblyFormat = "$partitioningMode attr-dict";
+}
+
+def DXBC_DclInputPrimitive : DXBC_Op<"dcl_input_primitive"> {
+  let summary = "declares the shader input primitive type";
+  let description = [{
+    The `dxbc.dcl_input_primitive` operation declares the input primitive
+    type that the shader is invoked with.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_input_primitive triangle
+    ```
+  }];
+  let arguments = (ins DXBC_InputPrimitiveAttr:$type);
+  let assemblyFormat = "$type attr-dict";
 }
 
 #endif // DXBC_OPS

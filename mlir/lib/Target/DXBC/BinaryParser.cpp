@@ -561,6 +561,13 @@ public:
                                                     partitioningModeAttr);
   }
 
+  Instruction buildDclInputPrimitive(dxbc::InputPrimitive inputPrimitive,
+                                     Location loc) {
+    auto inputPrimitiveAttr =
+        dxbc::InputPrimitiveAttr::get(builder.getContext(), inputPrimitive);
+    return dxbc::DclInputPrimitive::create(builder, loc, inputPrimitiveAttr);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -968,6 +975,15 @@ public:
     return builder.buildDclTessellatorPartitioning(*partitioningMode, loc);
   }
 
+  FailureOr<Instruction> parseDclInputPrimitive(uint32_t opcodeToken,
+                                                Location loc) {
+    auto rawInputPrimitive = DECODE_D3D10_SB_GS_INPUT_PRIMITIVE(opcodeToken);
+    auto inputPrimitive = dxbc::symbolizeInputPrimitive(rawInputPrimitive);
+    if (!inputPrimitive)
+      return emitError(loc, "unknown input primitive: ") << rawInputPrimitive;
+    return builder.buildDclInputPrimitive(*inputPrimitive, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -995,6 +1011,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_GS_OUTPUT_PRIMITIVE_TOPOLOGY:
       result = parseDclOutputTopology(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_GS_INPUT_PRIMITIVE:
+      result = parseDclInputPrimitive(opcodeToken, loc);
       break;
     default:
       return std::nullopt;
