@@ -1,0 +1,8 @@
+// RUN: mlir-translate --import-dxbc-bin %S/inputs/dcl_tessellator_partitioning.bin | FileCheck %s
+
+// CHECK:      module {
+// CHECK-NEXT:   dxbc.dcl_tessellator_partitioning partitioning_integer
+// CHECK-NEXT:   dxbc.dcl_tessellator_partitioning partitioning_pow2
+// CHECK-NEXT:   dxbc.dcl_tessellator_partitioning partitioning_fractional_odd
+// CHECK-NEXT:   dxbc.dcl_tessellator_partitioning partitioning_fractional_even
+// CHECK-NEXT: }

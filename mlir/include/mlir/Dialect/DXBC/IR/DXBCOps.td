@@ -112,6 +112,28 @@ def DXBC_OutputPrimitiveTopologyAttr :
   let assemblyFormat = "$value";
 }
 
+def DXBC_TessellatorPartitioningMode_Integer        : I32EnumAttrCase<"partitioning_integer",         1>;
+def DXBC_TessellatorPartitioningMode_Pow2           : I32EnumAttrCase<"partitioning_pow2",            2>;
+def DXBC_TessellatorPartitioningMode_FractionalOdd  : I32EnumAttrCase<"partitioning_fractional_odd",  3>;
+def DXBC_TessellatorPartitioningMode_FractionalEven : I32EnumAttrCase<"partitioning_fractional_even", 4>;
+
+def DXBC_TessellatorPartitioningMode : I32EnumAttr<
+    "TessellatorPartitioningMode", "tessellator partitioning mode", [
+      DXBC_TessellatorPartitioningMode_Integer,
+      DXBC_TessellatorPartitioningMode_Pow2,
+      DXBC_TessellatorPartitioningMode_FractionalOdd,
+      DXBC_TessellatorPartitioningMode_FractionalEven
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_TessellatorPartitioningModeAttr :
+    EnumAttr<DXBCDialect, DXBC_TessellatorPartitioningMode,
+             "tessellator_partitioning_mode"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC op definitions
 //===----------------------------------------------------------------------===//
@@ -305,6 +327,23 @@ def DXBC_DclOutputTopology : DXBC_Op<"dcl_output_topology"> {
   }];
   let arguments = (ins DXBC_OutputPrimitiveTopologyAttr:$topology);
   let assemblyFormat = "$topology attr-dict";
+}
+
+def DXBC_DclTessellatorPartitioning
+    : DXBC_Op<"dcl_tessellator_partitioning"> {
+  let summary = "declares the tessellator partitioning mode";
+  let description = [{
+    The `dxbc.dcl_tessellator_partitioning` operation declares the
+    tessellator partitioning mode in a Hull Shader declaration section.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_tessellator_partitioning partitioning_integer
+    ```
+  }];
+  let arguments = (ins DXBC_TessellatorPartitioningModeAttr:$partitioningMode);
+  let assemblyFormat = "$partitioningMode attr-dict";
 }
 
 #endif // DXBC_OPS
