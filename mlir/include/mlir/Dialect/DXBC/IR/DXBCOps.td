@@ -73,6 +73,26 @@ def DXBC_TessellatorOutputPrimitiveTypeAttr :
   let assemblyFormat = "$value";
 }
 
+def DXBC_OutputPrimitiveTopology_PointList     : I32EnumAttrCase<"pointlist",     1>;
+def DXBC_OutputPrimitiveTopology_LineStrip     : I32EnumAttrCase<"linestrip",     3>;
+def DXBC_OutputPrimitiveTopology_TriangleStrip : I32EnumAttrCase<"trianglestrip", 5>;
+
+def DXBC_OutputPrimitiveTopology : I32EnumAttr<
+    "OutputPrimitiveTopology", "shader output primitive topology", [
+      DXBC_OutputPrimitiveTopology_PointList,
+      DXBC_OutputPrimitiveTopology_LineStrip,
+      DXBC_OutputPrimitiveTopology_TriangleStrip
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_OutputPrimitiveTopologyAttr :
+    EnumAttr<DXBCDialect, DXBC_OutputPrimitiveTopology,
+             "output_primitive_topology"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC op definitions
 //===----------------------------------------------------------------------===//
@@ -233,6 +253,22 @@ def DXBC_DclTessellatorOutputPrimitive
   }];
   let arguments = (ins DXBC_TessellatorOutputPrimitiveTypeAttr:$type);
   let assemblyFormat = "$type attr-dict";
+}
+
+def DXBC_DclOutputTopology : DXBC_Op<"dcl_output_topology"> {
+  let summary = "declare what primitive topology the shader generates as output";
+  let description = [{
+    The `dxbc.dcl_output_topology` operation declares the primitive topology
+    that the shader generates as output.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_output_topology trianglestrip
+    ```
+  }];
+  let arguments = (ins DXBC_OutputPrimitiveTopologyAttr:$topology);
+  let assemblyFormat = "$topology attr-dict";
 }
 
 #endif // DXBC_OPS
