@@ -553,6 +553,14 @@ public:
     return dxsa::DclOutputTopology::create(builder, loc, outputTopologyAttr);
   }
 
+  Instruction buildDclTessellatorPartitioning(
+      dxsa::TessellatorPartitioningMode partitioningMode, Location loc) {
+    auto partitioningModeAttr = dxsa::TessellatorPartitioningModeAttr::get(
+        builder.getContext(), partitioningMode);
+    return dxsa::DclTessellatorPartitioning::create(builder, loc,
+                                                    partitioningModeAttr);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -949,6 +957,17 @@ public:
     return builder.buildDclOutputTopology(*outputTopology, loc);
   }
 
+  FailureOr<Instruction> parseDclTessellatorPartitioning(uint32_t opcodeToken,
+                                                         Location loc) {
+    auto rawPartitioningMode = DECODE_D3D11_SB_TESS_PARTITIONING(opcodeToken);
+    auto partitioningMode =
+        dxsa::symbolizeTessellatorPartitioningMode(rawPartitioningMode);
+    if (!partitioningMode)
+      return emitError(loc, "unknown tessellator partitioning mode: ")
+             << rawPartitioningMode;
+    return builder.buildDclTessellatorPartitioning(*partitioningMode, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -970,6 +989,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_TESS_OUTPUT_PRIMITIVE:
       result = parseDclTessellatorOutputPrimitive(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_TESS_PARTITIONING:
+      result = parseDclTessellatorPartitioning(opcodeToken, loc);
       break;
     case D3D10_SB_OPCODE_DCL_GS_OUTPUT_PRIMITIVE_TOPOLOGY:
       result = parseDclOutputTopology(opcodeToken, loc);

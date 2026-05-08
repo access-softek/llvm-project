@@ -112,6 +112,28 @@ def DXSA_OutputPrimitiveTopologyAttr :
   let assemblyFormat = "$value";
 }
 
+def DXSA_TessellatorPartitioningMode_Integer        : I32EnumAttrCase<"partitioning_integer",         1>;
+def DXSA_TessellatorPartitioningMode_Pow2           : I32EnumAttrCase<"partitioning_pow2",            2>;
+def DXSA_TessellatorPartitioningMode_FractionalOdd  : I32EnumAttrCase<"partitioning_fractional_odd",  3>;
+def DXSA_TessellatorPartitioningMode_FractionalEven : I32EnumAttrCase<"partitioning_fractional_even", 4>;
+
+def DXSA_TessellatorPartitioningMode : I32EnumAttr<
+    "TessellatorPartitioningMode", "tessellator partitioning mode", [
+      DXSA_TessellatorPartitioningMode_Integer,
+      DXSA_TessellatorPartitioningMode_Pow2,
+      DXSA_TessellatorPartitioningMode_FractionalOdd,
+      DXSA_TessellatorPartitioningMode_FractionalEven
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_TessellatorPartitioningModeAttr :
+    EnumAttr<DXSADialect, DXSA_TessellatorPartitioningMode,
+             "tessellator_partitioning_mode"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXSA op definitions
 //===----------------------------------------------------------------------===//
@@ -305,6 +327,23 @@ def DXSA_DclOutputTopology : DXSA_Op<"dcl_output_topology"> {
   }];
   let arguments = (ins DXSA_OutputPrimitiveTopologyAttr:$topology);
   let assemblyFormat = "$topology attr-dict";
+}
+
+def DXSA_DclTessellatorPartitioning
+    : DXSA_Op<"dcl_tessellator_partitioning"> {
+  let summary = "declares the tessellator partitioning mode";
+  let description = [{
+    The `dxsa.dcl_tessellator_partitioning` operation declares the
+    tessellator partitioning mode in a Hull Shader declaration section.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_tessellator_partitioning partitioning_integer
+    ```
+  }];
+  let arguments = (ins DXSA_TessellatorPartitioningModeAttr:$partitioningMode);
+  let assemblyFormat = "$partitioningMode attr-dict";
 }
 
 #endif // DXSA_OPS
