@@ -134,6 +134,35 @@ def DXSA_TessellatorPartitioningModeAttr :
   let assemblyFormat = "$value";
 }
 
+def DXSA_InputPrimitive_Point        : I32EnumAttrCase<"point",         1>;
+def DXSA_InputPrimitive_Line         : I32EnumAttrCase<"line",          2>;
+def DXSA_InputPrimitive_Triangle     : I32EnumAttrCase<"triangle",      3>;
+def DXSA_InputPrimitive_LineAdj      : I32EnumAttrCase<"line_adj",      6>;
+def DXSA_InputPrimitive_TriangleAdj  : I32EnumAttrCase<"triangle_adj",  7>;
+foreach i = !range(1, 33) in {
+  def DXSA_InputPrimitive_Patch#i :
+      I32EnumAttrCase<"patch" # i, !add(i, 7)>;
+}
+
+def DXSA_InputPrimitive : I32EnumAttr<
+    "InputPrimitive", "geometry shader input primitive type",
+    !listconcat(
+      [DXSA_InputPrimitive_Point,
+       DXSA_InputPrimitive_Line,
+       DXSA_InputPrimitive_Triangle,
+       DXSA_InputPrimitive_LineAdj,
+       DXSA_InputPrimitive_TriangleAdj],
+      !foreach(i, !range(1, 33),
+        !cast<I32EnumAttrCase>("DXSA_InputPrimitive_Patch" # i)))> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_InputPrimitiveAttr :
+    EnumAttr<DXSADialect, DXSA_InputPrimitive, "input_primitive"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXSA op definitions
 //===----------------------------------------------------------------------===//
@@ -344,6 +373,22 @@ def DXSA_DclTessellatorPartitioning
   }];
   let arguments = (ins DXSA_TessellatorPartitioningModeAttr:$partitioningMode);
   let assemblyFormat = "$partitioningMode attr-dict";
+}
+
+def DXSA_DclInputPrimitive : DXSA_Op<"dcl_input_primitive"> {
+  let summary = "declares the shader input primitive type";
+  let description = [{
+    The `dxsa.dcl_input_primitive` operation declares the input primitive
+    type that the shader is invoked with.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_input_primitive triangle
+    ```
+  }];
+  let arguments = (ins DXSA_InputPrimitiveAttr:$type);
+  let assemblyFormat = "$type attr-dict";
 }
 
 #endif // DXSA_OPS
