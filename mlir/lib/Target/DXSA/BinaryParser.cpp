@@ -538,6 +538,14 @@ public:
                                                        outputPrimitiveTypeAttr);
   }
 
+  Instruction
+  buildDclOutputTopology(dxsa::OutputPrimitiveTopology outputTopology,
+                         Location loc) {
+    auto outputTopologyAttr = dxsa::OutputPrimitiveTopologyAttr::get(
+        builder.getContext(), outputTopology);
+    return dxsa::DclOutputTopology::create(builder, loc, outputTopologyAttr);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -913,6 +921,18 @@ public:
                                                       loc);
   }
 
+  FailureOr<Instruction> parseDclOutputTopology(uint32_t opcodeToken,
+                                                Location loc) {
+    auto rawOutputTopology =
+        DECODE_D3D10_SB_GS_OUTPUT_PRIMITIVE_TOPOLOGY(opcodeToken);
+    auto outputTopology =
+        dxsa::symbolizeOutputPrimitiveTopology(rawOutputTopology);
+    if (!outputTopology)
+      return emitError(loc, "unknown output primitive topology: ")
+             << rawOutputTopology;
+    return builder.buildDclOutputTopology(*outputTopology, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -931,6 +951,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_TESS_OUTPUT_PRIMITIVE:
       result = parseDclTessellatorOutputPrimitive(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_GS_OUTPUT_PRIMITIVE_TOPOLOGY:
+      result = parseDclOutputTopology(opcodeToken, loc);
       break;
     default:
       return std::nullopt;
