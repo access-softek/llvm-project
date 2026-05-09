@@ -63,18 +63,14 @@ static void printComponent(raw_ostream &outs, uint32_t v) {
 }
 
 static void printComponentMask(raw_ostream &outs, uint32_t mask) {
-  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_X) {
+  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_X)
     outs << 'x';
-  }
-  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_Y) {
+  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_Y)
     outs << 'y';
-  }
-  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_Z) {
+  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_Z)
     outs << 'z';
-  }
-  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_W) {
+  if (mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_W)
     outs << 'w';
-  }
 }
 
 class Printer {
@@ -83,15 +79,13 @@ public:
 
   LogicalResult emitModule(ModuleOp source) {
     Region &region = source.getRegion();
-    if (!region.hasOneBlock()) {
+    if (!region.hasOneBlock())
       return emitError(region.getLoc(), "region should contain only one block");
-    }
 
     for (auto &op : region.front()) {
       if (auto inst = dyn_cast<dxsa::Instruction>(op)) {
-        if (failed(emitInstruction(inst))) {
+        if (failed(emitInstruction(inst)))
           return failure();
-        }
       }
     }
     return success();
@@ -125,9 +119,8 @@ public:
                 return emitError(op.getLoc(), "unexpected operand kind");
               });
 
-      if (failed(result)) {
+      if (failed(result))
         return result;
-      }
     }
     outs << '\n';
     return success();
@@ -226,19 +219,17 @@ public:
       assert(index && "undefined index");
 
       // Non-immediate indices always use subscript syntax.
-      if (!isa<dxsa::IndexImm>(*index)) {
+      if (!isa<dxsa::IndexImm>(*index))
         printSubscript = true;
-      }
 
-      if (printSubscript) {
+      if (printSubscript)
         outs << '[';
-      }
-      if (failed(emitIndex(index))) {
+
+      if (failed(emitIndex(index)))
         return failure();
-      }
-      if (printSubscript) {
+
+      if (printSubscript)
         outs << ']';
-      }
 
       // First index may be a register number (immediate), but other
       // indices are always subscripts.
@@ -247,9 +238,8 @@ public:
 
     if (auto swizzle = op.getSwizzle()) {
       outs << '.';
-      for (const APInt &v : *swizzle) {
+      for (const APInt &v : *swizzle)
         printComponent(outs, v.getZExtValue());
-      }
     } else if (auto mask = op.getMask()) {
       outs << '.';
       printComponentMask(outs, *mask);
@@ -267,9 +257,8 @@ public:
     auto attr = cast<DenseIntElementsAttr>(op.getImm());
     auto elementType = cast<IntegerType>(attr.getType().getElementType());
 
-    if (elementType.getWidth() != 32) {
+    if (elementType.getWidth() != 32)
       return emitError(op.getLoc(), "unsupported immediate operand type");
-    }
 
     // FIXME: encode OperandImm with the correct type in MLIR
     bool isInt = false;
@@ -285,25 +274,22 @@ public:
 
     bool printVec = attr.getNumElements() > 1 || !isInt;
 
-    if (printVec) {
+    if (printVec)
       outs << "l(";
-    }
 
     StringRef separator = "";
-    for (APInt v : attr) {
+    for (const APInt &v : attr) {
       outs << separator;
       separator = ",";
 
       uint32_t bits = v.getZExtValue();
-      if (isInt) {
+      if (isInt)
         outs << bits;
-      } else {
+      else
         write_double(outs, llvm::bit_cast<float>(bits), FloatStyle::Fixed, 6);
-      }
     }
-    if (printVec) {
+    if (printVec)
       outs << ")";
-    }
 
     return success();
   }
@@ -341,9 +327,8 @@ public:
   LogicalResult emitIndexRelImm(dxsa::IndexRelImm index) {
     auto operand = cast<dxsa::Operand>(index.getOperand().getDefiningOp());
 
-    if (failed(emitOperand(operand))) {
+    if (failed(emitOperand(operand)))
       return failure();
-    }
 
     outs << " + " << index.getImm();
     return success();
