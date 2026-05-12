@@ -257,6 +257,7 @@ public:
     auto attr = cast<DenseIntElementsAttr>(op.getImm());
     auto elementType = cast<IntegerType>(attr.getType().getElementType());
 
+    // FIXME: how 64-bit immediates should be printed?
     if (elementType.getWidth() != 32)
       return emitError(op.getLoc(), "unsupported immediate operand type");
 
