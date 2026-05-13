@@ -568,6 +568,35 @@ public:
     return dxbc::DclInputPrimitive::create(builder, loc, inputPrimitiveAttr);
   }
 
+  Instruction buildDclInputPs(dxbc::InterpolationMode interpolationMode,
+                              Operand operand, Location loc) {
+    auto interpolationModeAttr = dxbc::InterpolationModeAttr::get(
+        builder.getContext(), interpolationMode);
+    return dxbc::DclInputPs::create(builder, loc, interpolationModeAttr,
+                                    operand);
+  }
+
+  Instruction buildDclInputPsSiv(dxbc::InterpolationMode interpolationMode,
+                                 Operand operand,
+                                 dxbc::SystemValueName systemValueName,
+                                 Location loc) {
+    auto interpolationModeAttr = dxbc::InterpolationModeAttr::get(
+        builder.getContext(), interpolationMode);
+    auto systemValueNameAttr =
+        dxbc::SystemValueNameAttr::get(builder.getContext(), systemValueName);
+    return dxbc::DclInputPsSiv::create(builder, loc, interpolationModeAttr,
+                                       operand, systemValueNameAttr);
+  }
+
+  Instruction buildDclInputPsSgv(Operand operand,
+                                 dxbc::SystemValueName systemValueName,
+                                 Location loc) {
+    auto systemValueNameAttr =
+        dxbc::SystemValueNameAttr::get(builder.getContext(), systemValueName);
+    return dxbc::DclInputPsSgv::create(builder, loc, operand,
+                                       systemValueNameAttr);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -619,7 +648,7 @@ public:
   }
 
   FailureOr<OperandComponents> parseOperandComponents(uint32_t token) {
-    OperandComponents components;
+    OperandComponents components{};
     switch (DECODE_D3D10_SB_OPERAND_NUM_COMPONENTS(token)) {
     case D3D10_SB_OPERAND_0_COMPONENT: {
       components.num = 0;
@@ -984,6 +1013,69 @@ public:
     return builder.buildDclInputPrimitive(*inputPrimitive, loc);
   }
 
+  FailureOr<dxbc::InterpolationMode>
+  parseInterpolationMode(uint32_t opcodeToken, Location loc) {
+    auto rawInterpolationMode =
+        DECODE_D3D10_SB_INPUT_INTERPOLATION_MODE(opcodeToken);
+    auto interpolationMode =
+        dxbc::symbolizeInterpolationMode(rawInterpolationMode);
+    if (!interpolationMode)
+      return emitError(loc, "unknown interpolation mode: ")
+             << rawInterpolationMode;
+    return *interpolationMode;
+  }
+
+  FailureOr<dxbc::SystemValueName> parseSystemValueName(Location loc) {
+    Token nameToken = parseToken();
+    if (failed(nameToken))
+      return failure();
+    auto rawSystemValueName = DECODE_D3D10_SB_NAME(*nameToken);
+    auto systemValueName = dxbc::symbolizeSystemValueName(rawSystemValueName);
+    if (!systemValueName)
+      return emitError(loc, "unknown system value name: ")
+             << rawSystemValueName;
+    return *systemValueName;
+  }
+
+  FailureOr<Instruction> parseDclInputPs(uint32_t opcodeToken, Location loc) {
+    FailureOr<dxbc::InterpolationMode> interpolationMode =
+        parseInterpolationMode(opcodeToken, loc);
+    if (failed(interpolationMode))
+      return failure();
+    FailureOr<Operand> operand = parseOperand();
+    if (failed(operand))
+      return failure();
+    return builder.buildDclInputPs(*interpolationMode, *operand, loc);
+  }
+
+  FailureOr<Instruction> parseDclInputPsSiv(uint32_t opcodeToken,
+                                            Location loc) {
+    FailureOr<dxbc::InterpolationMode> interpolationMode =
+        parseInterpolationMode(opcodeToken, loc);
+    if (failed(interpolationMode))
+      return failure();
+    FailureOr<Operand> operand = parseOperand();
+    if (failed(operand))
+      return failure();
+    FailureOr<dxbc::SystemValueName> systemValueName =
+        parseSystemValueName(getLocation());
+    if (failed(systemValueName))
+      return failure();
+    return builder.buildDclInputPsSiv(*interpolationMode, *operand,
+                                      *systemValueName, loc);
+  }
+
+  FailureOr<Instruction> parseDclInputPsSgv(Location loc) {
+    FailureOr<Operand> operand = parseOperand();
+    if (failed(operand))
+      return failure();
+    FailureOr<dxbc::SystemValueName> systemValueName =
+        parseSystemValueName(getLocation());
+    if (failed(systemValueName))
+      return failure();
+    return builder.buildDclInputPsSgv(*operand, *systemValueName, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1014,6 +1106,15 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_GS_INPUT_PRIMITIVE:
       result = parseDclInputPrimitive(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_INPUT_PS:
+      result = parseDclInputPs(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_INPUT_PS_SIV:
+      result = parseDclInputPsSiv(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_INPUT_PS_SGV:
+      result = parseDclInputPsSgv(loc);
       break;
     default:
       return std::nullopt;

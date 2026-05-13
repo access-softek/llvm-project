@@ -163,6 +163,96 @@ def DXBC_InputPrimitiveAttr :
   let assemblyFormat = "$value";
 }
 
+def DXBC_InterpolationMode_Constant                    : I32EnumAttrCase<"constant",                    1>;
+def DXBC_InterpolationMode_Linear                      : I32EnumAttrCase<"linear",                      2>;
+def DXBC_InterpolationMode_LinearCentroid              : I32EnumAttrCase<"linearCentroid",              3>;
+def DXBC_InterpolationMode_LinearNoPerspective         : I32EnumAttrCase<"linearNoPerspective",         4>;
+def DXBC_InterpolationMode_LinearNoPerspectiveCentroid : I32EnumAttrCase<"linearNoPerspectiveCentroid", 5>;
+def DXBC_InterpolationMode_LinearSample                : I32EnumAttrCase<"linearSample",                6>;
+def DXBC_InterpolationMode_LinearNoPerspectiveSample   : I32EnumAttrCase<"linearNoPerspectiveSample",   7>;
+
+def DXBC_InterpolationMode : I32EnumAttr<
+    "InterpolationMode", "pixel shader interpolation mode", [
+      DXBC_InterpolationMode_Constant,
+      DXBC_InterpolationMode_Linear,
+      DXBC_InterpolationMode_LinearCentroid,
+      DXBC_InterpolationMode_LinearNoPerspective,
+      DXBC_InterpolationMode_LinearNoPerspectiveCentroid,
+      DXBC_InterpolationMode_LinearSample,
+      DXBC_InterpolationMode_LinearNoPerspectiveSample
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_InterpolationModeAttr :
+    EnumAttr<DXBCDialect, DXBC_InterpolationMode, "interpolation_mode"> {
+  let assemblyFormat = "$value";
+}
+
+def DXBC_SystemValueName_Position                       : I32EnumAttrCase<"position",                       1>;
+def DXBC_SystemValueName_ClipDistance                   : I32EnumAttrCase<"clipDistance",                   2>;
+def DXBC_SystemValueName_CullDistance                   : I32EnumAttrCase<"cullDistance",                   3>;
+def DXBC_SystemValueName_RenderTargetArrayIndex         : I32EnumAttrCase<"renderTargetArrayIndex",         4>;
+def DXBC_SystemValueName_ViewportArrayIndex             : I32EnumAttrCase<"viewportArrayIndex",             5>;
+def DXBC_SystemValueName_VertexId                       : I32EnumAttrCase<"vertexID",                       6>;
+def DXBC_SystemValueName_PrimitiveId                    : I32EnumAttrCase<"primitiveID",                    7>;
+def DXBC_SystemValueName_InstanceId                     : I32EnumAttrCase<"instanceID",                     8>;
+def DXBC_SystemValueName_IsFrontFace                    : I32EnumAttrCase<"isFrontFace",                    9>;
+def DXBC_SystemValueName_SampleIndex                    : I32EnumAttrCase<"sampleIndex",                   10>;
+def DXBC_SystemValueName_FinalQuadUeq0EdgeTessFactor    : I32EnumAttrCase<"finalQuadUeq0EdgeTessFactor",   11>;
+def DXBC_SystemValueName_FinalQuadVeq0EdgeTessFactor    : I32EnumAttrCase<"finalQuadVeq0EdgeTessFactor",   12>;
+def DXBC_SystemValueName_FinalQuadUeq1EdgeTessFactor    : I32EnumAttrCase<"finalQuadUeq1EdgeTessFactor",   13>;
+def DXBC_SystemValueName_FinalQuadVeq1EdgeTessFactor    : I32EnumAttrCase<"finalQuadVeq1EdgeTessFactor",   14>;
+def DXBC_SystemValueName_FinalQuadUInsideTessFactor     : I32EnumAttrCase<"finalQuadUInsideTessFactor",    15>;
+def DXBC_SystemValueName_FinalQuadVInsideTessFactor     : I32EnumAttrCase<"finalQuadVInsideTessFactor",    16>;
+def DXBC_SystemValueName_FinalTriUeq0EdgeTessFactor     : I32EnumAttrCase<"finalTriUeq0EdgeTessFactor",    17>;
+def DXBC_SystemValueName_FinalTriVeq0EdgeTessFactor     : I32EnumAttrCase<"finalTriVeq0EdgeTessFactor",    18>;
+def DXBC_SystemValueName_FinalTriWeq0EdgeTessFactor     : I32EnumAttrCase<"finalTriWeq0EdgeTessFactor",    19>;
+def DXBC_SystemValueName_FinalTriInsideTessFactor       : I32EnumAttrCase<"finalTriInsideTessFactor",      20>;
+def DXBC_SystemValueName_FinalLineDetailTessFactor      : I32EnumAttrCase<"finalLineDetailTessFactor",     21>;
+def DXBC_SystemValueName_FinalLineDensityTessFactor     : I32EnumAttrCase<"finalLineDensityTessFactor",    22>;
+def DXBC_SystemValueName_Barycentrics                   : I32EnumAttrCase<"barycentrics",                  23>;
+def DXBC_SystemValueName_ShadingRate                    : I32EnumAttrCase<"shadingRate",                   24>;
+def DXBC_SystemValueName_CullPrimitive                  : I32EnumAttrCase<"cullPrimitive",                 25>;
+
+def DXBC_SystemValueName : I32EnumAttr<
+    "SystemValueName", "DXBC system interpreted/generated value name", [
+      DXBC_SystemValueName_Position,
+      DXBC_SystemValueName_ClipDistance,
+      DXBC_SystemValueName_CullDistance,
+      DXBC_SystemValueName_RenderTargetArrayIndex,
+      DXBC_SystemValueName_ViewportArrayIndex,
+      DXBC_SystemValueName_VertexId,
+      DXBC_SystemValueName_PrimitiveId,
+      DXBC_SystemValueName_InstanceId,
+      DXBC_SystemValueName_IsFrontFace,
+      DXBC_SystemValueName_SampleIndex,
+      DXBC_SystemValueName_FinalQuadUeq0EdgeTessFactor,
+      DXBC_SystemValueName_FinalQuadVeq0EdgeTessFactor,
+      DXBC_SystemValueName_FinalQuadUeq1EdgeTessFactor,
+      DXBC_SystemValueName_FinalQuadVeq1EdgeTessFactor,
+      DXBC_SystemValueName_FinalQuadUInsideTessFactor,
+      DXBC_SystemValueName_FinalQuadVInsideTessFactor,
+      DXBC_SystemValueName_FinalTriUeq0EdgeTessFactor,
+      DXBC_SystemValueName_FinalTriVeq0EdgeTessFactor,
+      DXBC_SystemValueName_FinalTriWeq0EdgeTessFactor,
+      DXBC_SystemValueName_FinalTriInsideTessFactor,
+      DXBC_SystemValueName_FinalLineDetailTessFactor,
+      DXBC_SystemValueName_FinalLineDensityTessFactor,
+      DXBC_SystemValueName_Barycentrics,
+      DXBC_SystemValueName_ShadingRate,
+      DXBC_SystemValueName_CullPrimitive
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_SystemValueNameAttr :
+    EnumAttr<DXBCDialect, DXBC_SystemValueName, "system_value_name"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC op definitions
 //===----------------------------------------------------------------------===//
@@ -389,6 +479,59 @@ def DXBC_DclInputPrimitive : DXBC_Op<"dcl_input_primitive"> {
   }];
   let arguments = (ins DXBC_InputPrimitiveAttr:$type);
   let assemblyFormat = "$type attr-dict";
+}
+
+def DXBC_DclInputPs : DXBC_Op<"dcl_input_ps"> {
+  let summary = "declares a pixel shader input";
+  let description = [{
+    The `dxbc.dcl_input_ps` operation declares a pixel shader input
+    with the given attribute interpolation mode.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_input_ps linear %v0
+    ```
+  }];
+  let arguments = (ins DXBC_InterpolationModeAttr:$mode,
+                       DXBC_OperandType:$operand);
+  let assemblyFormat = "$mode $operand attr-dict";
+}
+
+def DXBC_DclInputPsSiv : DXBC_Op<"dcl_input_ps_siv"> {
+  let summary = "declares a pixel shader system-interpreted input";
+  let description = [{
+    The `dxbc.dcl_input_ps_siv` operation declares a pixel shader input
+    that receives a System Interpreted Value, with the given attribute
+    interpolation mode.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_input_ps_siv linear %v0, position
+    ```
+  }];
+  let arguments = (ins DXBC_InterpolationModeAttr:$mode,
+                       DXBC_OperandType:$operand,
+                       DXBC_SystemValueNameAttr:$name);
+  let assemblyFormat = "$mode $operand `,` $name attr-dict";
+}
+
+def DXBC_DclInputPsSgv : DXBC_Op<"dcl_input_ps_sgv"> {
+  let summary = "declares a pixel shader system-generated input";
+  let description = [{
+    The `dxbc.dcl_input_ps_sgv` operation declares a pixel shader input
+    that receives a System Generated Value.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_input_ps_sgv %v0, sampleIndex
+    ```
+  }];
+  let arguments = (ins DXBC_OperandType:$operand,
+                       DXBC_SystemValueNameAttr:$name);
+  let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
 #endif // DXBC_OPS
