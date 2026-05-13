@@ -99,6 +99,7 @@ def DXSA_OperandImm : DXSA_Op<"operand.imm"> {
   let arguments = (ins AnyAttrOf<[I32ElementsAttr, I64ElementsAttr]>:$imm);
   let results = (outs DXSA_OperandType:$operand);
   let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
 }
 
 def DXSA_IndexImm : DXSA_Op<"index.imm"> {

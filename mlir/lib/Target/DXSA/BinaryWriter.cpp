@@ -230,12 +230,11 @@ public:
     if (values.size() == 1) {
       token |=
           ENCODE_D3D10_SB_OPERAND_NUM_COMPONENTS(D3D10_SB_OPERAND_1_COMPONENT);
-    } else if (values.size() == 4) {
+    } else {
+      assert(values.size() == 4 &&
+             "immediate operand should be either 1- or 4- component");
       token |=
           ENCODE_D3D10_SB_OPERAND_NUM_COMPONENTS(D3D10_SB_OPERAND_4_COMPONENT);
-    } else {
-      return emitError(op.getLoc(),
-                       "immediate operand should be either 1- or 4- component");
     }
 
     buffer.push_back(token);
@@ -255,13 +254,12 @@ public:
       return success();
     }
 
-    if (attr.getType().isInteger(64)) {
-      buffer.push_back(value >> 32);
-      buffer.push_back(value);
-      return success();
-    }
+    assert(attr.getType().isInteger(64) &&
+           "invalid type of an immediate index");
 
-    return emitError(op.getLoc(), "invalid type of an immediate index");
+    buffer.push_back(value >> 32);
+    buffer.push_back(value);
+    return success();
   }
 
   // Emit an operand used as an index.

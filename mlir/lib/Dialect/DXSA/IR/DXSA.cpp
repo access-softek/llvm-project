@@ -52,6 +52,20 @@ LogicalResult Operand::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// OperandImm
+//===----------------------------------------------------------------------===//
+
+LogicalResult OperandImm::verify() {
+  auto attr = cast<DenseIntElementsAttr>(getImm());
+  uint32_t numComponents = attr.getNumElements();
+
+  if (numComponents != 1 && numComponents != 4)
+    return emitOpError("immediate operand should be either 1- or 4- component");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DclGlobalFlags
 //===----------------------------------------------------------------------===//
 
