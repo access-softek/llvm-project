@@ -43,6 +43,11 @@ LogicalResult Operand::verify() {
     if (swizzle->getNumElements() != 4)
       return emitOpError("invalid number of swizzle values");
   }
+
+  uint32_t numComponents = getNumComponents();
+  if (numComponents != 0 && numComponents != 1 && numComponents != 4)
+    return emitOpError("invalid number of components");
+
   return success();
 }
 

@@ -155,9 +155,6 @@ public:
       }
       break;
     }
-    default: {
-      return emitError(op.getLoc(), "invalid number of components");
-    }
     }
 
     // Operand token encodes types and number of indices that follow
