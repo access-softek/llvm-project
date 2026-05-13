@@ -78,11 +78,7 @@ public:
   Printer(raw_ostream &output) : outs(output) { initOpClassMap(opClass); }
 
   LogicalResult emitModule(ModuleOp source) {
-    Region &region = source.getRegion();
-    if (!region.hasOneBlock())
-      return emitError(region.getLoc(), "region should contain only one block");
-
-    for (auto &op : region.front()) {
+    for (auto &op : *source.getBody()) {
       if (auto inst = dyn_cast<dxsa::Instruction>(op)) {
         if (failed(emitInstruction(inst)))
           return failure();
