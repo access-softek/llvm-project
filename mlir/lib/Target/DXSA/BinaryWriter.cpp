@@ -55,12 +55,7 @@ public:
   }
 
   LogicalResult emitModule(ModuleOp source) {
-    Region &region = source.getRegion();
-    if (!region.hasOneBlock()) {
-      return emitError(region.getLoc(), "region should contain only one block");
-    }
-
-    for (auto &op : region.front()) {
+    for (auto &op : *source.getBody()) {
       // Only handle instructions. Skip operands and indices - they
       // are emitted by emitInstruction for instructions that use
       // them.
