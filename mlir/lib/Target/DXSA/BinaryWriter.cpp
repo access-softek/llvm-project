@@ -93,9 +93,7 @@ public:
 
     for (Value value : inst.getOperands()) {
       Operation *op = value.getDefiningOp();
-      if (!op) {
-        return emitError(value.getLoc(), "undefined operand");
-      }
+      assert(op && "undefined operand");
 
       auto result =
           llvm::TypeSwitch<Operation &, LogicalResult>(*op)
@@ -148,9 +146,7 @@ public:
         for (const APInt &v : *swizzle) {
           values.push_back(v.getZExtValue());
         }
-        if (values.size() != 4) {
-          return emitError(op.getLoc(), "invalid number of swizzle values");
-        }
+	assert(values.size() == 4 && "invalid number of swizzle values");
         token |= ENCODE_D3D10_SB_OPERAND_4_COMPONENT_SELECTION_MODE(
             D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
         token |= ENCODE_D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE(

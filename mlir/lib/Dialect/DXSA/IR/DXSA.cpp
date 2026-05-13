@@ -35,6 +35,18 @@ void DXSADialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// Operand
+//===----------------------------------------------------------------------===//
+
+LogicalResult Operand::verify() {
+  if (auto swizzle = getSwizzle()) {
+    if (swizzle->getNumElements() != 4)
+      return emitOpError("invalid number of swizzle values");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DclGlobalFlags
 //===----------------------------------------------------------------------===//
 

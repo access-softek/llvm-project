@@ -87,6 +87,7 @@ def DXSA_Operand : DXSA_Op<"operand"> {
 		       OptionalAttr<I32Attr>:$non_uniform);
   let results = (outs DXSA_OperandType:$operand);
   let assemblyFormat = "$operands attr-dict";
+  let hasVerifier = 1;
 }
 
 def DXSA_OperandImm : DXSA_Op<"operand.imm"> {
