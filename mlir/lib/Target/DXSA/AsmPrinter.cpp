@@ -301,7 +301,7 @@ public:
           return emitIndexRelImm(index);
         })
         .Default([this](auto &op) {
-          return emitError(op.getLoc(), "invalid index kind,");
+          return emitError(op.getLoc(), "invalid index kind");
         });
   }
 
