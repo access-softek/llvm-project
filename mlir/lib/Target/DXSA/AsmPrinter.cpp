@@ -4,6 +4,7 @@
 #include "mlir/Target/DXSA/BinaryParser.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -274,17 +275,14 @@ public:
     if (printVec)
       outs << "l(";
 
-    StringRef separator = "";
-    for (const APInt &v : attr) {
-      outs << separator;
-      separator = ",";
-
+    interleaveComma(attr, outs, [isInt, this](const APInt &v) {
       uint32_t bits = v.getZExtValue();
       if (isInt)
         outs << bits;
       else
         write_double(outs, llvm::bit_cast<float>(bits), FloatStyle::Fixed, 6);
-    }
+    });
+
     if (printVec)
       outs << ")";
 
@@ -296,10 +294,9 @@ public:
         .Case<dxsa::IndexImm>(
             [this](auto index) { return emitIndexImm(index); })
         .Case<dxsa::IndexRel>(
-            [this](auto index) -> LogicalResult { return emitIndexRel(index); })
-        .Case<dxsa::IndexRelImm>([this](auto index) -> LogicalResult {
-          return emitIndexRelImm(index);
-        })
+            [this](auto index) { return emitIndexRel(index); })
+        .Case<dxsa::IndexRelImm>(
+            [this](auto index) { return emitIndexRelImm(index); })
         .Default([this](auto &op) {
           return emitError(op.getLoc(), "invalid index kind");
         });
