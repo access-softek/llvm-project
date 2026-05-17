@@ -11,6 +11,8 @@
 
 include "mlir/Dialect/DXBC/IR/DXBCDialect.td"
 include "mlir/Dialect/DXBC/IR/DXBCTypes.td"
+include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
@@ -254,6 +256,32 @@ def DXBC_SystemValueNameAttr :
 }
 
 //===----------------------------------------------------------------------===//
+// DXBC ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
+//===----------------------------------------------------------------------===//
+
+def DXBC_ComponentMask_X : I32BitEnumAttrCaseBit<"x", 0>;
+def DXBC_ComponentMask_Y : I32BitEnumAttrCaseBit<"y", 1>;
+def DXBC_ComponentMask_Z : I32BitEnumAttrCaseBit<"z", 2>;
+def DXBC_ComponentMask_W : I32BitEnumAttrCaseBit<"w", 3>;
+
+def DXBC_ComponentMask : I32BitEnumAttr<
+    "ComponentMask", "component mask (subset of x, y, z, w)", [
+      DXBC_ComponentMask_X,
+      DXBC_ComponentMask_Y,
+      DXBC_ComponentMask_Z,
+      DXBC_ComponentMask_W
+    ]> {
+  let separator = ", ";
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_ComponentMaskAttr :
+    EnumAttr<DXBCDialect, DXBC_ComponentMask, "component_mask"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DXBC op definitions
 //===----------------------------------------------------------------------===//
 
@@ -333,6 +361,127 @@ def DXBC_Instruction : DXBC_Op<"instruction"> {
   let arguments = (ins Variadic<DXBC_OperandType>:$operands, StrAttr:$mnemonic);
   let results = (outs);
   let assemblyFormat = "$mnemonic $operands attr-dict";
+}
+
+def DXBC_InlineOperandType_Temp                          : I32EnumAttrCase<"temp",                                  0>;
+def DXBC_InlineOperandType_Input                         : I32EnumAttrCase<"input",                                 1>;
+def DXBC_InlineOperandType_Output                        : I32EnumAttrCase<"output",                                2>;
+def DXBC_InlineOperandType_IndexableTemp                 : I32EnumAttrCase<"indexable_temp",                        3>;
+def DXBC_InlineOperandType_Immediate32                   : I32EnumAttrCase<"immediate32",                           4>;
+def DXBC_InlineOperandType_Immediate64                   : I32EnumAttrCase<"immediate64",                           5>;
+def DXBC_InlineOperandType_Sampler                       : I32EnumAttrCase<"sampler",                               6>;
+def DXBC_InlineOperandType_Resource                      : I32EnumAttrCase<"resource",                              7>;
+def DXBC_InlineOperandType_ConstantBuffer                : I32EnumAttrCase<"constant_buffer",                       8>;
+def DXBC_InlineOperandType_ImmediateConstantBuffer       : I32EnumAttrCase<"immediate_constant_buffer",             9>;
+def DXBC_InlineOperandType_Label                         : I32EnumAttrCase<"label",                                10>;
+def DXBC_InlineOperandType_InputPrimitiveId              : I32EnumAttrCase<"input_primitive_id",                   11>;
+def DXBC_InlineOperandType_OutputDepth                   : I32EnumAttrCase<"output_depth",                         12>;
+def DXBC_InlineOperandType_Null                          : I32EnumAttrCase<"null",                                 13>;
+def DXBC_InlineOperandType_Rasterizer                    : I32EnumAttrCase<"rasterizer",                           14>;
+def DXBC_InlineOperandType_OutputCoverageMask            : I32EnumAttrCase<"output_coverage_mask",                 15>;
+def DXBC_InlineOperandType_Stream                        : I32EnumAttrCase<"stream",                               16>;
+def DXBC_InlineOperandType_FunctionBody                  : I32EnumAttrCase<"function_body",                        17>;
+def DXBC_InlineOperandType_FunctionTable                 : I32EnumAttrCase<"function_table",                       18>;
+def DXBC_InlineOperandType_Interface                     : I32EnumAttrCase<"interface",                            19>;
+def DXBC_InlineOperandType_FunctionInput                 : I32EnumAttrCase<"function_input",                       20>;
+def DXBC_InlineOperandType_FunctionOutput                : I32EnumAttrCase<"function_output",                      21>;
+def DXBC_InlineOperandType_OutputControlPointId          : I32EnumAttrCase<"output_control_point_id",              22>;
+def DXBC_InlineOperandType_InputForkInstanceId           : I32EnumAttrCase<"input_fork_instance_id",               23>;
+def DXBC_InlineOperandType_InputJoinInstanceId           : I32EnumAttrCase<"input_join_instance_id",               24>;
+def DXBC_InlineOperandType_InputControlPoint             : I32EnumAttrCase<"input_control_point",                  25>;
+def DXBC_InlineOperandType_OutputControlPoint            : I32EnumAttrCase<"output_control_point",                 26>;
+def DXBC_InlineOperandType_InputPatchConstant            : I32EnumAttrCase<"input_patch_constant",                 27>;
+def DXBC_InlineOperandType_InputDomainPoint              : I32EnumAttrCase<"input_domain_point",                   28>;
+def DXBC_InlineOperandType_ThisPointer                   : I32EnumAttrCase<"this_pointer",                         29>;
+def DXBC_InlineOperandType_Uav                           : I32EnumAttrCase<"uav",                                  30>;
+def DXBC_InlineOperandType_ThreadGroupSharedMemory       : I32EnumAttrCase<"thread_group_shared_memory",           31>;
+def DXBC_InlineOperandType_InputThreadId                 : I32EnumAttrCase<"input_thread_id",                      32>;
+def DXBC_InlineOperandType_InputThreadGroupId            : I32EnumAttrCase<"input_thread_group_id",                33>;
+def DXBC_InlineOperandType_InputThreadIdInGroup          : I32EnumAttrCase<"input_thread_id_in_group",             34>;
+def DXBC_InlineOperandType_InputCoverageMask             : I32EnumAttrCase<"input_coverage_mask",                  35>;
+def DXBC_InlineOperandType_InputThreadIdInGroupFlattened : I32EnumAttrCase<"input_thread_id_in_group_flattened",   36>;
+def DXBC_InlineOperandType_InputGsInstanceId             : I32EnumAttrCase<"input_gs_instance_id",                 37>;
+def DXBC_InlineOperandType_OutputDepthGe                 : I32EnumAttrCase<"output_depth_ge",                      38>;
+def DXBC_InlineOperandType_OutputDepthLe                 : I32EnumAttrCase<"output_depth_le",                      39>;
+def DXBC_InlineOperandType_CycleCounter                  : I32EnumAttrCase<"cycle_counter",                        40>;
+def DXBC_InlineOperandType_OutputStencilRef              : I32EnumAttrCase<"output_stencil_ref",                   41>;
+def DXBC_InlineOperandType_InnerCoverage                 : I32EnumAttrCase<"inner_coverage",                       42>;
+
+def DXBC_InlineOperandType : I32EnumAttr<
+    "InlineOperandType", "operand type", [
+      DXBC_InlineOperandType_Temp,
+      DXBC_InlineOperandType_Input,
+      DXBC_InlineOperandType_Output,
+      DXBC_InlineOperandType_IndexableTemp,
+      DXBC_InlineOperandType_Immediate32,
+      DXBC_InlineOperandType_Immediate64,
+      DXBC_InlineOperandType_Sampler,
+      DXBC_InlineOperandType_Resource,
+      DXBC_InlineOperandType_ConstantBuffer,
+      DXBC_InlineOperandType_ImmediateConstantBuffer,
+      DXBC_InlineOperandType_Label,
+      DXBC_InlineOperandType_InputPrimitiveId,
+      DXBC_InlineOperandType_OutputDepth,
+      DXBC_InlineOperandType_Null,
+      DXBC_InlineOperandType_Rasterizer,
+      DXBC_InlineOperandType_OutputCoverageMask,
+      DXBC_InlineOperandType_Stream,
+      DXBC_InlineOperandType_FunctionBody,
+      DXBC_InlineOperandType_FunctionTable,
+      DXBC_InlineOperandType_Interface,
+      DXBC_InlineOperandType_FunctionInput,
+      DXBC_InlineOperandType_FunctionOutput,
+      DXBC_InlineOperandType_OutputControlPointId,
+      DXBC_InlineOperandType_InputForkInstanceId,
+      DXBC_InlineOperandType_InputJoinInstanceId,
+      DXBC_InlineOperandType_InputControlPoint,
+      DXBC_InlineOperandType_OutputControlPoint,
+      DXBC_InlineOperandType_InputPatchConstant,
+      DXBC_InlineOperandType_InputDomainPoint,
+      DXBC_InlineOperandType_ThisPointer,
+      DXBC_InlineOperandType_Uav,
+      DXBC_InlineOperandType_ThreadGroupSharedMemory,
+      DXBC_InlineOperandType_InputThreadId,
+      DXBC_InlineOperandType_InputThreadGroupId,
+      DXBC_InlineOperandType_InputThreadIdInGroup,
+      DXBC_InlineOperandType_InputCoverageMask,
+      DXBC_InlineOperandType_InputThreadIdInGroupFlattened,
+      DXBC_InlineOperandType_InputGsInstanceId,
+      DXBC_InlineOperandType_OutputDepthGe,
+      DXBC_InlineOperandType_OutputDepthLe,
+      DXBC_InlineOperandType_CycleCounter,
+      DXBC_InlineOperandType_OutputStencilRef,
+      DXBC_InlineOperandType_InnerCoverage
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_InlineOperandAttr : AttrDef<DXBCDialect, "InlineOperand"> {
+  let mnemonic = "inline_operand";
+  let summary = "inline operand of an instruction";
+  let description = [{
+    The `#dxbc.inline_operand` attribute carries a fully decoded operand token
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_output <type = output, components = 4, mask = <x, y, z, w>, index = [0]>
+    dxbc.dcl_output <type = output_depth, components = 1>
+    ```
+  }];
+  let parameters = (ins
+      EnumParameter<DXBC_InlineOperandType>:$type,
+      "uint32_t":$components,
+      OptionalParameter<"::mlir::dxbc::ComponentMaskAttr">:$mask,
+      OptionalParameter<"::mlir::DenseI64ArrayAttr">:$index);
+  let assemblyFormat = [{
+    `<` `type` `=` $type
+        `,` `components` `=` $components
+        (`,` `mask` `=` $mask^)?
+        (`,` `index` `=` $index^)?
+    `>`
+  }];
 }
 
 def DXBC_DclGlobalFlags : DXBC_Op<"dcl_global_flags"> {
@@ -545,11 +694,10 @@ def DXBC_DclInput : DXBC_Op<"dcl_input"> {
     Example:
 
     ```mlir
-
-    dxbc.dcl_input %v0
+    dxbc.dcl_input <type = input, components = 4, mask = <x>, index = [0]>
     ```
   }];
-  let arguments = (ins DXBC_OperandType:$operand);
+  let arguments = (ins DXBC_InlineOperandAttr:$operand);
   let assemblyFormat = "$operand attr-dict";
 }
 
@@ -564,10 +712,10 @@ def DXBC_DclOutput : DXBC_Op<"dcl_output"> {
     Example:
 
     ```mlir
-    dxbc.dcl_output %o0
+    dxbc.dcl_output <type = output, components = 4, mask = <x, y, z, w>, index = [0]>
     ```
   }];
-  let arguments = (ins DXBC_OperandType:$operand);
+  let arguments = (ins DXBC_InlineOperandAttr:$operand);
   let assemblyFormat = "$operand attr-dict";
 }
 
