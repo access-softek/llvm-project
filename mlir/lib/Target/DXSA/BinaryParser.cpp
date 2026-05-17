@@ -30,6 +30,10 @@ using UINT = unsigned int;
 using namespace mlir;
 using namespace llvm;
 
+#define FAILURE_IF_FAILED(RES)                                                 \
+  if (failed(RES))                                                             \
+    return failure();
+
 enum OpcodeClass {
   D3D10_SB_FLOAT_OP,
   D3D10_SB_INT_OP,
@@ -400,6 +404,19 @@ struct OperandComponents {
   };
 };
 
+static dxsa::ComponentMask decodeComponentMask(uint32_t rawComponentMask) {
+  auto componentMask = static_cast<dxsa::ComponentMask>(0);
+  if (rawComponentMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_X)
+    componentMask |= dxsa::ComponentMask::x;
+  if (rawComponentMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_Y)
+    componentMask |= dxsa::ComponentMask::y;
+  if (rawComponentMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_Z)
+    componentMask |= dxsa::ComponentMask::z;
+  if (rawComponentMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_W)
+    componentMask |= dxsa::ComponentMask::w;
+  return componentMask;
+}
+
 class DXBuilder {
 public:
   DXBuilder(MLIRContext *context, StringAttr name)
@@ -597,11 +614,24 @@ public:
                                        systemValueNameAttr);
   }
 
-  Instruction buildDclInput(Operand operand, Location loc) {
+  dxsa::InlineOperandAttr buildInlineOperandAttr(
+      dxsa::InlineOperandType operandType, uint32_t components,
+      std::optional<dxsa::ComponentMask> mask, ArrayRef<int64_t> indexArray) {
+    auto *ctx = builder.getContext();
+    auto maskAttr = mask ? dxsa::ComponentMaskAttr::get(ctx, *mask)
+                         : dxsa::ComponentMaskAttr();
+    auto indexAttr = indexArray.empty()
+                         ? DenseI64ArrayAttr()
+                         : DenseI64ArrayAttr::get(ctx, indexArray);
+    return dxsa::InlineOperandAttr::get(ctx, operandType, components, maskAttr,
+                                        indexAttr);
+  }
+
+  Instruction buildDclInput(dxsa::InlineOperandAttr operand, Location loc) {
     return dxsa::DclInput::create(builder, loc, operand);
   }
 
-  Instruction buildDclOutput(Operand operand, Location loc) {
+  Instruction buildDclOutput(dxsa::InlineOperandAttr operand, Location loc) {
     return dxsa::DclOutput::create(builder, loc, operand);
   }
 
@@ -1084,17 +1114,63 @@ public:
     return builder.buildDclInputPsSgv(*operand, *systemValueName, loc);
   }
 
+  FailureOr<dxsa::InlineOperandAttr> parseInlineOperand() {
+    auto token = parseToken();
+    FAILURE_IF_FAILED(token);
+
+    auto rawOperandType = DECODE_D3D10_SB_OPERAND_TYPE(*token);
+    auto isExtended = DECODE_IS_D3D10_SB_OPERAND_EXTENDED(*token);
+    auto loc = getLocation();
+
+    if (isImmOperand(*token))
+      return emitError(loc, "immediate operand is not supported yet");
+
+    auto type = dxsa::symbolizeInlineOperandType(rawOperandType);
+    if (!type)
+      return emitError(loc, "unknown operand type: ") << rawOperandType;
+
+    auto components = parseOperandComponents(*token);
+    FAILURE_IF_FAILED(components);
+
+    auto indexTypes = parseOperandIndexTypes(*token);
+    FAILURE_IF_FAILED(indexTypes);
+
+    if (isExtended)
+      return emitError(loc, "extended operand tokens are not yet supported in "
+                            "inline operand attribute");
+
+    if (components->kind == OperandComponentsKind::Swizzle ||
+        components->kind == OperandComponentsKind::One)
+      return emitError(loc, "swizzled / single-component operand selection is "
+                            "not supported in inline operand attribute");
+
+    std::optional<dxsa::ComponentMask> mask;
+    if (components->kind == OperandComponentsKind::Mask)
+      mask = decodeComponentMask(components->mask);
+
+    SmallVector<int64_t, 3> indices;
+    for (auto indexType : *indexTypes) {
+      if (indexType != D3D10_SB_OPERAND_INDEX_IMMEDIATE32)
+        return emitError(getLocation(), "unsupported index representation: ")
+               << indexType;
+      auto value = parseToken();
+      FAILURE_IF_FAILED(value);
+      indices.push_back(static_cast<int32_t>(*value));
+    }
+
+    return builder.buildInlineOperandAttr(*type, components->num, mask,
+                                          indices);
+  }
+
   FailureOr<Instruction> parseDclInput(Location loc) {
-    auto operand = parseOperand();
-    if (failed(operand))
-      return failure();
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
     return builder.buildDclInput(*operand, loc);
   }
 
   FailureOr<Instruction> parseDclOutput(Location loc) {
-    auto operand = parseOperand();
-    if (failed(operand))
-      return failure();
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
     return builder.buildDclOutput(*operand, loc);
   }
 

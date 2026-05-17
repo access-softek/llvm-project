@@ -11,6 +11,8 @@
 
 include "mlir/Dialect/DXSA/IR/DXSADialect.td"
 include "mlir/Dialect/DXSA/IR/DXSATypes.td"
+include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
@@ -254,6 +256,32 @@ def DXSA_SystemValueNameAttr :
 }
 
 //===----------------------------------------------------------------------===//
+// DXSA ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
+//===----------------------------------------------------------------------===//
+
+def DXSA_ComponentMask_X : I32BitEnumAttrCaseBit<"x", 0>;
+def DXSA_ComponentMask_Y : I32BitEnumAttrCaseBit<"y", 1>;
+def DXSA_ComponentMask_Z : I32BitEnumAttrCaseBit<"z", 2>;
+def DXSA_ComponentMask_W : I32BitEnumAttrCaseBit<"w", 3>;
+
+def DXSA_ComponentMask : I32BitEnumAttr<
+    "ComponentMask", "component mask (subset of x, y, z, w)", [
+      DXSA_ComponentMask_X,
+      DXSA_ComponentMask_Y,
+      DXSA_ComponentMask_Z,
+      DXSA_ComponentMask_W
+    ]> {
+  let separator = ", ";
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_ComponentMaskAttr :
+    EnumAttr<DXSADialect, DXSA_ComponentMask, "component_mask"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DXSA op definitions
 //===----------------------------------------------------------------------===//
 
@@ -333,6 +361,127 @@ def DXSA_Instruction : DXSA_Op<"instruction"> {
   let arguments = (ins Variadic<DXSA_OperandType>:$operands, StrAttr:$mnemonic);
   let results = (outs);
   let assemblyFormat = "$mnemonic $operands attr-dict";
+}
+
+def DXSA_InlineOperandType_Temp                          : I32EnumAttrCase<"temp",                                  0>;
+def DXSA_InlineOperandType_Input                         : I32EnumAttrCase<"input",                                 1>;
+def DXSA_InlineOperandType_Output                        : I32EnumAttrCase<"output",                                2>;
+def DXSA_InlineOperandType_IndexableTemp                 : I32EnumAttrCase<"indexable_temp",                        3>;
+def DXSA_InlineOperandType_Immediate32                   : I32EnumAttrCase<"immediate32",                           4>;
+def DXSA_InlineOperandType_Immediate64                   : I32EnumAttrCase<"immediate64",                           5>;
+def DXSA_InlineOperandType_Sampler                       : I32EnumAttrCase<"sampler",                               6>;
+def DXSA_InlineOperandType_Resource                      : I32EnumAttrCase<"resource",                              7>;
+def DXSA_InlineOperandType_ConstantBuffer                : I32EnumAttrCase<"constant_buffer",                       8>;
+def DXSA_InlineOperandType_ImmediateConstantBuffer       : I32EnumAttrCase<"immediate_constant_buffer",             9>;
+def DXSA_InlineOperandType_Label                         : I32EnumAttrCase<"label",                                10>;
+def DXSA_InlineOperandType_InputPrimitiveId              : I32EnumAttrCase<"input_primitive_id",                   11>;
+def DXSA_InlineOperandType_OutputDepth                   : I32EnumAttrCase<"output_depth",                         12>;
+def DXSA_InlineOperandType_Null                          : I32EnumAttrCase<"null",                                 13>;
+def DXSA_InlineOperandType_Rasterizer                    : I32EnumAttrCase<"rasterizer",                           14>;
+def DXSA_InlineOperandType_OutputCoverageMask            : I32EnumAttrCase<"output_coverage_mask",                 15>;
+def DXSA_InlineOperandType_Stream                        : I32EnumAttrCase<"stream",                               16>;
+def DXSA_InlineOperandType_FunctionBody                  : I32EnumAttrCase<"function_body",                        17>;
+def DXSA_InlineOperandType_FunctionTable                 : I32EnumAttrCase<"function_table",                       18>;
+def DXSA_InlineOperandType_Interface                     : I32EnumAttrCase<"interface",                            19>;
+def DXSA_InlineOperandType_FunctionInput                 : I32EnumAttrCase<"function_input",                       20>;
+def DXSA_InlineOperandType_FunctionOutput                : I32EnumAttrCase<"function_output",                      21>;
+def DXSA_InlineOperandType_OutputControlPointId          : I32EnumAttrCase<"output_control_point_id",              22>;
+def DXSA_InlineOperandType_InputForkInstanceId           : I32EnumAttrCase<"input_fork_instance_id",               23>;
+def DXSA_InlineOperandType_InputJoinInstanceId           : I32EnumAttrCase<"input_join_instance_id",               24>;
+def DXSA_InlineOperandType_InputControlPoint             : I32EnumAttrCase<"input_control_point",                  25>;
+def DXSA_InlineOperandType_OutputControlPoint            : I32EnumAttrCase<"output_control_point",                 26>;
+def DXSA_InlineOperandType_InputPatchConstant            : I32EnumAttrCase<"input_patch_constant",                 27>;
+def DXSA_InlineOperandType_InputDomainPoint              : I32EnumAttrCase<"input_domain_point",                   28>;
+def DXSA_InlineOperandType_ThisPointer                   : I32EnumAttrCase<"this_pointer",                         29>;
+def DXSA_InlineOperandType_Uav                           : I32EnumAttrCase<"uav",                                  30>;
+def DXSA_InlineOperandType_ThreadGroupSharedMemory       : I32EnumAttrCase<"thread_group_shared_memory",           31>;
+def DXSA_InlineOperandType_InputThreadId                 : I32EnumAttrCase<"input_thread_id",                      32>;
+def DXSA_InlineOperandType_InputThreadGroupId            : I32EnumAttrCase<"input_thread_group_id",                33>;
+def DXSA_InlineOperandType_InputThreadIdInGroup          : I32EnumAttrCase<"input_thread_id_in_group",             34>;
+def DXSA_InlineOperandType_InputCoverageMask             : I32EnumAttrCase<"input_coverage_mask",                  35>;
+def DXSA_InlineOperandType_InputThreadIdInGroupFlattened : I32EnumAttrCase<"input_thread_id_in_group_flattened",   36>;
+def DXSA_InlineOperandType_InputGsInstanceId             : I32EnumAttrCase<"input_gs_instance_id",                 37>;
+def DXSA_InlineOperandType_OutputDepthGe                 : I32EnumAttrCase<"output_depth_ge",                      38>;
+def DXSA_InlineOperandType_OutputDepthLe                 : I32EnumAttrCase<"output_depth_le",                      39>;
+def DXSA_InlineOperandType_CycleCounter                  : I32EnumAttrCase<"cycle_counter",                        40>;
+def DXSA_InlineOperandType_OutputStencilRef              : I32EnumAttrCase<"output_stencil_ref",                   41>;
+def DXSA_InlineOperandType_InnerCoverage                 : I32EnumAttrCase<"inner_coverage",                       42>;
+
+def DXSA_InlineOperandType : I32EnumAttr<
+    "InlineOperandType", "operand type", [
+      DXSA_InlineOperandType_Temp,
+      DXSA_InlineOperandType_Input,
+      DXSA_InlineOperandType_Output,
+      DXSA_InlineOperandType_IndexableTemp,
+      DXSA_InlineOperandType_Immediate32,
+      DXSA_InlineOperandType_Immediate64,
+      DXSA_InlineOperandType_Sampler,
+      DXSA_InlineOperandType_Resource,
+      DXSA_InlineOperandType_ConstantBuffer,
+      DXSA_InlineOperandType_ImmediateConstantBuffer,
+      DXSA_InlineOperandType_Label,
+      DXSA_InlineOperandType_InputPrimitiveId,
+      DXSA_InlineOperandType_OutputDepth,
+      DXSA_InlineOperandType_Null,
+      DXSA_InlineOperandType_Rasterizer,
+      DXSA_InlineOperandType_OutputCoverageMask,
+      DXSA_InlineOperandType_Stream,
+      DXSA_InlineOperandType_FunctionBody,
+      DXSA_InlineOperandType_FunctionTable,
+      DXSA_InlineOperandType_Interface,
+      DXSA_InlineOperandType_FunctionInput,
+      DXSA_InlineOperandType_FunctionOutput,
+      DXSA_InlineOperandType_OutputControlPointId,
+      DXSA_InlineOperandType_InputForkInstanceId,
+      DXSA_InlineOperandType_InputJoinInstanceId,
+      DXSA_InlineOperandType_InputControlPoint,
+      DXSA_InlineOperandType_OutputControlPoint,
+      DXSA_InlineOperandType_InputPatchConstant,
+      DXSA_InlineOperandType_InputDomainPoint,
+      DXSA_InlineOperandType_ThisPointer,
+      DXSA_InlineOperandType_Uav,
+      DXSA_InlineOperandType_ThreadGroupSharedMemory,
+      DXSA_InlineOperandType_InputThreadId,
+      DXSA_InlineOperandType_InputThreadGroupId,
+      DXSA_InlineOperandType_InputThreadIdInGroup,
+      DXSA_InlineOperandType_InputCoverageMask,
+      DXSA_InlineOperandType_InputThreadIdInGroupFlattened,
+      DXSA_InlineOperandType_InputGsInstanceId,
+      DXSA_InlineOperandType_OutputDepthGe,
+      DXSA_InlineOperandType_OutputDepthLe,
+      DXSA_InlineOperandType_CycleCounter,
+      DXSA_InlineOperandType_OutputStencilRef,
+      DXSA_InlineOperandType_InnerCoverage
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_InlineOperandAttr : AttrDef<DXSADialect, "InlineOperand"> {
+  let mnemonic = "inline_operand";
+  let summary = "inline operand of an instruction";
+  let description = [{
+    The `#dxsa.inline_operand` attribute carries a fully decoded operand token
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_output <type = output, components = 4, mask = <x, y, z, w>, index = [0]>
+    dxsa.dcl_output <type = output_depth, components = 1>
+    ```
+  }];
+  let parameters = (ins
+      EnumParameter<DXSA_InlineOperandType>:$type,
+      "uint32_t":$components,
+      OptionalParameter<"::mlir::dxsa::ComponentMaskAttr">:$mask,
+      OptionalParameter<"::mlir::DenseI64ArrayAttr">:$index);
+  let assemblyFormat = [{
+    `<` `type` `=` $type
+        `,` `components` `=` $components
+        (`,` `mask` `=` $mask^)?
+        (`,` `index` `=` $index^)?
+    `>`
+  }];
 }
 
 def DXSA_DclGlobalFlags : DXSA_Op<"dcl_global_flags"> {
@@ -545,11 +694,10 @@ def DXSA_DclInput : DXSA_Op<"dcl_input"> {
     Example:
 
     ```mlir
-
-    dxsa.dcl_input %v0
+    dxsa.dcl_input <type = input, components = 4, mask = <x>, index = [0]>
     ```
   }];
-  let arguments = (ins DXSA_OperandType:$operand);
+  let arguments = (ins DXSA_InlineOperandAttr:$operand);
   let assemblyFormat = "$operand attr-dict";
 }
 
@@ -564,10 +712,10 @@ def DXSA_DclOutput : DXSA_Op<"dcl_output"> {
     Example:
 
     ```mlir
-    dxsa.dcl_output %o0
+    dxsa.dcl_output <type = output, components = 4, mask = <x, y, z, w>, index = [0]>
     ```
   }];
-  let arguments = (ins DXSA_OperandType:$operand);
+  let arguments = (ins DXSA_InlineOperandAttr:$operand);
   let assemblyFormat = "$operand attr-dict";
 }
 
