@@ -692,6 +692,18 @@ public:
         builder.getI32IntegerAttr(structCount));
   }
 
+  Instruction buildDclConstantBuffer(
+      uint32_t id, uint32_t size, std::optional<uint32_t> lbound,
+      std::optional<uint32_t> ubound, std::optional<uint32_t> space,
+      dxsa::ConstantBufferAccessPattern accessPattern, Location loc) {
+    auto optionalToAttr = [&](std::optional<uint32_t> v) -> IntegerAttr {
+      return v ? builder.getI32IntegerAttr(*v) : IntegerAttr();
+    };
+    return dxsa::DclConstantBuffer::create(
+        builder, loc, id, size, optionalToAttr(lbound), optionalToAttr(ubound),
+        optionalToAttr(space), accessPattern);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1317,6 +1329,63 @@ public:
                                           *structCount, loc);
   }
 
+  FailureOr<Instruction> parseDclConstantBuffer(uint32_t opcodeToken,
+                                                Location loc) {
+    auto rawAccessPattern =
+        DECODE_D3D10_SB_CONSTANT_BUFFER_ACCESS_PATTERN(opcodeToken);
+    auto accessPattern =
+        dxsa::symbolizeConstantBufferAccessPattern(rawAccessPattern);
+    if (!accessPattern)
+      return emitError(loc, "unknown constant buffer access pattern: ")
+             << rawAccessPattern;
+
+    auto operandToken = parseToken();
+    FAILURE_IF_FAILED(operandToken);
+
+    auto operandType = DECODE_D3D10_SB_OPERAND_TYPE(*operandToken);
+    if (operandType != D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER)
+      return emitError(loc, "unexpected operand type: ") << operandType;
+
+    if (DECODE_IS_D3D10_SB_OPERAND_EXTENDED(*operandToken))
+      return emitError(loc, "extended operand tokens are not supported");
+
+    auto indexDim = DECODE_D3D10_SB_OPERAND_INDEX_DIMENSION(*operandToken);
+    if (indexDim != D3D10_SB_OPERAND_INDEX_2D &&
+        indexDim != D3D10_SB_OPERAND_INDEX_3D)
+      return emitError(loc, "unsupported index dimension: ") << indexDim;
+
+    SmallVector<uint32_t, 3> indices;
+    indices.reserve(indexDim);
+    for (uint32_t i = 0; i < indexDim; ++i) {
+      auto indexRepesentation =
+          DECODE_D3D10_SB_OPERAND_INDEX_REPRESENTATION(i, *operandToken);
+      if (indexRepesentation != D3D10_SB_OPERAND_INDEX_IMMEDIATE32)
+        return emitError(loc, "unsupported index representation: ")
+               << indexRepesentation;
+      auto value = parseToken();
+      FAILURE_IF_FAILED(value);
+      indices.push_back(*value);
+    }
+
+    switch (indexDim) {
+    case D3D10_SB_OPERAND_INDEX_2D:
+      return builder.buildDclConstantBuffer(
+          /*id=*/indices[0], /*size=*/indices[1], /*lbound=*/std::nullopt,
+          /*ubound=*/std::nullopt, /*space=*/std::nullopt, *accessPattern, loc);
+    case D3D10_SB_OPERAND_INDEX_3D: {
+      auto sizeToken = parseToken();
+      FAILURE_IF_FAILED(sizeToken);
+      auto spaceToken = parseToken();
+      FAILURE_IF_FAILED(spaceToken);
+      return builder.buildDclConstantBuffer(
+          /*id=*/indices[0], /*size=*/*sizeToken, /*lbound=*/indices[1],
+          /*ubound=*/indices[2], /*space=*/*spaceToken, *accessPattern, loc);
+    }
+    default:
+      llvm_unreachable("indexDim was validated above");
+    }
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1392,6 +1461,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_THREAD_GROUP_SHARED_MEMORY_STRUCTURED:
       result = parseDclTgsmStructured(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
+      result = parseDclConstantBuffer(opcodeToken, loc);
       break;
     default:
       return std::nullopt;
