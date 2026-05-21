@@ -84,6 +84,15 @@ LogicalResult DclTgsmStructured::verify() {
   return success();
 }
 
+LogicalResult DclConstantBuffer::verify() {
+  auto lbound = getLbound();
+  auto ubound = getUbound();
+  if (lbound && ubound && *lbound > *ubound)
+    return emitOpError("expected lbound <= ubound, got lbound=")
+           << *lbound << ", ubound=" << *ubound;
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd attribute method definitions
 //===----------------------------------------------------------------------===//

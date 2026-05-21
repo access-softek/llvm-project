@@ -281,6 +281,24 @@ def DXBC_ComponentMaskAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def DXBC_ConstantBufferAccessPattern_ImmediateIndexed : I32EnumAttrCase<"immediateIndexed", 0>;
+def DXBC_ConstantBufferAccessPattern_DynamicIndexed   : I32EnumAttrCase<"dynamicIndexed",   1>;
+
+def DXBC_ConstantBufferAccessPattern : I32EnumAttr<
+    "ConstantBufferAccessPattern", "constant buffer access pattern", [
+      DXBC_ConstantBufferAccessPattern_ImmediateIndexed,
+      DXBC_ConstantBufferAccessPattern_DynamicIndexed
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_ConstantBufferAccessPatternAttr :
+    EnumAttr<DXBCDialect, DXBC_ConstantBufferAccessPattern,
+             "constant_buffer_access_pattern"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC attribute Constraints
 //===----------------------------------------------------------------------===//
@@ -919,6 +937,35 @@ def DXBC_DclTgsmStructured : DXBC_Op<"dcl_tgsm_structured"> {
                            [IntPositive, IntMaxValue<8192>]>:$struct_count);
   let assemblyFormat =
       "$operand `,` $struct_byte_stride `,` $struct_count attr-dict";
+  let hasVerifier = 1;
+}
+
+def DXBC_DclConstantBuffer : DXBC_Op<"dcl_constant_buffer"> {
+  let summary = "declares a constant buffer";
+  let description = [{
+    The `dxbc.dcl_constant_buffer` operation declares a constant buffer
+    with its access pattern.
+
+    Examples:
+
+    ```mlir
+    dxbc.dcl_constant_buffer <id = 0, size = 1>, <immediateIndexed>
+    dxbc.dcl_constant_buffer <id = 0, size = 4, lbound = 0, ubound = 3, space = 1>, <dynamicIndexed>
+    ```
+  }];
+  let arguments = (ins
+      I32Attr:$id,
+      I32Attr:$size,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space,
+      DXBC_ConstantBufferAccessPatternAttr:$access_pattern);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id `,` `size` `=` $size
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)?
+    `>` `,` $access_pattern attr-dict
+  }];
   let hasVerifier = 1;
 }
 
