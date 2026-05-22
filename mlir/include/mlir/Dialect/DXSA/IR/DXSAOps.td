@@ -771,4 +771,23 @@ def DXSA_DclOutputSiv : DXSA_Op<"dcl_output_siv"> {
   let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
+def DXSA_DclHsMaxTessFactor : DXSA_Op<"dcl_hs_max_tessfactor"> {
+  let summary = "declares the MaxTessFactor for the patch";
+  let description = [{
+    The `dxsa.dcl_hs_max_tessfactor` operation declares the MaxTessFactor
+    for the patch.
+
+    The `$max_tessfactor` is a float32 value in the range [1.0, 64.0].
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_hs_max_tessfactor 4.200000e+01
+    ```
+  }];
+  let arguments = (ins F32Attr:$max_tessfactor);
+  let assemblyFormat = "$max_tessfactor attr-dict";
+  let hasVerifier = 1;
+}
+
 #endif // DXSA_OPS
