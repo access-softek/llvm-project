@@ -54,6 +54,15 @@ LogicalResult DclIndexRange::verify() {
   return success();
 }
 
+LogicalResult DclHsMaxTessFactor::verify() {
+  auto value = getMaxTessfactorAttr().getValue();
+  if (!value.isFinite() || value < llvm::APFloat(1.0f) ||
+      value > llvm::APFloat(64.0f))
+    return emitOpError("MaxTessFactor must be in [1.0, 64.0], got ")
+           << value.convertToFloat();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd attribute method definitions
 //===----------------------------------------------------------------------===//
