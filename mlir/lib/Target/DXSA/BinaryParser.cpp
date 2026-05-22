@@ -639,6 +639,13 @@ public:
     return dxsa::DclFunctionBody::create(builder, loc, index);
   }
 
+  Instruction buildDclFunctionTable(uint32_t index, ArrayRef<int32_t> functions,
+                                    Location loc) {
+    auto *ctx = builder.getContext();
+    return dxsa::DclFunctionTable::create(
+        builder, loc, index, DenseI32ArrayAttr::get(ctx, functions));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1184,6 +1191,24 @@ public:
     return builder.buildDclFunctionBody(*index, loc);
   }
 
+  FailureOr<Instruction> parseDclFunctionTable(Location loc) {
+    Token index = parseToken();
+    FAILURE_IF_FAILED(index);
+
+    Token numFunctions = parseToken();
+    FAILURE_IF_FAILED(numFunctions);
+
+    SmallVector<int32_t, 16> functions;
+    functions.resize(*numFunctions);
+    for (uint32_t i = 0; i < numFunctions; ++i) {
+      Token functionIndex = parseToken();
+      FAILURE_IF_FAILED(functionIndex);
+      functions[i] = *functionIndex;
+    }
+
+    return builder.buildDclFunctionTable(*index, functions, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1232,6 +1257,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_FUNCTION_BODY:
       result = parseDclFunctionBody(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_FUNCTION_TABLE:
+      result = parseDclFunctionTable(loc);
       break;
     default:
       return std::nullopt;
