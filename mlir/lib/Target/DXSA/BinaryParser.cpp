@@ -664,6 +664,11 @@ public:
         builder, loc, builder.getUI32IntegerAttr(count));
   }
 
+  Instruction buildDclHsForkPhaseInstanceCount(uint32_t count, Location loc) {
+    return dxsa::DclHsForkPhaseInstanceCount::create(
+        builder, loc, builder.getUI32IntegerAttr(count));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1240,6 +1245,12 @@ public:
     return builder.buildDclHsJoinPhaseInstanceCount(*count, loc);
   }
 
+  FailureOr<Instruction> parseDclHsForkPhaseInstanceCount(Location loc) {
+    auto count = parseToken();
+    FAILURE_IF_FAILED(count);
+    return builder.buildDclHsForkPhaseInstanceCount(*count, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1300,6 +1311,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_HS_JOIN_PHASE_INSTANCE_COUNT:
       result = parseDclHsJoinPhaseInstanceCount(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_HS_FORK_PHASE_INSTANCE_COUNT:
+      result = parseDclHsForkPhaseInstanceCount(loc);
       break;
     default:
       return std::nullopt;

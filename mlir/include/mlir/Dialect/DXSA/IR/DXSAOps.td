@@ -819,4 +819,23 @@ def DXSA_DclHsJoinPhaseInstanceCount :
   let assemblyFormat = "$count attr-dict";
 }
 
+def DXSA_DclHsForkPhaseInstanceCount :
+    DXSA_Op<"dcl_hs_fork_phase_instance_count"> {
+  let summary = "declares the Fork Phase instance count";
+  let description = [{
+    The `dxsa.dcl_hs_fork_phase_instance_count` operation declares
+    the Fork Phase instance count.
+
+    The `$count` must be a positive 32-bit unsigned integer in the range [1, 2^32 - 1].
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_hs_fork_phase_instance_count 42
+    ```
+  }];
+  let arguments = (ins ConfinedAttr<UI32Attr, [DXSA_UIntNonZero]>:$count);
+  let assemblyFormat = "$count attr-dict";
+}
+
 #endif // DXSA_OPS
