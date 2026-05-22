@@ -635,6 +635,10 @@ public:
     return dxsa::DclOutput::create(builder, loc, operand);
   }
 
+  Instruction buildDclFunctionBody(uint32_t index, Location loc) {
+    return dxsa::DclFunctionBody::create(builder, loc, index);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1174,6 +1178,12 @@ public:
     return builder.buildDclOutput(*operand, loc);
   }
 
+  FailureOr<Instruction> parseDclFunctionBody(Location loc) {
+    Token index = parseToken();
+    FAILURE_IF_FAILED(index);
+    return builder.buildDclFunctionBody(*index, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1220,6 +1230,9 @@ public:
     case D3D10_SB_OPCODE_DCL_OUTPUT:
       result = parseDclOutput(loc);
       break;
+    case D3D11_SB_OPCODE_DCL_FUNCTION_BODY:
+      result = parseDclFunctionBody(loc);
+      break;
     default:
       return std::nullopt;
     }
@@ -1261,7 +1274,11 @@ public:
     if (parseResult.has_value()) {
       if (failed(*parseResult))
         return failure();
-      if (failed(verifyInstructionLength(beginOffset, length)))
+
+      // Some custom instructions are encoded with 0 length, which is
+      // meaningless because the opcode token should be included in
+      // the total length of an instruction.
+      if (length > 0 && failed(verifyInstructionLength(beginOffset, length)))
         return failure();
       return dclInstruction;
     }
