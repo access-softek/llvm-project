@@ -635,6 +635,17 @@ public:
     return dxsa::DclOutput::create(builder, loc, operand);
   }
 
+  Instruction buildDclFunctionBody(uint32_t index, Location loc) {
+    return dxsa::DclFunctionBody::create(builder, loc, index);
+  }
+
+  Instruction buildDclFunctionTable(uint32_t index, ArrayRef<int32_t> functions,
+                                    Location loc) {
+    auto *ctx = builder.getContext();
+    return dxsa::DclFunctionTable::create(
+        builder, loc, index, DenseI32ArrayAttr::get(ctx, functions));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1174,6 +1185,30 @@ public:
     return builder.buildDclOutput(*operand, loc);
   }
 
+  FailureOr<Instruction> parseDclFunctionBody(Location loc) {
+    Token index = parseToken();
+    FAILURE_IF_FAILED(index);
+    return builder.buildDclFunctionBody(*index, loc);
+  }
+
+  FailureOr<Instruction> parseDclFunctionTable(Location loc) {
+    Token index = parseToken();
+    FAILURE_IF_FAILED(index);
+
+    Token numFunctions = parseToken();
+    FAILURE_IF_FAILED(numFunctions);
+
+    SmallVector<int32_t, 16> functions;
+    functions.resize(*numFunctions);
+    for (uint32_t i = 0; i < numFunctions; ++i) {
+      Token functionIndex = parseToken();
+      FAILURE_IF_FAILED(functionIndex);
+      functions[i] = *functionIndex;
+    }
+
+    return builder.buildDclFunctionTable(*index, functions, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1220,6 +1255,12 @@ public:
     case D3D10_SB_OPCODE_DCL_OUTPUT:
       result = parseDclOutput(loc);
       break;
+    case D3D11_SB_OPCODE_DCL_FUNCTION_BODY:
+      result = parseDclFunctionBody(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_FUNCTION_TABLE:
+      result = parseDclFunctionTable(loc);
+      break;
     default:
       return std::nullopt;
     }
@@ -1261,7 +1302,11 @@ public:
     if (parseResult.has_value()) {
       if (failed(*parseResult))
         return failure();
-      if (failed(verifyInstructionLength(beginOffset, length)))
+
+      // Some custom instructions are encoded with 0 length, which is
+      // meaningless because the opcode token should be included in
+      // the total length of an instruction.
+      if (length > 0 && failed(verifyInstructionLength(beginOffset, length)))
         return failure();
       return dclInstruction;
     }
