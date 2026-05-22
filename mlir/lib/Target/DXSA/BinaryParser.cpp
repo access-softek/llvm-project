@@ -659,6 +659,11 @@ public:
         builder, loc, builder.getF32FloatAttr(maxTessFactor));
   }
 
+  Instruction buildDclHsJoinPhaseInstanceCount(uint32_t count, Location loc) {
+    return dxsa::DclHsJoinPhaseInstanceCount::create(
+        builder, loc, builder.getUI32IntegerAttr(count));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1229,6 +1234,12 @@ public:
     return builder.buildDclHsMaxTessFactor(maxTessFactor, loc);
   }
 
+  FailureOr<Instruction> parseDclHsJoinPhaseInstanceCount(Location loc) {
+    auto count = parseToken();
+    FAILURE_IF_FAILED(count);
+    return builder.buildDclHsJoinPhaseInstanceCount(*count, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1286,6 +1297,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_HS_MAX_TESSFACTOR:
       result = parseDclHsMaxTessFactor(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_HS_JOIN_PHASE_INSTANCE_COUNT:
+      result = parseDclHsJoinPhaseInstanceCount(loc);
       break;
     default:
       return std::nullopt;

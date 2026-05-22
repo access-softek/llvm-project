@@ -282,6 +282,16 @@ def DXSA_ComponentMaskAttr :
 }
 
 //===----------------------------------------------------------------------===//
+// DXSA attribute Constraints
+//===----------------------------------------------------------------------===//
+
+// This constraint does not treat the most significant bit as a sign bit,
+// so it is safe to use on unsigned integer attributes.
+def DXSA_UIntNonZero : AttrConstraint<
+    CPred<"!::llvm::cast<::mlir::IntegerAttr>($_self).getValue().isZero()">,
+    "whose value is non-zero">;
+
+//===----------------------------------------------------------------------===//
 // DXSA op definitions
 //===----------------------------------------------------------------------===//
 
@@ -788,6 +798,25 @@ def DXSA_DclHsMaxTessFactor : DXSA_Op<"dcl_hs_max_tessfactor"> {
   let arguments = (ins F32Attr:$max_tessfactor);
   let assemblyFormat = "$max_tessfactor attr-dict";
   let hasVerifier = 1;
+}
+
+def DXSA_DclHsJoinPhaseInstanceCount :
+    DXSA_Op<"dcl_hs_join_phase_instance_count"> {
+  let summary = "declares the Join Phase instance count";
+  let description = [{
+    The `dxsa.dcl_hs_join_phase_instance_count` operation declares
+    the Join Phase instance count.
+
+    The `$count` must be a positive 32-bit unsigned integer in the range [1, 2^32 - 1].
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_hs_join_phase_instance_count 42
+    ```
+  }];
+  let arguments = (ins ConfinedAttr<UI32Attr, [DXSA_UIntNonZero]>:$count);
+  let assemblyFormat = "$count attr-dict";
 }
 
 #endif // DXSA_OPS
