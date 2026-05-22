@@ -719,4 +719,19 @@ def DXSA_DclOutput : DXSA_Op<"dcl_output"> {
   let assemblyFormat = "$operand attr-dict";
 }
 
+def DXSA_DclFunctionBody : DXSA_Op<"dcl_function_body"> {
+  let summary = "declares a function body number";
+  let description = [{
+    The `dxsa.dcl_function_body` declares a unique function body whose index
+    will appear later in the program at `label #` or `dcl_function_table`.
+
+    Example:
+    ```mlir
+    dxsa.dcl_function_body 0
+    ```
+  }];
+  let arguments = (ins I32Attr:$index);
+  let assemblyFormat = "$index attr-dict";
+}
+
 #endif // DXSA_OPS
