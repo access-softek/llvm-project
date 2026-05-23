@@ -42,6 +42,19 @@ void DXSADialect::initialize() {
 #include "mlir/Dialect/DXSA/IR/DXSAOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// Op verifiers
+//===----------------------------------------------------------------------===//
+
+LogicalResult DclIndexRange::verify() {
+  auto operandType = getOperand().getType();
+  if (operandType != InlineOperandType::input &&
+      operandType != InlineOperandType::output)
+    return emitOpError("operand must be an input or output register, got ")
+           << stringifyInlineOperandType(operandType);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd attribute method definitions
 //===----------------------------------------------------------------------===//
 
