@@ -252,7 +252,7 @@ def DXBC_SystemValueName : I32EnumAttr<
 
 def DXBC_SystemValueNameAttr :
     EnumAttr<DXBCDialect, DXBC_SystemValueName, "system_value_name"> {
-  let assemblyFormat = "$value";
+  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -657,7 +657,7 @@ def DXBC_DclInputPsSiv : DXBC_Op<"dcl_input_ps_siv"> {
     Example:
 
     ```mlir
-    dxbc.dcl_input_ps_siv linear %v0, position
+    dxbc.dcl_input_ps_siv linear %v0, <position>
     ```
   }];
   let arguments = (ins DXBC_InterpolationModeAttr:$mode,
@@ -675,7 +675,7 @@ def DXBC_DclInputPsSgv : DXBC_Op<"dcl_input_ps_sgv"> {
     Example:
 
     ```mlir
-    dxbc.dcl_input_ps_sgv %v0, sampleIndex
+    dxbc.dcl_input_ps_sgv %v0, <sampleIndex>
     ```
   }];
   let arguments = (ins DXBC_OperandType:$operand,
@@ -735,6 +735,23 @@ def DXBC_DclIndexRange : DXBC_Op<"dcl_index_range"> {
                        ConfinedAttr<I32Attr, [IntPositive]>:$count);
   let assemblyFormat = "$operand `,` $count attr-dict";
   let hasVerifier = 1;
+}
+
+def DXBC_DclOutputSgv : DXBC_Op<"dcl_output_sgv"> {
+  let summary = "declares an output as a System Generated Value";
+  let description = [{
+    The `dxbc.dcl_output_sgv` operation declares an output to be written
+    that represents a System Generated Value.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_output_sgv <type = output, components = 1, mask = <x>, index = [4]>, <primitiveID>
+    ```
+  }];
+  let arguments = (ins DXBC_InlineOperandAttr:$operand,
+                       DXBC_SystemValueNameAttr:$name);
+  let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
 #endif // DXBC_OPS
