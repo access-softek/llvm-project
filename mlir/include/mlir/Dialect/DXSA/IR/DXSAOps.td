@@ -754,4 +754,21 @@ def DXSA_DclOutputSgv : DXSA_Op<"dcl_output_sgv"> {
   let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
+def DXSA_DclOutputSiv : DXSA_Op<"dcl_output_siv"> {
+  let summary = "declares an output as a System Interpreted Value";
+  let description = [{
+    The `dxsa.dcl_output_siv` operation declares an output to be written
+    that represents a System Interpreted Value.
+    
+    Example:
+
+    ```mlir
+    dxsa.dcl_output_siv <type = output, components = 4, mask = <x, y, z, w>, index = [3]>, <position>
+    ```
+  }];
+  let arguments = (ins DXSA_InlineOperandAttr:$operand,
+                       DXSA_SystemValueNameAttr:$name);
+  let assemblyFormat = "$operand `,` $name attr-dict";
+}
+
 #endif // DXSA_OPS
