@@ -485,13 +485,7 @@ def DXSA_InlineOperandAttr : AttrDef<DXSADialect, "InlineOperand"> {
       "uint32_t":$components,
       OptionalParameter<"::mlir::dxsa::ComponentMaskAttr">:$mask,
       OptionalParameter<"::mlir::DenseI64ArrayAttr">:$index);
-  let assemblyFormat = [{
-    `<` `type` `=` $type
-        `,` `components` `=` $components
-        (`,` `mask` `=` $mask^)?
-        (`,` `index` `=` $index^)?
-    `>`
-  }];
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 def DXSA_DclGlobalFlags : DXSA_Op<"dcl_global_flags"> {
@@ -876,6 +870,28 @@ def DXSA_DclMaxOutputVertexCount :
   let arguments = (ins ConfinedAttr<I32Attr,
       [IntPositive, IntMaxValue<1024>]>:$count);
   let assemblyFormat = [{ $count attr-dict }];
+}
+
+def DXSA_DclTgsmRaw : DXSA_Op<"dcl_tgsm_raw"> {
+  let summary = "declares a reference to a Thread Group Shared Memory region";
+  let description = [{
+    The `dxsa.dcl_tgsm_raw` operation declares a reference to a Thread Group Shared Memory region.
+
+    The `$operand` is the `g#` register being declared.
+    The `$byte_count$ is the size of the block of untyped shared memory;
+    must be a multiple of 4.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_tgsm_raw <type = thread_group_shared_memory, components = 0, index = [0]>, 1024
+    ```
+  }];
+  let arguments = (ins DXSA_InlineOperandAttr:$operand,
+                       ConfinedAttr<I32Attr,
+                           [IntPositive, IntMaxValue<32768>]>:$byte_count);
+  let assemblyFormat = "$operand `,` $byte_count attr-dict";
+  let hasVerifier = 1;
 }
 
 #endif // DXSA_OPS
