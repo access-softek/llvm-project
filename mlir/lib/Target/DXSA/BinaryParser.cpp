@@ -641,6 +641,12 @@ public:
                                        builder.getI32IntegerAttr(count));
   }
 
+  Instruction buildDclOutputSgv(dxsa::InlineOperandAttr operand,
+                                dxsa::SystemValueName name, Location loc) {
+    auto nameAttr = dxsa::SystemValueNameAttr::get(builder.getContext(), name);
+    return dxsa::DclOutputSgv::create(builder, loc, operand, nameAttr);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1188,6 +1194,14 @@ public:
     return builder.buildDclIndexRange(*operand, *count, loc);
   }
 
+  FailureOr<Instruction> parseDclOutputSgv(Location loc) {
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    auto name = parseSystemValueName(getLocation());
+    FAILURE_IF_FAILED(name);
+    return builder.buildDclOutputSgv(*operand, *name, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1236,6 +1250,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_INDEX_RANGE:
       result = parseDclIndexRange(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_OUTPUT_SGV:
+      result = parseDclOutputSgv(loc);
       break;
     default:
       return std::nullopt;

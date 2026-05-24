@@ -252,7 +252,7 @@ def DXSA_SystemValueName : I32EnumAttr<
 
 def DXSA_SystemValueNameAttr :
     EnumAttr<DXSADialect, DXSA_SystemValueName, "system_value_name"> {
-  let assemblyFormat = "$value";
+  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -657,7 +657,7 @@ def DXSA_DclInputPsSiv : DXSA_Op<"dcl_input_ps_siv"> {
     Example:
 
     ```mlir
-    dxsa.dcl_input_ps_siv linear %v0, position
+    dxsa.dcl_input_ps_siv linear %v0, <position>
     ```
   }];
   let arguments = (ins DXSA_InterpolationModeAttr:$mode,
@@ -675,7 +675,7 @@ def DXSA_DclInputPsSgv : DXSA_Op<"dcl_input_ps_sgv"> {
     Example:
 
     ```mlir
-    dxsa.dcl_input_ps_sgv %v0, sampleIndex
+    dxsa.dcl_input_ps_sgv %v0, <sampleIndex>
     ```
   }];
   let arguments = (ins DXSA_OperandType:$operand,
@@ -735,6 +735,23 @@ def DXSA_DclIndexRange : DXSA_Op<"dcl_index_range"> {
                        ConfinedAttr<I32Attr, [IntPositive]>:$count);
   let assemblyFormat = "$operand `,` $count attr-dict";
   let hasVerifier = 1;
+}
+
+def DXSA_DclOutputSgv : DXSA_Op<"dcl_output_sgv"> {
+  let summary = "declares an output as a System Generated Value";
+  let description = [{
+    The `dxsa.dcl_output_sgv` operation declares an output to be written
+    that represents a System Generated Value.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_output_sgv <type = output, components = 1, mask = <x>, index = [4]>, <primitiveID>
+    ```
+  }];
+  let arguments = (ins DXSA_InlineOperandAttr:$operand,
+                       DXSA_SystemValueNameAttr:$name);
+  let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
 #endif // DXSA_OPS
