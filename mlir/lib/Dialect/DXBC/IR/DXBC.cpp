@@ -63,6 +63,13 @@ LogicalResult DclHsMaxTessFactor::verify() {
   return success();
 }
 
+LogicalResult DclTgsmRaw::verify() {
+  auto byteCount = getByteCount();
+  if (byteCount % 4 != 0)
+    return emitOpError("byte count must be a multiple of 4, got ") << byteCount;
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd attribute method definitions
 //===----------------------------------------------------------------------===//

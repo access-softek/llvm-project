@@ -1,0 +1,5 @@
+// RUN: mlir-translate --import-dxbc-bin %S/inputs/dcl_tgsm_raw.bin | FileCheck %s
+
+// CHECK:      module {
+// CHECK-NEXT:   dxbc.dcl_tgsm_raw <type = thread_group_shared_memory, components = 0, index = [0]>, 40
+// CHECK-NEXT: }
