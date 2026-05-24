@@ -754,4 +754,21 @@ def DXBC_DclOutputSgv : DXBC_Op<"dcl_output_sgv"> {
   let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
+def DXBC_DclOutputSiv : DXBC_Op<"dcl_output_siv"> {
+  let summary = "declares an output as a System Interpreted Value";
+  let description = [{
+    The `dxbc.dcl_output_siv` operation declares an output to be written
+    that represents a System Interpreted Value.
+    
+    Example:
+
+    ```mlir
+    dxbc.dcl_output_siv <type = output, components = 4, mask = <x, y, z, w>, index = [3]>, <position>
+    ```
+  }];
+  let arguments = (ins DXBC_InlineOperandAttr:$operand,
+                       DXBC_SystemValueNameAttr:$name);
+  let assemblyFormat = "$operand `,` $name attr-dict";
+}
+
 #endif // DXBC_OPS

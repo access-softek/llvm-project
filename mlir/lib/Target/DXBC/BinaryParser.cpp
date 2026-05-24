@@ -647,6 +647,12 @@ public:
     return dxbc::DclOutputSgv::create(builder, loc, operand, nameAttr);
   }
 
+  Instruction buildDclOutputSiv(dxbc::InlineOperandAttr operand,
+                                dxbc::SystemValueName name, Location loc) {
+    auto nameAttr = dxbc::SystemValueNameAttr::get(builder.getContext(), name);
+    return dxbc::DclOutputSiv::create(builder, loc, operand, nameAttr);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1202,6 +1208,14 @@ public:
     return builder.buildDclOutputSgv(*operand, *name, loc);
   }
 
+  FailureOr<Instruction> parseDclOutputSiv(Location loc) {
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    auto name = parseSystemValueName(getLocation());
+    FAILURE_IF_FAILED(name);
+    return builder.buildDclOutputSiv(*operand, *name, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1253,6 +1267,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_OUTPUT_SGV:
       result = parseDclOutputSgv(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_OUTPUT_SIV:
+      result = parseDclOutputSiv(loc);
       break;
     default:
       return std::nullopt;
