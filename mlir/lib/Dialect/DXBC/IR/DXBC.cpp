@@ -70,6 +70,20 @@ LogicalResult DclTgsmRaw::verify() {
   return success();
 }
 
+LogicalResult DclTgsmStructured::verify() {
+  auto stride = getStructByteStride();
+  auto count = getStructCount();
+  if (stride % 4 != 0)
+    return emitOpError("struct byte stride must be a multiple of 4, got ")
+           << stride;
+  auto totalSize = static_cast<uint64_t>(stride) * count;
+  if (totalSize > 32768)
+    return emitOpError("total size struct_byte_stride * struct_count must "
+                       "be <= 32768, got ")
+           << totalSize;
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd attribute method definitions
 //===----------------------------------------------------------------------===//
