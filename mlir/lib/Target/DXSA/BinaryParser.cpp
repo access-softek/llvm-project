@@ -586,6 +586,11 @@ public:
     return dxsa::DclInputPrimitive::create(builder, loc, inputPrimitiveAttr);
   }
 
+  Instruction buildDclGsInstanceCount(uint32_t count, Location loc) {
+    return dxsa::DclGsInstanceCount::create(builder, loc,
+                                            builder.getI32IntegerAttr(count));
+  }
+
   Instruction buildDclInputPs(dxsa::InterpolationMode interpolationMode,
                               Operand operand, Location loc) {
     auto interpolationModeAttr = dxsa::InterpolationModeAttr::get(
@@ -1085,6 +1090,17 @@ public:
     return builder.buildDclInputPrimitive(*inputPrimitive, loc);
   }
 
+  FailureOr<Instruction> parseDclGsInstanceCount(Location loc) {
+    auto countToken = parseToken();
+    FAILURE_IF_FAILED(countToken);
+    auto count = *countToken;
+    if (count == 0)
+      return emitError(loc, "instance count cannot be zero");
+    if (count > 32)
+      return emitError(loc, "instance count must be <= 32, got ") << count;
+    return builder.buildDclGsInstanceCount(count, loc);
+  }
+
   FailureOr<dxsa::InterpolationMode>
   parseInterpolationMode(uint32_t opcodeToken, Location loc) {
     auto rawInterpolationMode =
@@ -1281,6 +1297,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_GS_INPUT_PRIMITIVE:
       result = parseDclInputPrimitive(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_GS_INSTANCE_COUNT:
+      result = parseDclGsInstanceCount(loc);
       break;
     case D3D10_SB_OPCODE_DCL_INPUT_PS:
       result = parseDclInputPs(opcodeToken, loc);

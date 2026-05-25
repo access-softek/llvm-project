@@ -838,4 +838,23 @@ def DXSA_DclHsForkPhaseInstanceCount :
   let assemblyFormat = "$count attr-dict";
 }
 
+def DXSA_DclGsInstanceCount : DXSA_Op<"dcl_gs_instance_count"> {
+  let summary = "declares instance count for the geometry shader";
+  let description = [{
+    The `dxsa.dcl_gs_instance_count` operation declares declares instance count
+    for the geometry shader.
+
+    The `$count` must be in [1, 32].
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_gs_instance_count 4
+    ```
+  }];
+  let arguments = (ins ConfinedAttr<I32Attr,
+      [IntPositive, IntMaxValue<32>]>:$count);
+  let assemblyFormat = [{ $count attr-dict }];
+}
+
 #endif // DXSA_OPS
