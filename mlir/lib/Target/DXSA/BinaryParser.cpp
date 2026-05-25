@@ -684,6 +684,14 @@ public:
                                     builder.getI32IntegerAttr(byteCount));
   }
 
+  Instruction buildDclTgsmStructured(dxsa::InlineOperandAttr operand,
+                                     uint32_t structByteStride,
+                                     uint32_t structCount, Location loc) {
+    return dxsa::DclTgsmStructured::create(
+        builder, loc, operand, builder.getI32IntegerAttr(structByteStride),
+        builder.getI32IntegerAttr(structCount));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1298,6 +1306,17 @@ public:
     return builder.buildDclTgsmRaw(*operand, *byteCount, loc);
   }
 
+  FailureOr<Instruction> parseDclTgsmStructured(Location loc) {
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    auto structByteStride = parseToken();
+    FAILURE_IF_FAILED(structByteStride);
+    auto structCount = parseToken();
+    FAILURE_IF_FAILED(structCount);
+    return builder.buildDclTgsmStructured(*operand, *structByteStride,
+                                          *structCount, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1370,6 +1389,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_THREAD_GROUP_SHARED_MEMORY_RAW:
       result = parseDclTgsmRaw(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_THREAD_GROUP_SHARED_MEMORY_STRUCTURED:
+      result = parseDclTgsmStructured(loc);
       break;
     default:
       return std::nullopt;

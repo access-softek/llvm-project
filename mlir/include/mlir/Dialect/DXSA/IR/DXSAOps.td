@@ -894,4 +894,32 @@ def DXSA_DclTgsmRaw : DXSA_Op<"dcl_tgsm_raw"> {
   let hasVerifier = 1;
 }
 
+def DXSA_DclTgsmStructured : DXSA_Op<"dcl_tgsm_structured"> {
+  let summary = "declares a reference to a Thread Group Shared Memory region";
+  let description = [{
+    The `dxsa.dcl_tgsm_structured` operation declares a reference to a Thread Group Shared Memory region.
+    The memory is viewed as an array of structures.
+
+    The `$operand` is the `g#` register being declared.
+    The `$struct_byte_stride` is a uint in bytes and must be a multiple of 4.
+    The `$struct_count` is the number of structures.
+    The total size `$struct_byte_stride * $struct_count` must not exceed
+    32 KB.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_tgsm_structured <type = thread_group_shared_memory, components = 0, index = [0]>, 16, 64
+    ```
+  }];
+  let arguments = (ins DXSA_InlineOperandAttr:$operand,
+                       ConfinedAttr<I32Attr,
+                           [IntPositive, IntMaxValue<32768>]>:$struct_byte_stride,
+                       ConfinedAttr<I32Attr,
+                           [IntPositive, IntMaxValue<8192>]>:$struct_count);
+  let assemblyFormat =
+      "$operand `,` $struct_byte_stride `,` $struct_count attr-dict";
+  let hasVerifier = 1;
+}
+
 #endif // DXSA_OPS
