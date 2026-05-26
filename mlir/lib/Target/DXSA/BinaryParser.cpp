@@ -159,8 +159,8 @@ static void initInstructionInfo(MutableArrayRef<InstructionInfo> instructions) {
       D3D10_SB_DCL_OP);
   SET(D3D10_SB_OPCODE_DCL_GS_OUTPUT_PRIMITIVE_TOPOLOGY, "dcl_outputtopology", 0,
       0x00, D3D10_SB_DCL_OP);
-  SET(D3D10_SB_OPCODE_DCL_MAX_OUTPUT_VERTEX_COUNT, "dcl_maxout", 0, 0x00,
-      D3D10_SB_DCL_OP);
+  SET(D3D10_SB_OPCODE_DCL_MAX_OUTPUT_VERTEX_COUNT,
+      "dcl_max_output_vertex_count", 0, 0x00, D3D10_SB_DCL_OP);
   SET(D3D10_SB_OPCODE_DCL_INPUT_PS, "dcl_input_ps", 1, 0x00, D3D10_SB_DCL_OP);
   SET(D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER, "dcl_constantbuffer", 1, 0x00,
       D3D10_SB_DCL_OP);
@@ -589,6 +589,10 @@ public:
   Instruction buildDclGsInstanceCount(uint32_t count, Location loc) {
     return dxsa::DclGsInstanceCount::create(builder, loc,
                                             builder.getI32IntegerAttr(count));
+  }
+
+  Instruction buildDclMaxOutputVertexCount(uint32_t count, Location loc) {
+    return dxsa::DclMaxOutputVertexCount::create(builder, loc, count);
   }
 
   Instruction buildDclInputPs(dxsa::InterpolationMode interpolationMode,
@@ -1101,6 +1105,19 @@ public:
     return builder.buildDclGsInstanceCount(count, loc);
   }
 
+  FailureOr<Instruction> parseDclMaxOutputVertexCount(Location loc) {
+    auto countToken = parseToken();
+    FAILURE_IF_FAILED(countToken);
+    auto count = *countToken;
+    if (count == 0)
+      return emitError(getLocation(), "max output vertex count cannot be zero");
+    if (count > 1024)
+      return emitError(getLocation(),
+                       "max output vertex count must be <= 1024, got ")
+             << count;
+    return builder.buildDclMaxOutputVertexCount(count, loc);
+  }
+
   FailureOr<dxsa::InterpolationMode>
   parseInterpolationMode(uint32_t opcodeToken, Location loc) {
     auto rawInterpolationMode =
@@ -1300,6 +1317,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_GS_INSTANCE_COUNT:
       result = parseDclGsInstanceCount(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_MAX_OUTPUT_VERTEX_COUNT:
+      result = parseDclMaxOutputVertexCount(loc);
       break;
     case D3D10_SB_OPCODE_DCL_INPUT_PS:
       result = parseDclInputPs(opcodeToken, loc);
