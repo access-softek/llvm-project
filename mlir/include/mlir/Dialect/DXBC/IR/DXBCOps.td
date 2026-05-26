@@ -857,4 +857,25 @@ def DXBC_DclGsInstanceCount : DXBC_Op<"dcl_gs_instance_count"> {
   let assemblyFormat = [{ $count attr-dict }];
 }
 
+def DXBC_DclMaxOutputVertexCount :
+    DXBC_Op<"dcl_max_output_vertex_count"> {
+  let summary = "declares the geometry shader maximum output vertex count";
+  let description = [{
+    The `dxbc.dcl_max_output_vertex_count` operation declares the maximum
+    number of vertices that a single invocation of the geometry shader will
+    emit.
+
+    The count must be in [1, 1024].
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_max_output_vertex_count 42
+    ```
+  }];
+  let arguments = (ins ConfinedAttr<I32Attr,
+      [IntPositive, IntMaxValue<1024>]>:$count);
+  let assemblyFormat = [{ $count attr-dict }];
+}
+
 #endif // DXBC_OPS
