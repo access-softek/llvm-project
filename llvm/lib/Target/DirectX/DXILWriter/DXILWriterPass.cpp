@@ -36,6 +36,8 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+extern cl::opt<bool> EmbedDebug;
+extern cl::opt<std::string> PdbDebugPath;
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 cl::opt<bool> SourceInDebugModule(
     "dx-source-in-debug-module",
@@ -148,63 +150,61 @@ static void removeLifetimeIntrinsics(Module &M) {
 }
 
 class EmbedDXILPass : public llvm::ModulePass {
-  std::string writeModule(Module &M, bool HasDebugInfo, bool IsDebug) {
+  std::string writeModule(Module &M, bool WriteDebug) {
     std::string Data;
     llvm::raw_string_ostream OS(Data);
 
-    if (HasDebugInfo) {
-      if (IsDebug) {
-        if (!SourceInDebugModule) {
-          LLVMContext &Ctx = M.getContext();
-          MDString *EmptyString = MDString::get(Ctx, "");
-          if (NamedMDNode *Contents =
-                  M.getNamedMetadata("dx.source.contents")) {
-            Contents->eraseFromParent();
-            Metadata *Ops[2] = {EmptyString, EmptyString};
-            M.getOrInsertNamedMetadata("dx.source.contents")
-                ->addOperand(MDTuple::get(Ctx, Ops));
-          }
-          if (NamedMDNode *Defines = M.getNamedMetadata("dx.source.defines")) {
-            Defines->eraseFromParent();
-            M.getOrInsertNamedMetadata("dx.source.defines")
-                ->addOperand(MDTuple::get(Ctx, {}));
-          }
-          if (NamedMDNode *MainFileName =
-                  M.getNamedMetadata("dx.source.mainFileName")) {
-            MainFileName->eraseFromParent();
-            Metadata *Ops[1] = {EmptyString};
-            M.getOrInsertNamedMetadata("dx.source.mainFileName")
-                ->addOperand(MDTuple::get(Ctx, {Ops}));
-          }
-          if (NamedMDNode *Args = M.getNamedMetadata("dx.source.args")) {
-            Args->eraseFromParent();
-            M.getOrInsertNamedMetadata("dx.source.args")
-                ->addOperand(MDTuple::get(Ctx, {}));
-          }
+    if (WriteDebug) {
+      if (!SourceInDebugModule) {
+        LLVMContext &Ctx = M.getContext();
+        MDString *EmptyString = MDString::get(Ctx, "");
+        if (NamedMDNode *Contents =
+                M.getNamedMetadata("dx.source.contents")) {
+          Contents->eraseFromParent();
+          Metadata *Ops[2] = {EmptyString, EmptyString};
+          M.getOrInsertNamedMetadata("dx.source.contents")
+              ->addOperand(MDTuple::get(Ctx, Ops));
         }
-      } else {
-        // If we have an ILDB part, strip DXIL from all debug info.
-        StripDebugInfo(M);
-
-        // Also, manually remove debug version flags and dx.source nodes.
-        if (NamedMDNode *Flags = M.getModuleFlagsMetadata()) {
-          SmallVector<llvm::Module::ModuleFlagEntry, 4> FlagEntries;
-          M.getModuleFlagsMetadata(FlagEntries);
-          Flags->eraseFromParent();
-          for (unsigned I : seq(FlagEntries.size())) {
-            llvm::Module::ModuleFlagEntry &Entry = FlagEntries[I];
-            if (Entry.Key->getString() == "Dwarf Version" ||
-                Entry.Key->getString() == "Debug Info Version") {
-              continue;
-            }
-            M.addModuleFlag(Entry.Behavior, Entry.Key->getString(),
-                            cast<ConstantAsMetadata>(Entry.Val)->getValue());
-          }
+        if (NamedMDNode *Defines = M.getNamedMetadata("dx.source.defines")) {
+          Defines->eraseFromParent();
+          M.getOrInsertNamedMetadata("dx.source.defines")
+              ->addOperand(MDTuple::get(Ctx, {}));
         }
-        for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata()))
-          if (NMD.getName().starts_with("dx.source"))
-            NMD.eraseFromParent();
+        if (NamedMDNode *MainFileName =
+                M.getNamedMetadata("dx.source.mainFileName")) {
+          MainFileName->eraseFromParent();
+          Metadata *Ops[1] = {EmptyString};
+          M.getOrInsertNamedMetadata("dx.source.mainFileName")
+              ->addOperand(MDTuple::get(Ctx, {Ops}));
+        }
+        if (NamedMDNode *Args = M.getNamedMetadata("dx.source.args")) {
+          Args->eraseFromParent();
+          M.getOrInsertNamedMetadata("dx.source.args")
+              ->addOperand(MDTuple::get(Ctx, {}));
+        }
       }
+    } else {
+      // If we don't want debug info, strip it from DXIL.
+      StripDebugInfo(M);
+
+      // Also, manually remove debug version flags and dx.source nodes.
+      if (NamedMDNode *Flags = M.getModuleFlagsMetadata()) {
+        SmallVector<llvm::Module::ModuleFlagEntry, 4> FlagEntries;
+        M.getModuleFlagsMetadata(FlagEntries);
+        Flags->eraseFromParent();
+        for (unsigned I : seq(FlagEntries.size())) {
+          llvm::Module::ModuleFlagEntry &Entry = FlagEntries[I];
+          if (Entry.Key->getString() == "Dwarf Version" ||
+              Entry.Key->getString() == "Debug Info Version") {
+            continue;
+          }
+          M.addModuleFlag(Entry.Behavior, Entry.Key->getString(),
+                          cast<ConstantAsMetadata>(Entry.Val)->getValue());
+        }
+      }
+      for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata()))
+        if (NMD.getName().starts_with("dx.source"))
+          NMD.eraseFromParent();
     }
 
     const auto DIMap = DebugInfoPass::run(M);
@@ -239,19 +239,30 @@ public:
     legalizeLifetimeIntrinsics(M);
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
+
+    // Enable EmbedDebug if there is debug info, but it is not being written
+    // to a PDB file.
+    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
+      EmbedDebug = true;
+    if (!HasDebugInfo && EmbedDebug)
+      reportFatalUsageError(
+          "Missing debug info for embedding into the container");
+    // TODO: move this check to DXContainerPDB.cpp when /Zs is implemented.
+    if (!HasDebugInfo && !PdbDebugPath.empty())
+      reportFatalUsageError("Missing debug info for writing to the PDB file");
+
     std::string ILDBData;
-    if (HasDebugInfo) {
+    if (HasDebugInfo && (EmbedDebug || !PdbDebugPath.empty())) {
       // Write DXIL with debug info to ILDB part.
       // Clone the module to avoid alternating it with DebugInfoPass
       // before stripping the debug info later.
-      ILDBData =
-          writeModule(*llvm::CloneModule(M), HasDebugInfo, /*IsDebug=*/true);
+      ILDBData = writeModule(*llvm::CloneModule(M), /*WriteDebug=*/true);
     }
 
     // Clone the module to save dx.source metadata nodes from stripping, as they
     // are needed for DXILMetadataAnalysisWrapperPass.
     std::string DXILData =
-        writeModule(*llvm::CloneModule(M), HasDebugInfo, /*IsDebug=*/false);
+        writeModule(*llvm::CloneModule(M), /*WriteDebug=*/false);
 
     // TODO Do we need to run this pass on module itself?
     const auto DIMap = DebugInfoPass::run(M);
@@ -262,7 +273,7 @@ public:
     removeLifetimeIntrinsics(M);
 
     SmallVector<GlobalValue *, 2> Globals;
-    if (HasDebugInfo) {
+    if (HasDebugInfo && (EmbedDebug || !PdbDebugPath.empty())) {
       // Create a GV after both parts are written, otherwise it gets
       // added to DXIL when `writeModule` is called the second time.
       Globals.emplace_back(createSectionGlobal(M, ILDBData, "dx.ildb", "ILDB"));

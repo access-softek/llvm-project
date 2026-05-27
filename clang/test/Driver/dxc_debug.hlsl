@@ -16,3 +16,11 @@
 // Make sure dxc command line arguments are passed to clang invocation.
 // CHECK-SAME: -fdx-record-command-line
 // CHECK-CMD-SAME: --driver-mode=dxc -T lib_6_7 -### -g {{.*}}dxc_debug.hlsl -S -O3
+
+// Check errors and warnings
+// RUN: %clang_dxc -Tlib_6_7 -### /Zi %s 2>&1 | FileCheck %s --check-prefix=WARN-EMBED
+// WARN-EMBED: warning: no output provided for debug - embedding PDB in shader container
+// RUN: not %clang_dxc -Tlib_6_7 -### /Qembed_debug %s 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG0
+// ERROR-NODBG0: error: must enable debug info with /Zi for /Qembed_debug
+// RUN: not %clang_dxc -Tlib_6_7 -### /Fd %t.pdb %s 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG1
+// ERROR-NODBG1: error: /Fd specified, but no Debug Info was found in the shader
