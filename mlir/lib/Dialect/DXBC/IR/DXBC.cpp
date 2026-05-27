@@ -102,6 +102,19 @@ LogicalResult DclSampler::verify() {
   return success();
 }
 
+LogicalResult DclResource::verify() {
+  auto dim = getDim();
+  bool isMultisampled = dim == ResourceDimension::texture2dms ||
+                        dim == ResourceDimension::texture2dmsarray;
+  if (isMultisampled && !getSampleCount())
+    return emitOpError("missing sample_count for multisampled dimension ")
+           << stringifyResourceDimension(dim);
+  if (!isMultisampled && getSampleCount())
+    return emitOpError("sample_count is only valid for texture2dms and "
+                       "texture2dmsarray, got ")
+           << stringifyResourceDimension(dim);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd attribute method definitions
 //===----------------------------------------------------------------------===//

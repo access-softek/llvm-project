@@ -255,6 +255,64 @@ def DXBC_SystemValueNameAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def DXBC_ResourceDimension_Buffer           : I32EnumAttrCase<"buffer",           1>;
+def DXBC_ResourceDimension_Texture1D        : I32EnumAttrCase<"texture1d",        2>;
+def DXBC_ResourceDimension_Texture2D        : I32EnumAttrCase<"texture2d",        3>;
+def DXBC_ResourceDimension_Texture2DMS      : I32EnumAttrCase<"texture2dms",      4>;
+def DXBC_ResourceDimension_Texture3D        : I32EnumAttrCase<"texture3d",        5>;
+def DXBC_ResourceDimension_TextureCube      : I32EnumAttrCase<"texturecube",      6>;
+def DXBC_ResourceDimension_Texture1DArray   : I32EnumAttrCase<"texture1darray",   7>;
+def DXBC_ResourceDimension_Texture2DArray   : I32EnumAttrCase<"texture2darray",   8>;
+def DXBC_ResourceDimension_Texture2DMSArray : I32EnumAttrCase<"texture2dmsarray", 9>;
+def DXBC_ResourceDimension_TextureCubeArray : I32EnumAttrCase<"texturecubearray", 10>;
+
+def DXBC_ResourceDimension : I32EnumAttr<
+    "ResourceDimension", "input resource dimension", [
+      DXBC_ResourceDimension_Buffer,
+      DXBC_ResourceDimension_Texture1D,
+      DXBC_ResourceDimension_Texture2D,
+      DXBC_ResourceDimension_Texture2DMS,
+      DXBC_ResourceDimension_Texture3D,
+      DXBC_ResourceDimension_TextureCube,
+      DXBC_ResourceDimension_Texture1DArray,
+      DXBC_ResourceDimension_Texture2DArray,
+      DXBC_ResourceDimension_Texture2DMSArray,
+      DXBC_ResourceDimension_TextureCubeArray
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_ResourceDimensionAttr :
+    EnumAttr<DXBCDialect, DXBC_ResourceDimension, "resource_dimension"> {
+  let assemblyFormat = "$value";
+}
+
+// `float` is a reserved C++ keyword, so the symbolic (C++ enum case) names use
+// PascalCase while the printable asm form stays lowercase.
+def DXBC_ResourceReturnType_Unorm : I32EnumAttrCase<"Unorm", 1, "unorm">;
+def DXBC_ResourceReturnType_Snorm : I32EnumAttrCase<"Snorm", 2, "snorm">;
+def DXBC_ResourceReturnType_Sint  : I32EnumAttrCase<"Sint",  3, "sint">;
+def DXBC_ResourceReturnType_Uint  : I32EnumAttrCase<"Uint",  4, "uint">;
+def DXBC_ResourceReturnType_Float : I32EnumAttrCase<"Float", 5, "float">;
+
+def DXBC_ResourceReturnType : I32EnumAttr<
+    "ResourceReturnType", "input resource per-component return type", [
+      DXBC_ResourceReturnType_Unorm,
+      DXBC_ResourceReturnType_Snorm,
+      DXBC_ResourceReturnType_Sint,
+      DXBC_ResourceReturnType_Uint,
+      DXBC_ResourceReturnType_Float
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_ResourceReturnTypeAttr :
+    EnumAttr<DXBCDialect, DXBC_ResourceReturnType, "resource_return_type"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
 //===----------------------------------------------------------------------===//
@@ -1070,6 +1128,48 @@ def DXBC_DclStream : DXBC_Op<"dcl_stream"> {
   let arguments = (ins ConfinedAttr<I32Attr,
       [IntNonNegative, IntMaxValue<3>]>:$index);
   let assemblyFormat = [{ $index attr-dict }];
+}
+
+def DXBC_DclResource : DXBC_Op<"dcl_resource"> {
+  let summary = "declares a shader input resource bound to a register";
+  let description = [{
+    The `dxbc.dcl_resource` operation declares a shader input resource
+    bound to a register.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_resource <id = 0>, <dim = buffer>,
+        <x = unorm, y = snorm, z = sint, w = uint>
+    dxbc.dcl_resource <id = 5>, <dim = texture2dms, sample_count = 4>,
+        <x = float, y = float, z = float, w = float>
+    dxbc.dcl_resource <id = 0, lbound = 0, ubound = 3, space = 1>,
+        <dim = texture3d>, <x = float, y = float, z = float, w = float>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      DXBC_ResourceDimensionAttr:$dim,
+      DXBC_ResourceReturnTypeAttr:$x,
+      DXBC_ResourceReturnTypeAttr:$y,
+      DXBC_ResourceReturnTypeAttr:$z,
+      DXBC_ResourceReturnTypeAttr:$w,
+      OptionalAttr<ConfinedAttr<I32Attr,
+          [IntPositive, IntMaxValue<127>]>>:$sample_count,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)? `>` `,`
+    `<` `dim` `=` $dim
+         (`,` `sample_count` `=` $sample_count^)? `>` `,`
+    `<` `x` `=` $x `,` `y` `=` $y `,` `z` `=` $z `,` `w` `=` $w `>`
+    attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // DXBC_OPS
