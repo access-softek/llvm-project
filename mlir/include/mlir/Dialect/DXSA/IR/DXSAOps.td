@@ -255,6 +255,64 @@ def DXSA_SystemValueNameAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def DXSA_ResourceDimension_Buffer           : I32EnumAttrCase<"buffer",           1>;
+def DXSA_ResourceDimension_Texture1D        : I32EnumAttrCase<"texture1d",        2>;
+def DXSA_ResourceDimension_Texture2D        : I32EnumAttrCase<"texture2d",        3>;
+def DXSA_ResourceDimension_Texture2DMS      : I32EnumAttrCase<"texture2dms",      4>;
+def DXSA_ResourceDimension_Texture3D        : I32EnumAttrCase<"texture3d",        5>;
+def DXSA_ResourceDimension_TextureCube      : I32EnumAttrCase<"texturecube",      6>;
+def DXSA_ResourceDimension_Texture1DArray   : I32EnumAttrCase<"texture1darray",   7>;
+def DXSA_ResourceDimension_Texture2DArray   : I32EnumAttrCase<"texture2darray",   8>;
+def DXSA_ResourceDimension_Texture2DMSArray : I32EnumAttrCase<"texture2dmsarray", 9>;
+def DXSA_ResourceDimension_TextureCubeArray : I32EnumAttrCase<"texturecubearray", 10>;
+
+def DXSA_ResourceDimension : I32EnumAttr<
+    "ResourceDimension", "input resource dimension", [
+      DXSA_ResourceDimension_Buffer,
+      DXSA_ResourceDimension_Texture1D,
+      DXSA_ResourceDimension_Texture2D,
+      DXSA_ResourceDimension_Texture2DMS,
+      DXSA_ResourceDimension_Texture3D,
+      DXSA_ResourceDimension_TextureCube,
+      DXSA_ResourceDimension_Texture1DArray,
+      DXSA_ResourceDimension_Texture2DArray,
+      DXSA_ResourceDimension_Texture2DMSArray,
+      DXSA_ResourceDimension_TextureCubeArray
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_ResourceDimensionAttr :
+    EnumAttr<DXSADialect, DXSA_ResourceDimension, "resource_dimension"> {
+  let assemblyFormat = "$value";
+}
+
+// `float` is a reserved C++ keyword, so the symbolic (C++ enum case) names use
+// PascalCase while the printable asm form stays lowercase.
+def DXSA_ResourceReturnType_Unorm : I32EnumAttrCase<"Unorm", 1, "unorm">;
+def DXSA_ResourceReturnType_Snorm : I32EnumAttrCase<"Snorm", 2, "snorm">;
+def DXSA_ResourceReturnType_Sint  : I32EnumAttrCase<"Sint",  3, "sint">;
+def DXSA_ResourceReturnType_Uint  : I32EnumAttrCase<"Uint",  4, "uint">;
+def DXSA_ResourceReturnType_Float : I32EnumAttrCase<"Float", 5, "float">;
+
+def DXSA_ResourceReturnType : I32EnumAttr<
+    "ResourceReturnType", "input resource per-component return type", [
+      DXSA_ResourceReturnType_Unorm,
+      DXSA_ResourceReturnType_Snorm,
+      DXSA_ResourceReturnType_Sint,
+      DXSA_ResourceReturnType_Uint,
+      DXSA_ResourceReturnType_Float
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_ResourceReturnTypeAttr :
+    EnumAttr<DXSADialect, DXSA_ResourceReturnType, "resource_return_type"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXSA ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
 //===----------------------------------------------------------------------===//
@@ -1070,6 +1128,48 @@ def DXSA_DclStream : DXSA_Op<"dcl_stream"> {
   let arguments = (ins ConfinedAttr<I32Attr,
       [IntNonNegative, IntMaxValue<3>]>:$index);
   let assemblyFormat = [{ $index attr-dict }];
+}
+
+def DXSA_DclResource : DXSA_Op<"dcl_resource"> {
+  let summary = "declares a shader input resource bound to a register";
+  let description = [{
+    The `dxsa.dcl_resource` operation declares a shader input resource
+    bound to a register.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_resource <id = 0>, <dim = buffer>,
+        <x = unorm, y = snorm, z = sint, w = uint>
+    dxsa.dcl_resource <id = 5>, <dim = texture2dms, sample_count = 4>,
+        <x = float, y = float, z = float, w = float>
+    dxsa.dcl_resource <id = 0, lbound = 0, ubound = 3, space = 1>,
+        <dim = texture3d>, <x = float, y = float, z = float, w = float>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      DXSA_ResourceDimensionAttr:$dim,
+      DXSA_ResourceReturnTypeAttr:$x,
+      DXSA_ResourceReturnTypeAttr:$y,
+      DXSA_ResourceReturnTypeAttr:$z,
+      DXSA_ResourceReturnTypeAttr:$w,
+      OptionalAttr<ConfinedAttr<I32Attr,
+          [IntPositive, IntMaxValue<127>]>>:$sample_count,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)? `>` `,`
+    `<` `dim` `=` $dim
+         (`,` `sample_count` `=` $sample_count^)? `>` `,`
+    `<` `x` `=` $x `,` `y` `=` $y `,` `z` `=` $z `,` `w` `=` $w `>`
+    attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // DXSA_OPS

@@ -733,6 +733,20 @@ public:
         optionalToAttr(space));
   }
 
+  Instruction buildDclResource(
+      uint32_t id, dxsa::ResourceDimension dim, dxsa::ResourceReturnType x,
+      dxsa::ResourceReturnType y, dxsa::ResourceReturnType z,
+      dxsa::ResourceReturnType w, std::optional<uint32_t> sampleCount,
+      std::optional<uint32_t> lbound, std::optional<uint32_t> ubound,
+      std::optional<uint32_t> space, Location loc) {
+    auto toAttr = [&](std::optional<uint32_t> v) -> IntegerAttr {
+      return v ? builder.getI32IntegerAttr(*v) : IntegerAttr();
+    };
+    return dxsa::DclResource::create(builder, loc, id, dim, x, y, z, w,
+                                     toAttr(sampleCount), toAttr(lbound),
+                                     toAttr(ubound), toAttr(space));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1476,6 +1490,73 @@ public:
     return builder.buildDclSampler(id, lbound, ubound, space, *mode, loc);
   }
 
+  FailureOr<dxsa::ResourceReturnType>
+  parseResourceReturnType(uint32_t returnTypeToken, uint32_t component,
+                          Location loc) {
+    auto rawReturnType =
+        DECODE_D3D10_SB_RESOURCE_RETURN_TYPE(returnTypeToken, component);
+    auto returnType = dxsa::symbolizeResourceReturnType(rawReturnType);
+    if (!returnType)
+      return emitError(loc, "unknown resource return type: ") << rawReturnType;
+    return *returnType;
+  }
+
+  FailureOr<Instruction> parseDclResource(uint32_t opcodeToken, Location loc) {
+    auto rawDim = DECODE_D3D10_SB_RESOURCE_DIMENSION(opcodeToken);
+    auto dim = dxsa::symbolizeResourceDimension(rawDim);
+    if (!dim)
+      return emitError(loc, "unknown resource dimension: ") << rawDim;
+
+    std::optional<uint32_t> sampleCount;
+    if (*dim == dxsa::ResourceDimension::texture2dms ||
+        *dim == dxsa::ResourceDimension::texture2dmsarray) {
+      auto rawSampleCount = DECODE_D3D10_SB_RESOURCE_SAMPLE_COUNT(opcodeToken);
+      if (rawSampleCount == 0)
+        return emitError(loc, "sample count must be non-zero for multisampled "
+                              "dimension ")
+               << dxsa::stringifyResourceDimension(*dim);
+      sampleCount = rawSampleCount;
+    }
+
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    if (operand->getType() != dxsa::InlineOperandType::resource)
+      return emitError(loc, "operand must be a resource register, got ")
+             << dxsa::stringifyInlineOperandType(operand->getType());
+    auto indexArray = operand->getIndex();
+    auto indexDim = indexArray ? indexArray.size() : 0;
+    if (indexDim != 1 && indexDim != 3)
+      return emitError(loc, "operand must have a 1D or 3D index, got ")
+             << indexDim;
+    auto id = indexArray[0];
+    std::optional<uint32_t> lbound, ubound;
+    if (indexDim == 3) {
+      lbound = indexArray[1];
+      ubound = indexArray[2];
+    }
+
+    auto returnTypeToken = parseToken();
+    FAILURE_IF_FAILED(returnTypeToken);
+    auto x = parseResourceReturnType(*returnTypeToken, 0, loc);
+    FAILURE_IF_FAILED(x);
+    auto y = parseResourceReturnType(*returnTypeToken, 1, loc);
+    FAILURE_IF_FAILED(y);
+    auto z = parseResourceReturnType(*returnTypeToken, 2, loc);
+    FAILURE_IF_FAILED(z);
+    auto w = parseResourceReturnType(*returnTypeToken, 3, loc);
+    FAILURE_IF_FAILED(w);
+
+    std::optional<uint32_t> space;
+    if (indexDim == 3) {
+      auto spaceToken = parseToken();
+      FAILURE_IF_FAILED(spaceToken);
+      space = *spaceToken;
+    }
+
+    return builder.buildDclResource(id, *dim, *x, *y, *z, *w, sampleCount,
+                                    lbound, ubound, space, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1566,6 +1647,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_SAMPLER:
       result = parseDclSampler(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_RESOURCE:
+      result = parseDclResource(opcodeToken, loc);
       break;
     default:
       return std::nullopt;
