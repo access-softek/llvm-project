@@ -1326,4 +1326,32 @@ def DXBC_DclResourceStructured : DXBC_Op<"dcl_resource_structured"> {
   let hasVerifier = 1;
 }
 
+def DXBC_DclResourceRaw : DXBC_Op<"dcl_resource_raw"> {
+  let summary = "declares a raw buffer shader input resource bound to a register";
+  let description = [{
+    The `dxbc.dcl_resource_raw` operation declares a raw buffer shader
+    input resource bound to a register.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_resource_raw <id = 3>
+    dxbc.dcl_resource_raw <id = 0, lbound = 0, ubound = 3, space = 1>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)? `>`
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
 #endif // DXBC_OPS
