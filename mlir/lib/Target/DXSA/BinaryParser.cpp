@@ -747,6 +747,19 @@ public:
                                      toAttr(ubound), toAttr(space));
   }
 
+  Instruction buildDclResourceStructured(uint32_t id, uint32_t structByteStride,
+                                         std::optional<uint32_t> lbound,
+                                         std::optional<uint32_t> ubound,
+                                         std::optional<uint32_t> space,
+                                         Location loc) {
+    auto toAttr = [&](std::optional<uint32_t> v) -> IntegerAttr {
+      return v ? builder.getI32IntegerAttr(*v) : IntegerAttr();
+    };
+    return dxsa::DclResourceStructured::create(builder, loc, id,
+                                               structByteStride, toAttr(lbound),
+                                               toAttr(ubound), toAttr(space));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1557,6 +1570,38 @@ public:
                                     lbound, ubound, space, loc);
   }
 
+  FailureOr<Instruction> parseDclResourceStructured(Location loc) {
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    if (operand->getType() != dxsa::InlineOperandType::resource)
+      return emitError(loc, "operand must be a resource register, got ")
+             << dxsa::stringifyInlineOperandType(operand->getType());
+    auto indexArray = operand->getIndex();
+    auto indexDim = indexArray ? indexArray.size() : 0;
+    if (indexDim != 1 && indexDim != 3)
+      return emitError(loc, "operand must have a 1D or 3D index, got ")
+             << indexDim;
+    auto id = indexArray[0];
+    std::optional<uint32_t> lbound, ubound;
+    if (indexDim == 3) {
+      lbound = indexArray[1];
+      ubound = indexArray[2];
+    }
+
+    auto strideToken = parseToken();
+    FAILURE_IF_FAILED(strideToken);
+
+    std::optional<uint32_t> space;
+    if (indexDim == 3) {
+      auto spaceToken = parseToken();
+      FAILURE_IF_FAILED(spaceToken);
+      space = *spaceToken;
+    }
+
+    return builder.buildDclResourceStructured(id, *strideToken, lbound, ubound,
+                                              space, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1650,6 +1695,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_RESOURCE:
       result = parseDclResource(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_RESOURCE_STRUCTURED:
+      result = parseDclResourceStructured(loc);
       break;
     default:
       return std::nullopt;
