@@ -113,6 +113,33 @@ LogicalResult DclResource::verify() {
     return emitOpError("sample_count is only valid for texture2dms and "
                        "texture2dmsarray, got ")
            << stringifyResourceDimension(dim);
+  auto lbound = getLbound();
+  auto ubound = getUbound();
+  auto space = getSpace();
+  if ((lbound || ubound || space) && !(lbound && ubound && space))
+    return emitOpError(
+        "lbound, ubound and space must be either all set or all absent");
+  if (lbound && ubound && *lbound > *ubound)
+    return emitOpError("expected lbound <= ubound, got lbound=")
+           << *lbound << ", ubound=" << *ubound;
+  return success();
+}
+
+LogicalResult DclResourceStructured::verify() {
+  auto stride = getStructByteStride();
+  if (stride % 4 != 0)
+    return emitOpError("struct byte stride must be a multiple of 4, got ")
+           << stride;
+  auto lbound = getLbound();
+  auto ubound = getUbound();
+  auto space = getSpace();
+  if ((lbound || ubound || space) && !(lbound && ubound && space))
+    return emitOpError(
+        "lbound, ubound and space must be either all set or all absent");
+  if (lbound && ubound && *lbound > *ubound)
+    return emitOpError("expected lbound <= ubound, got lbound=")
+           << *lbound << ", ubound=" << *ubound;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
