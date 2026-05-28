@@ -1326,4 +1326,32 @@ def DXSA_DclResourceStructured : DXSA_Op<"dcl_resource_structured"> {
   let hasVerifier = 1;
 }
 
+def DXSA_DclResourceRaw : DXSA_Op<"dcl_resource_raw"> {
+  let summary = "declares a raw buffer shader input resource bound to a register";
+  let description = [{
+    The `dxsa.dcl_resource_raw` operation declares a raw buffer shader
+    input resource bound to a register.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_resource_raw <id = 3>
+    dxsa.dcl_resource_raw <id = 0, lbound = 0, ubound = 3, space = 1>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)? `>`
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
 #endif // DXSA_OPS

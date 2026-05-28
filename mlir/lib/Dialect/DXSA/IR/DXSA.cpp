@@ -201,6 +201,19 @@ LogicalResult DclResource::verify() {
   return success();
 }
 
+LogicalResult DclResourceRaw::verify() {
+  auto lbound = getLbound();
+  auto ubound = getUbound();
+  auto space = getSpace();
+  if ((lbound || ubound || space) && !(lbound && ubound && space))
+    return emitOpError(
+        "lbound, ubound and space must be either all set or all absent");
+  if (lbound && ubound && *lbound > *ubound)
+    return emitOpError("expected lbound <= ubound, got lbound=")
+           << *lbound << ", ubound=" << *ubound;
+  return success();
+}
+
 LogicalResult DclResourceStructured::verify() {
   auto stride = getStructByteStride();
   if (stride % 4 != 0)
