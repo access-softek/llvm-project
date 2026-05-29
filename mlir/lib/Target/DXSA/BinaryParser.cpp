@@ -733,6 +733,11 @@ public:
         optionalToAttr(space));
   }
 
+  Instruction buildInterfaceCall(Operand operand, uint32_t callSite,
+                                 Location loc) {
+    return dxsa::InterfaceCall::create(builder, loc, operand, callSite);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1476,6 +1481,22 @@ public:
     return builder.buildDclSampler(id, lbound, ubound, space, *mode, loc);
   }
 
+  FailureOr<Instruction> parseInterfaceCall(uint32_t opcodeToken,
+                                            Location loc) {
+    if (DECODE_IS_D3D10_SB_OPCODE_EXTENDED(opcodeToken)) {
+      return emitError(getLocation(),
+                       "extended interface calls are not supported");
+    }
+
+    auto callSite = parseToken();
+    FAILURE_IF_FAILED(callSite);
+
+    auto operand = parseOperand();
+    FAILURE_IF_FAILED(operand);
+
+    return builder.buildInterfaceCall(*operand, *callSite, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1566,6 +1587,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_SAMPLER:
       result = parseDclSampler(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_INTERFACE_CALL:
+      result = parseInterfaceCall(opcodeToken, loc);
       break;
     default:
       return std::nullopt;
