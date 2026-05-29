@@ -937,6 +937,51 @@ public:
                                         toAttr(ubound), toAttr(space));
   }
 
+  dxsa::UAVFlagsAttr buildUavFlagsAttr(std::optional<dxsa::UAVFlags> flags) {
+    return flags ? dxsa::UAVFlagsAttr::get(context, *flags)
+                 : dxsa::UAVFlagsAttr();
+  }
+
+  Instruction buildDclUavTyped(
+      uint32_t id, dxsa::ResourceDimension dim, dxsa::ResourceReturnType x,
+      dxsa::ResourceReturnType y, dxsa::ResourceReturnType z,
+      dxsa::ResourceReturnType w, std::optional<dxsa::UAVFlags> flags,
+      std::optional<uint32_t> lbound, std::optional<uint32_t> ubound,
+      std::optional<uint32_t> space, Location loc) {
+    auto toAttr = [&](std::optional<uint32_t> v) -> IntegerAttr {
+      return v ? builder.getI32IntegerAttr(*v) : IntegerAttr();
+    };
+    return dxsa::DclUavTyped::create(builder, loc, id, dim, x, y, z, w,
+                                     buildUavFlagsAttr(flags), toAttr(lbound),
+                                     toAttr(ubound), toAttr(space));
+  }
+
+  Instruction buildDclUavRaw(uint32_t id, std::optional<dxsa::UAVFlags> flags,
+                             std::optional<uint32_t> lbound,
+                             std::optional<uint32_t> ubound,
+                             std::optional<uint32_t> space, Location loc) {
+    auto toAttr = [&](std::optional<uint32_t> v) -> IntegerAttr {
+      return v ? builder.getI32IntegerAttr(*v) : IntegerAttr();
+    };
+    return dxsa::DclUavRaw::create(builder, loc, id, buildUavFlagsAttr(flags),
+                                   toAttr(lbound), toAttr(ubound),
+                                   toAttr(space));
+  }
+
+  Instruction buildDclUavStructured(uint32_t id, uint32_t structByteStride,
+                                    std::optional<dxsa::UAVFlags> flags,
+                                    std::optional<uint32_t> lbound,
+                                    std::optional<uint32_t> ubound,
+                                    std::optional<uint32_t> space,
+                                    Location loc) {
+    auto toAttr = [&](std::optional<uint32_t> v) -> IntegerAttr {
+      return v ? builder.getI32IntegerAttr(*v) : IntegerAttr();
+    };
+    return dxsa::DclUavStructured::create(
+        builder, loc, id, structByteStride, buildUavFlagsAttr(flags),
+        toAttr(lbound), toAttr(ubound), toAttr(space));
+  }
+
   Instruction buildDclIndexableTemp(uint32_t id, uint32_t size,
                                     uint32_t numComponents, Location loc) {
     return dxsa::DclIndexableTemp::create(
@@ -2003,6 +2048,105 @@ public:
     return builder.buildDclResourceRaw(id, lbound, ubound, space, loc);
   }
 
+  std::optional<dxsa::UAVFlags> decodeUavFlags(uint32_t opcodeToken) {
+    auto flags = static_cast<dxsa::UAVFlags>(0);
+    if (opcodeToken & D3D11_SB_GLOBALLY_COHERENT_ACCESS)
+      flags = flags | dxsa::UAVFlags::globallyCoherent;
+    if (opcodeToken & D3D11_SB_RASTERIZER_ORDERED_ACCESS)
+      flags = flags | dxsa::UAVFlags::rasterizerOrdered;
+    if (opcodeToken & D3D11_SB_UAV_HAS_ORDER_PRESERVING_COUNTER)
+      flags = flags | dxsa::UAVFlags::hasOrderPreservingCounter;
+    if (static_cast<uint32_t>(flags) == 0)
+      return std::nullopt;
+    return flags;
+  }
+
+  struct UavOperand {
+    uint32_t id;
+    std::optional<uint32_t> lbound;
+    std::optional<uint32_t> ubound;
+  };
+
+  FailureOr<UavOperand> parseUavOperand(Location loc) {
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    if (operand->getType() != dxsa::InlineOperandType::uav)
+      return emitError(loc, "operand must be a uav register, got ")
+             << dxsa::stringifyInlineOperandType(operand->getType());
+    auto indexArray = operand->getIndex();
+    auto indexDim = indexArray ? indexArray.size() : 0;
+    if (indexDim != 1 && indexDim != 3)
+      return emitError(loc, "operand must have a 1D or 3D index, got ")
+             << indexDim;
+    UavOperand uav{static_cast<uint32_t>(indexArray[0]), std::nullopt,
+                   std::nullopt};
+    if (indexDim == 3) {
+      uav.lbound = static_cast<uint32_t>(indexArray[1]);
+      uav.ubound = static_cast<uint32_t>(indexArray[2]);
+    }
+    return uav;
+  }
+
+  FailureOr<std::optional<uint32_t>> parseUavSpace(const UavOperand &uav) {
+    if (!uav.lbound)
+      return std::optional<uint32_t>(std::nullopt);
+    auto spaceToken = parseToken();
+    FAILURE_IF_FAILED(spaceToken);
+    return std::optional<uint32_t>(*spaceToken);
+  }
+
+  FailureOr<Instruction> parseDclUavTyped(uint32_t opcodeToken, Location loc) {
+    auto rawDim = DECODE_D3D10_SB_RESOURCE_DIMENSION(opcodeToken);
+    auto dim = dxsa::symbolizeResourceDimension(rawDim);
+    if (!dim)
+      return emitError(loc, "unknown resource dimension: ") << rawDim;
+
+    auto flags = decodeUavFlags(opcodeToken);
+
+    auto uav = parseUavOperand(loc);
+    FAILURE_IF_FAILED(uav);
+
+    auto returnTypeToken = parseToken();
+    FAILURE_IF_FAILED(returnTypeToken);
+    auto x = parseResourceReturnType(*returnTypeToken, 0, loc);
+    FAILURE_IF_FAILED(x);
+    auto y = parseResourceReturnType(*returnTypeToken, 1, loc);
+    FAILURE_IF_FAILED(y);
+    auto z = parseResourceReturnType(*returnTypeToken, 2, loc);
+    FAILURE_IF_FAILED(z);
+    auto w = parseResourceReturnType(*returnTypeToken, 3, loc);
+    FAILURE_IF_FAILED(w);
+
+    auto space = parseUavSpace(*uav);
+    FAILURE_IF_FAILED(space);
+
+    return builder.buildDclUavTyped(uav->id, *dim, *x, *y, *z, *w, flags,
+                                    uav->lbound, uav->ubound, *space, loc);
+  }
+
+  FailureOr<Instruction> parseDclUavRaw(uint32_t opcodeToken, Location loc) {
+    auto flags = decodeUavFlags(opcodeToken);
+    auto uav = parseUavOperand(loc);
+    FAILURE_IF_FAILED(uav);
+    auto space = parseUavSpace(*uav);
+    FAILURE_IF_FAILED(space);
+    return builder.buildDclUavRaw(uav->id, flags, uav->lbound, uav->ubound,
+                                  *space, loc);
+  }
+
+  FailureOr<Instruction> parseDclUavStructured(uint32_t opcodeToken,
+                                               Location loc) {
+    auto flags = decodeUavFlags(opcodeToken);
+    auto uav = parseUavOperand(loc);
+    FAILURE_IF_FAILED(uav);
+    auto strideToken = parseToken();
+    FAILURE_IF_FAILED(strideToken);
+    auto space = parseUavSpace(*uav);
+    FAILURE_IF_FAILED(space);
+    return builder.buildDclUavStructured(uav->id, *strideToken, flags,
+                                         uav->lbound, uav->ubound, *space, loc);
+  }
+
   FailureOr<Instruction> parseDclIndexableTemp(Location loc) {
     auto id = parseToken();
     FAILURE_IF_FAILED(id);
@@ -2122,6 +2266,15 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_RESOURCE_RAW:
       result = parseDclResourceRaw(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_TYPED:
+      result = parseDclUavTyped(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_RAW:
+      result = parseDclUavRaw(opcodeToken, loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_STRUCTURED:
+      result = parseDclUavStructured(opcodeToken, loc);
       break;
     case D3D10_SB_OPCODE_DCL_INDEXABLE_TEMP:
       result = parseDclIndexableTemp(loc);
