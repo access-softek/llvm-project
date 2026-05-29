@@ -394,6 +394,27 @@ def DXBC_ResourceReturnTypeAttr :
   let assemblyFormat = "$value";
 }
 
+def DXBC_UAVFlags_GloballyCoherent          : I32BitEnumAttrCaseBit<"globallyCoherent",          0>;
+def DXBC_UAVFlags_RasterizerOrdered         : I32BitEnumAttrCaseBit<"rasterizerOrdered",         1>;
+def DXBC_UAVFlags_HasOrderPreservingCounter : I32BitEnumAttrCaseBit<"hasOrderPreservingCounter", 2>;
+
+def DXBC_UAVFlags : I32BitEnumAttr<
+    "UAVFlags", "UAV access flags", [
+      DXBC_UAVFlags_GloballyCoherent,
+      DXBC_UAVFlags_RasterizerOrdered,
+      DXBC_UAVFlags_HasOrderPreservingCounter
+    ]> {
+  let separator = "|";
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def DXBC_UAVFlagsAttr :
+    EnumAttr<DXBCDialect, DXBC_UAVFlags, "uav_flags"> {
+  let assemblyFormat = "$value";
+}
+
 def DXBC_ConstantBufferAccessPattern_ImmediateIndexed : I32EnumAttrCase<"immediateIndexed", 0>;
 def DXBC_ConstantBufferAccessPattern_DynamicIndexed   : I32EnumAttrCase<"dynamicIndexed",   1>;
 
@@ -1300,6 +1321,114 @@ def DXBC_DclResourceRaw : DXBC_Op<"dcl_resource_raw"> {
     ` ` `<` `id` `=` $id
             (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
              `,` `space` `=` $space)? `>`
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def DXBC_DclUavTyped : DXBC_Op<"dcl_uav_typed"> {
+  let summary = "declares a typed UnorderedAccessView (UAV) for use by a shader";
+  let description = [{
+    The `dxbc.dcl_uav_typed` operation declares a typed UnorderedAccessView (UAV) for use by a shader.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_uav_typed <id = 0, dim = buffer>,
+        <x = unorm, y = snorm, z = sint, w = uint>
+    dxbc.dcl_uav_typed <id = 1, dim = texture2d>,
+        <x = float, y = float, z = float, w = float>,
+        <flags = globallyCoherent>
+    dxbc.dcl_uav_typed <id = 0, dim = texture3d,
+        lbound = 0, ubound = 3, space = 1>,
+        <x = float, y = float, z = float, w = float>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      DXBC_ResourceDimensionAttr:$dim,
+      DXBC_ResourceReturnTypeAttr:$x,
+      DXBC_ResourceReturnTypeAttr:$y,
+      DXBC_ResourceReturnTypeAttr:$z,
+      DXBC_ResourceReturnTypeAttr:$w,
+      OptionalAttr<DXBC_UAVFlagsAttr>:$flags,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id `,` `dim` `=` $dim
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)? `>` `,`
+    `<` `x` `=` $x `,` `y` `=` $y `,` `z` `=` $z `,` `w` `=` $w `>`
+    (`,` `<` `flags` `=` $flags^ `>`)?
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def DXBC_DclUavRaw : DXBC_Op<"dcl_uav_raw"> {
+  let summary = "declares a raw UnorderedAccessView (UAV) for use by a shader";
+  let description = [{
+    The `dxbc.dcl_uav_raw` operation declares a raw UnorderedAccessView (UAV) for use by a shader.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_uav_raw <id = 0>
+    dxbc.dcl_uav_raw <id = 1>, <flags = globallyCoherent>
+    dxbc.dcl_uav_raw <id = 0, lbound = 0, ubound = 3, space = 1>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      OptionalAttr<DXBC_UAVFlagsAttr>:$flags,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)? `>`
+    (`,` `<` `flags` `=` $flags^ `>`)?
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def DXBC_DclUavStructured : DXBC_Op<"dcl_uav_structured"> {
+  let summary = "declares a structured UnorderedAccessView (UAV) for use by a shader";
+  let description = [{
+    The `dxbc.dcl_uav_structured` operation declares a structured UnorderedAccessView (UAV) for use by a shader.
+
+    `$struct_byte_stride` is the structure size in bytes; it must be a
+    multiple of 4.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_uav_structured <id = 0, struct_byte_stride = 16>
+    dxbc.dcl_uav_structured <id = 1, struct_byte_stride = 32>,
+        <flags = globallyCoherent|hasOrderPreservingCounter>
+    dxbc.dcl_uav_structured <id = 0, struct_byte_stride = 32,
+        lbound = 0, ubound = 3, space = 1>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      ConfinedAttr<I32Attr, [IntPositive]>:$struct_byte_stride,
+      OptionalAttr<DXBC_UAVFlagsAttr>:$flags,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id
+            `,` `struct_byte_stride` `=` $struct_byte_stride
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)? `>`
+    (`,` `<` `flags` `=` $flags^ `>`)?
     attr-dict
   }];
   let hasVerifier = 1;

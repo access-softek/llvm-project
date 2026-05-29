@@ -179,6 +179,19 @@ LogicalResult DclSampler::verify() {
   return success();
 }
 
+static LogicalResult verifyLboundUboundSpace(Operation *op,
+                                             std::optional<uint32_t> lbound,
+                                             std::optional<uint32_t> ubound,
+                                             std::optional<uint32_t> space) {
+  if ((lbound || ubound || space) && !(lbound && ubound && space))
+    return op->emitOpError(
+        "lbound, ubound and space must be either all set or all absent");
+  if (lbound && ubound && *lbound > *ubound)
+    return op->emitOpError("expected lbound <= ubound, got lbound=")
+           << *lbound << ", ubound=" << *ubound;
+  return success();
+}
+
 LogicalResult DclResource::verify() {
   auto dim = getDim();
   bool isMultisampled = dim == ResourceDimension::texture2dms ||
@@ -190,29 +203,11 @@ LogicalResult DclResource::verify() {
     return emitOpError("sample_count is only valid for texture2dms and "
                        "texture2dmsarray, got ")
            << stringifyResourceDimension(dim);
-  auto lbound = getLbound();
-  auto ubound = getUbound();
-  auto space = getSpace();
-  if ((lbound || ubound || space) && !(lbound && ubound && space))
-    return emitOpError(
-        "lbound, ubound and space must be either all set or all absent");
-  if (lbound && ubound && *lbound > *ubound)
-    return emitOpError("expected lbound <= ubound, got lbound=")
-           << *lbound << ", ubound=" << *ubound;
-  return success();
+  return verifyLboundUboundSpace(*this, getLbound(), getUbound(), getSpace());
 }
 
 LogicalResult DclResourceRaw::verify() {
-  auto lbound = getLbound();
-  auto ubound = getUbound();
-  auto space = getSpace();
-  if ((lbound || ubound || space) && !(lbound && ubound && space))
-    return emitOpError(
-        "lbound, ubound and space must be either all set or all absent");
-  if (lbound && ubound && *lbound > *ubound)
-    return emitOpError("expected lbound <= ubound, got lbound=")
-           << *lbound << ", ubound=" << *ubound;
-  return success();
+  return verifyLboundUboundSpace(*this, getLbound(), getUbound(), getSpace());
 }
 
 LogicalResult DclResourceStructured::verify() {
@@ -220,16 +215,48 @@ LogicalResult DclResourceStructured::verify() {
   if (stride % 4 != 0)
     return emitOpError("struct byte stride must be a multiple of 4, got ")
            << stride;
-  auto lbound = getLbound();
-  auto ubound = getUbound();
-  auto space = getSpace();
-  if ((lbound || ubound || space) && !(lbound && ubound && space))
-    return emitOpError(
-        "lbound, ubound and space must be either all set or all absent");
-  if (lbound && ubound && *lbound > *ubound)
-    return emitOpError("expected lbound <= ubound, got lbound=")
-           << *lbound << ", ubound=" << *ubound;
+  return verifyLboundUboundSpace(*this, getLbound(), getUbound(), getSpace());
+}
+
+static LogicalResult
+verifyNoOrderPreservingCounter(Operation *op, std::optional<UAVFlags> flags) {
+  if (flags && bitEnumContainsAny(*flags, UAVFlags::hasOrderPreservingCounter))
+    return op->emitOpError(
+        "hasOrderPreservingCounter flag is only valid for dcl_uav_structured");
   return success();
+}
+
+LogicalResult DclUavTyped::verify() {
+  auto dim = getDim();
+  switch (dim) {
+  case ResourceDimension::buffer:
+  case ResourceDimension::texture1d:
+  case ResourceDimension::texture1darray:
+  case ResourceDimension::texture2d:
+  case ResourceDimension::texture2darray:
+  case ResourceDimension::texture3d:
+    break;
+  default:
+    return emitOpError("invalid dimension for typed UAV: ")
+           << stringifyResourceDimension(dim);
+  }
+  if (failed(verifyNoOrderPreservingCounter(*this, getFlags())))
+    return failure();
+  return verifyLboundUboundSpace(*this, getLbound(), getUbound(), getSpace());
+}
+
+LogicalResult DclUavRaw::verify() {
+  if (failed(verifyNoOrderPreservingCounter(*this, getFlags())))
+    return failure();
+  return verifyLboundUboundSpace(*this, getLbound(), getUbound(), getSpace());
+}
+
+LogicalResult DclUavStructured::verify() {
+  auto stride = getStructByteStride();
+  if (stride % 4 != 0)
+    return emitOpError("struct byte stride must be a multiple of 4, got ")
+           << stride;
+  return verifyLboundUboundSpace(*this, getLbound(), getUbound(), getSpace());
 }
 
 //===----------------------------------------------------------------------===//
