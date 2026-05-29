@@ -41,6 +41,16 @@ void DXSADialect::initialize() {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/DXSA/IR/DXSAOps.cpp.inc"
 
+LogicalResult DclFunctionTable::verify() {
+  for (int32_t functionIndex : getFunctions()) {
+    if (functionIndex < 0) {
+      return emitOpError("function body index must not be negative, got ")
+             << functionIndex;
+    }
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd attribute method definitions
 //===----------------------------------------------------------------------===//

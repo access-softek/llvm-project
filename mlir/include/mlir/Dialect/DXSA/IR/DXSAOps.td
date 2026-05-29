@@ -730,7 +730,7 @@ def DXSA_DclFunctionBody : DXSA_Op<"dcl_function_body"> {
     dxsa.dcl_function_body 0
     ```
   }];
-  let arguments = (ins I32Attr:$index);
+  let arguments = (ins ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
   let assemblyFormat = "$index attr-dict";
 }
 
@@ -750,8 +750,10 @@ def DXSA_DclFunctionTable : DXSA_Op<"dcl_function_table"> {
     dxsa.dcl_function_table 0, <functions = [0, 1]>
     ```
   }];
-  let arguments = (ins I32Attr:$index, DenseI32ArrayAttr:$functions);
+  let arguments = (ins ConfinedAttr<I32Attr, [IntNonNegative]>:$index,
+                       DenseI32ArrayAttr:$functions);
   let assemblyFormat = "$index `,` `<` `functions` `=` $functions `>` attr-dict";
+  let hasVerifier = 1;
 }
 
 #endif // DXSA_OPS
