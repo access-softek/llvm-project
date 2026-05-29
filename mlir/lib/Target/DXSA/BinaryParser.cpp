@@ -1270,6 +1270,18 @@ public:
     return success();
   }
 
+  FailureOr<std::optional<uint32_t>> parseExtendedLength(uint32_t opcode) {
+    std::optional<uint32_t> result;
+    if (opcode != D3D11_SB_OPCODE_DCL_FUNCTION_TABLE) {
+      return success(result);
+    }
+
+    Token lengthToken = parseToken();
+    FAILURE_IF_FAILED(lengthToken);
+    result = *lengthToken;
+    return success(result);
+  }
+
   FailureOr<Instruction> parseInstruction() {
     size_t beginOffset = currentTokenOffset;
     Token token = parseToken();
@@ -1284,11 +1296,16 @@ public:
     modifier.saturate = DECODE_IS_D3D10_SB_INSTRUCTION_SATURATE_ENABLED(*token);
 
     uint32_t length = DECODE_D3D10_SB_TOKENIZED_INSTRUCTION_LENGTH(*token);
+    if (DECODE_IS_D3D10_SB_OPCODE_EXTENDED(*token)) {
+      auto extLength = parseExtendedLength(opcode);
+      FAILURE_IF_FAILED(extLength);
+      if (*extLength) {
+        length = extLength->value();
+      }
+    }
 
     // TODO: extended instructions:
     // BOOL b51PlusShader =
-    // BOOL bExtended = DECODE_IS_D3D10_SB_OPCODE_EXTENDED(Token)
-    // ...
 
     if (opcode >= D3D10_SB_NUM_OPCODES) {
       emitError(getLocation(), "unknown opcode");
