@@ -759,6 +759,24 @@ def DXBC_DclIndexRange : DXBC_Op<"dcl_index_range"> {
   let hasVerifier = 1;
 }
 
+def DXBC_DclInputSgv : DXBC_Op<"dcl_input_sgv"> {
+  let summary = "declares an input register as a System Generated Value";
+  let description = [{
+    The `dxbc.dcl_input_sgv` operation declares an input register
+    that expects a System Generated Value to be provided
+    from the upstream stage.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_input_sgv <type = input, components = 4, mask = <x>, index = [0]>, <vertexID>
+    ```
+  }];
+  let arguments = (ins DXBC_InlineOperandAttr:$operand,
+                       DXBC_SystemValueNameAttr:$name);
+  let assemblyFormat = "$operand `,` $name attr-dict";
+}
+
 def DXBC_DclOutputSgv : DXBC_Op<"dcl_output_sgv"> {
   let summary = "declares an output as a System Generated Value";
   let description = [{
