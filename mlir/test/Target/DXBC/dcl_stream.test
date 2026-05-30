@@ -1,0 +1,6 @@
+// RUN: mlir-translate --import-dxbc-bin %S/inputs/dcl_stream.bin | FileCheck %s
+
+// CHECK:      module {
+// CHECK-NEXT:   dxbc.dcl_stream 0
+// CHECK-NEXT:   dxbc.dcl_stream 3
+// CHECK-NEXT: }
