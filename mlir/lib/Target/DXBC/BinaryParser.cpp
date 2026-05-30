@@ -716,6 +716,18 @@ public:
         optionalToAttr(space), accessPattern);
   }
 
+  Instruction buildDclSampler(uint32_t id, std::optional<uint32_t> lbound,
+                              std::optional<uint32_t> ubound,
+                              std::optional<uint32_t> space,
+                              dxbc::SamplerMode mode, Location loc) {
+    auto optionalToAttr = [&](std::optional<uint32_t> v) -> IntegerAttr {
+      return v ? builder.getI32IntegerAttr(*v) : IntegerAttr();
+    };
+    return dxbc::DclSampler::create(
+        builder, loc, id, mode, optionalToAttr(lbound), optionalToAttr(ubound),
+        optionalToAttr(space));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1414,6 +1426,35 @@ public:
     }
   }
 
+  FailureOr<Instruction> parseDclSampler(uint32_t opcodeToken, Location loc) {
+    auto rawMode = DECODE_D3D10_SB_SAMPLER_MODE(opcodeToken);
+    auto mode = dxbc::symbolizeSamplerMode(rawMode);
+    if (!mode)
+      return emitError(loc, "unknown sampler mode: ") << rawMode;
+
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    if (operand->getType() != dxbc::InlineOperandType::sampler)
+      return emitError(loc, "operand must be a sampler register, got ")
+             << dxbc::stringifyInlineOperandType(operand->getType());
+    auto indexArray = operand->getIndex();
+    auto indexDim = indexArray ? indexArray.size() : 0;
+    if (indexDim != 1 && indexDim != 3)
+      return emitError(loc, "operand must have a 1D or 3D index, got ")
+             << indexDim;
+    auto id = indexArray[0];
+    std::optional<uint32_t> lbound, ubound, space;
+    if (indexDim == 3) {
+      lbound = indexArray[1];
+      ubound = indexArray[2];
+      auto spaceToken = parseToken();
+      FAILURE_IF_FAILED(spaceToken);
+      space = *spaceToken;
+    }
+
+    return builder.buildDclSampler(id, lbound, ubound, space, *mode, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1498,6 +1539,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
       result = parseDclConstantBuffer(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_SAMPLER:
+      result = parseDclSampler(opcodeToken, loc);
       break;
     default:
       return std::nullopt;

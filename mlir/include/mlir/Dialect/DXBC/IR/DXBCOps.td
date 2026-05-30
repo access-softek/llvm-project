@@ -299,6 +299,27 @@ def DXBC_ConstantBufferAccessPatternAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+// `default` is a reserved C++ keyword, so the symbolic (C++ enum case) names
+// use PascalCase while the printable asm form stays lowercase.
+def DXBC_SamplerMode_Default    : I32EnumAttrCase<"Default",    0, "default">;
+def DXBC_SamplerMode_Comparison : I32EnumAttrCase<"Comparison", 1, "comparison">;
+def DXBC_SamplerMode_Mono       : I32EnumAttrCase<"Mono",       2, "mono">;
+
+def DXBC_SamplerMode : I32EnumAttr<
+    "SamplerMode", "sampler mode", [
+      DXBC_SamplerMode_Default,
+      DXBC_SamplerMode_Comparison,
+      DXBC_SamplerMode_Mono
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_SamplerModeAttr :
+    EnumAttr<DXBCDialect, DXBC_SamplerMode, "sampler_mode"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXBC attribute Constraints
 //===----------------------------------------------------------------------===//
@@ -1001,6 +1022,34 @@ def DXBC_DclConstantBuffer : DXBC_Op<"dcl_constant_buffer"> {
             (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
              `,` `space` `=` $space)?
     `>` `,` $access_pattern attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def DXBC_DclSampler : DXBC_Op<"dcl_sampler"> {
+  let summary = "declares a sampler that will be referenced in the shader";
+  let description = [{
+    The `dxbc.dcl_sampler` operation declares sampler that will be referenced in the shader.
+
+    Examples:
+
+    ```mlir
+    dxbc.dcl_sampler <id = 3, mode = default>
+    dxbc.dcl_sampler <id = 0, mode = comparison, lbound = 0, ubound = 3, space = 1>
+    ```
+  }];
+
+  let arguments = (ins
+      I32Attr:$id,
+      DXBC_SamplerModeAttr:$mode,
+      OptionalAttr<I32Attr>:$lbound,
+      OptionalAttr<I32Attr>:$ubound,
+      OptionalAttr<I32Attr>:$space);
+  let assemblyFormat = [{
+    ` ` `<` `id` `=` $id `,` `mode` `=` $mode
+            (`,` `lbound` `=` $lbound^ `,` `ubound` `=` $ubound
+             `,` `space` `=` $space)?
+    `>` attr-dict
   }];
   let hasVerifier = 1;
 }
