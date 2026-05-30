@@ -595,6 +595,11 @@ public:
     return dxsa::DclMaxOutputVertexCount::create(builder, loc, count);
   }
 
+  Instruction buildDclStream(uint32_t index, Location loc) {
+    return dxsa::DclStream::create(builder, loc,
+                                   builder.getI32IntegerAttr(index));
+  }
+
   Instruction buildDclInputPs(dxsa::InterpolationMode interpolationMode,
                               Operand operand, Location loc) {
     auto interpolationModeAttr = dxsa::InterpolationModeAttr::get(
@@ -1168,6 +1173,22 @@ public:
     return builder.buildDclMaxOutputVertexCount(count, loc);
   }
 
+  FailureOr<Instruction> parseDclStream(Location loc) {
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    if (operand->getType() != dxsa::InlineOperandType::stream)
+      return emitError(loc, "unexpected operand type: ")
+             << dxsa::stringifyInlineOperandType(operand->getType());
+    if (operand->getComponents() != 0)
+      return emitError(loc, "unexpected number of components: ")
+             << operand->getComponents();
+    auto indexArray = operand->getIndex();
+    if (!indexArray || indexArray.size() != 1)
+      return emitError(loc, "unsupported index dimension: ")
+             << (indexArray ? indexArray.size() : 0);
+    return builder.buildDclStream(static_cast<uint32_t>(indexArray[0]), loc);
+  }
+
   FailureOr<dxsa::InterpolationMode>
   parseInterpolationMode(uint32_t opcodeToken, Location loc) {
     auto rawInterpolationMode =
@@ -1491,6 +1512,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_MAX_OUTPUT_VERTEX_COUNT:
       result = parseDclMaxOutputVertexCount(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_STREAM:
+      result = parseDclStream(loc);
       break;
     case D3D10_SB_OPCODE_DCL_INPUT_PS:
       result = parseDclInputPs(opcodeToken, loc);
