@@ -777,6 +777,24 @@ def DXSA_DclInputSgv : DXSA_Op<"dcl_input_sgv"> {
   let assemblyFormat = "$operand `,` $name attr-dict";
 }
 
+def DXSA_DclInputSiv : DXSA_Op<"dcl_input_siv"> {
+  let summary = "declares an input register as a System Interpreted Value";
+  let description = [{
+    The `dxsa.dcl_input_siv` operation declares an input register
+    that expects a System Interpreted Value to be provided
+    from the upstream Stage.
+
+    Example:
+
+    ```mlir
+    dxsa.dcl_input_siv <type = input, components = 4, mask = <x, y, z, w>, index = [0]>, <position>
+    ```
+  }];
+  let arguments = (ins DXSA_InlineOperandAttr:$operand,
+                       DXSA_SystemValueNameAttr:$name);
+  let assemblyFormat = "$operand `,` $name attr-dict";
+}
+
 def DXSA_DclOutputSgv : DXSA_Op<"dcl_output_sgv"> {
   let summary = "declares an output as a System Generated Value";
   let description = [{
