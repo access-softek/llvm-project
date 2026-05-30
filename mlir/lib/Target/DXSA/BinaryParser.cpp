@@ -651,6 +651,12 @@ public:
                                        builder.getI32IntegerAttr(count));
   }
 
+  Instruction buildDclInputSgv(dxsa::InlineOperandAttr operand,
+                               dxsa::SystemValueName name, Location loc) {
+    auto nameAttr = dxsa::SystemValueNameAttr::get(builder.getContext(), name);
+    return dxsa::DclInputSgv::create(builder, loc, operand, nameAttr);
+  }
+
   Instruction buildDclOutputSgv(dxsa::InlineOperandAttr operand,
                                 dxsa::SystemValueName name, Location loc) {
     auto nameAttr = dxsa::SystemValueNameAttr::get(builder.getContext(), name);
@@ -1291,6 +1297,14 @@ public:
     return builder.buildDclOutputSiv(*operand, *name, loc);
   }
 
+  FailureOr<Instruction> parseDclInputSgv(Location loc) {
+    auto operand = parseInlineOperand();
+    FAILURE_IF_FAILED(operand);
+    auto name = parseSystemValueName(getLocation());
+    FAILURE_IF_FAILED(name);
+    return builder.buildDclInputSgv(*operand, *name, loc);
+  }
+
   FailureOr<Instruction> parseDclHsMaxTessFactor(Location loc) {
     auto token = parseToken();
     FAILURE_IF_FAILED(token);
@@ -1440,6 +1454,9 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_INDEX_RANGE:
       result = parseDclIndexRange(loc);
+      break;
+    case D3D10_SB_OPCODE_DCL_INPUT_SGV:
+      result = parseDclInputSgv(loc);
       break;
     case D3D10_SB_OPCODE_DCL_OUTPUT_SGV:
       result = parseDclOutputSgv(loc);
