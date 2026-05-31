@@ -2,7 +2,7 @@
 
 // 9 individual flags (one per instruction), then multi-flag combo, then all flags.
 
-// CHECK:      module {
+// CHECK:      dxsa.module {
 // CHECK-NEXT:   dxsa.dcl_global_flags <refactoringAllowed>
 // CHECK-NEXT:   dxsa.dcl_global_flags <enableDoublePrecisionFloatOps>
 // CHECK-NEXT:   dxsa.dcl_global_flags <forceEarlyDepthStencil>

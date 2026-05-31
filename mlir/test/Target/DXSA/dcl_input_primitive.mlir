@@ -1,6 +1,6 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_input_primitive.bin | FileCheck %s
 
-// CHECK:      module {
+// CHECK:      dxsa.module {
 // CHECK-NEXT:   dxsa.dcl_input_primitive point
 // CHECK-NEXT:   dxsa.dcl_input_primitive line
 // CHECK-NEXT:   dxsa.dcl_input_primitive triangle

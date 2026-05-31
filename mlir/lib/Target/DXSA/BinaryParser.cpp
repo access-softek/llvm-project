@@ -420,15 +420,22 @@ static dxsa::ComponentMask decodeComponentMask(uint32_t rawComponentMask) {
 
 class DXBuilder {
 public:
-  DXBuilder(MLIRContext *context, StringAttr name)
-      : context(context),
-        module(ModuleOp::create(builder, FileLineColLoc::get(name, 0, 0))),
-        builder(module.getRegion()) {}
+  explicit DXBuilder(MLIRContext *context)
+      : context(context), builder(context) {}
 
   using Index = mlir::Value;
   using Operand = mlir::Value;
   using Instruction = mlir::Operation *;
-  using Module = mlir::ModuleOp;
+  using Module = dxsa::ModuleOp;
+
+  Module createModule(dxsa::ProgramTypeAttr programType,
+                      dxsa::ShaderVersionAttr shaderVersion, Location loc) {
+    OperationState state(loc, Module::getOperationName());
+    Module::build(builder, state, programType, shaderVersion);
+    auto module = cast<Module>(Operation::create(state));
+    builder.setInsertionPointToStart(&module.getBody().front());
+    return module;
+  }
 
   Index buildIndexImm32(int32_t imm, FileLineColLoc loc) {
     Operation *op =
@@ -521,10 +528,6 @@ public:
                                FileLineColLoc loc) {
     return dxsa::Instruction::create(builder, loc, operands,
                                      builder.getStringAttr(name));
-  }
-
-  Module buildModule(ArrayRef<Instruction> instructions, FileLineColLoc loc) {
-    return module;
   }
 
   Instruction buildDclGlobalFlags(dxsa::GlobalFlags flags, Location loc) {
@@ -706,7 +709,6 @@ public:
 
 private:
   MLIRContext *context;
-  ModuleOp module;
   OpBuilder builder;
 };
 
@@ -723,9 +725,11 @@ public:
   using Instruction = DXBuilder::Instruction;
   using Module = DXBuilder::Module;
 
+  /// Width of the token in the program binary stream.
+  static constexpr size_t tokenSize = sizeof(uint32_t);
+
   /// Parse the current token and move the cursor to the next one.
   Token parseToken() {
-    constexpr size_t tokenSize = sizeof(uint32_t);
     if ((currentTokenOffset + tokenSize) > buffer.size()) {
       emitError(getLocation(), "unexpected end of file");
       return failure();
@@ -1530,15 +1534,76 @@ public:
 
   FailureOr<Module> parseModule() {
     FileLineColLoc loc = getLocation(0);
-    std::vector<Instruction> instructions;
+    auto header = parseProgramHeader();
+    FAILURE_IF_FAILED(header);
+    dxsa::ProgramTypeAttr programType;
+    dxsa::ShaderVersionAttr shaderVersion;
+    if (*header) {
+      programType =
+          dxsa::ProgramTypeAttr::get(name.getContext(), (*header)->type);
+      shaderVersion = dxsa::ShaderVersionAttr::get(
+          name.getContext(), (*header)->major, (*header)->minor);
+    }
+    auto module = builder.createModule(programType, shaderVersion, loc);
     while (currentTokenOffset < buffer.size()) {
       FailureOr<Instruction> inst = parseInstruction();
       if (failed(inst)) {
         return failure();
       }
-      instructions.push_back(*inst);
     }
-    return builder.buildModule(instructions, loc);
+    return module;
+  }
+
+  struct ProgramHeader {
+    dxsa::ProgramType type;
+    uint8_t major;
+    uint8_t minor;
+  };
+
+  /// If the buffer begins with a tokenized-program header (VersionToken +
+  /// LengthToken), decode and consume both tokens and return the program type
+  /// and shader version. Otherwise return without touching the parser current
+  /// position.
+  FailureOr<std::optional<ProgramHeader>> parseProgramHeader() {
+    auto remainingBytes = buffer.size() - currentTokenOffset;
+    if (remainingBytes < tokenSize)
+      return std::optional<ProgramHeader>{};
+
+    auto versionToken = support::endian::read<uint32_t>(
+        buffer.begin() + currentTokenOffset, endianness::little);
+    uint32_t rawProgramType =
+        DECODE_D3D10_SB_TOKENIZED_PROGRAM_TYPE(versionToken);
+    auto programType = dxsa::symbolizeProgramType(rawProgramType);
+    if (!programType)
+      return std::optional<ProgramHeader>{};
+
+    constexpr size_t headerSize = 2 * tokenSize;
+    if (remainingBytes < headerSize)
+      return emitError(getLocation(),
+                       "expected LengthToken after VersionToken");
+
+    auto versionTokenLength =
+        DECODE_D3D10_SB_TOKENIZED_INSTRUCTION_LENGTH(versionToken);
+    if (versionTokenLength != 0)
+      return emitError(getLocation(), "VersionToken length must be 0, got ")
+             << versionTokenLength;
+
+    auto lengthToken = support::endian::read<uint32_t>(
+        buffer.begin() + currentTokenOffset + tokenSize, endianness::little);
+    auto programLength = DECODE_D3D10_SB_TOKENIZED_PROGRAM_LENGTH(lengthToken);
+    constexpr size_t minProgramLen = 2; // VersionToken and LengthToken
+    if (programLength < minProgramLen)
+      return emitError(getLocation(), "LengthToken must be >= ")
+             << minProgramLen << ", got " << programLength;
+
+    uint8_t major =
+        DECODE_D3D10_SB_TOKENIZED_PROGRAM_MAJOR_VERSION(versionToken);
+    uint8_t minor =
+        DECODE_D3D10_SB_TOKENIZED_PROGRAM_MINOR_VERSION(versionToken);
+
+    FAILURE_IF_FAILED(parseToken()); // VersionToken
+    FAILURE_IF_FAILED(parseToken()); // LengthToken
+    return std::optional<ProgramHeader>{{*programType, major, minor}};
   }
 
   LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length) {
@@ -1558,8 +1623,8 @@ private:
 };
 
 namespace mlir::dxsa {
-OwningOpRef<ModuleOp> importDxsaBinaryToModule(llvm::SourceMgr &source,
-                                               MLIRContext *context) {
+OwningOpRef<ModuleOp> deserialize(llvm::SourceMgr &source,
+                                  MLIRContext *context) {
 
   if (source.getNumBuffers() != 1) {
     emitError(UnknownLoc::get(context), "one source file should be provided");
@@ -1575,7 +1640,7 @@ OwningOpRef<ModuleOp> importDxsaBinaryToModule(llvm::SourceMgr &source,
   context->allowUnregisteredDialects();
   context->loadAllAvailableDialects();
 
-  DXBuilder builder(context, name);
+  DXBuilder builder(context);
   Parser parser(builder, name, buffer);
   FailureOr<ModuleOp> mod = parser.parseModule();
   if (failed(mod))

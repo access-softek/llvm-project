@@ -18,7 +18,7 @@ using namespace mlir;
 using namespace llvm;
 
 namespace mlir::dxsa {
-LogicalResult exportModuleToDxsaBinary(ModuleOp source, raw_ostream &output) {
+LogicalResult serialize(mlir::ModuleOp source, raw_ostream &output) {
   Region &region = source.getRegion();
   assert(region.hasOneBlock() && "invalid module");
   return failure();

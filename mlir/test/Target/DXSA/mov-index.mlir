@@ -1,7 +1,7 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/mov-index.bin | FileCheck %s
 // mov o0.xyzw, v[r0.x][0].xyzw
 
-// CHECK: module {
+// CHECK:      dxsa.module {
 // CHECK-NEXT:   %0 = dxsa.index.imm {imm = 0 : i32}
 // CHECK-NEXT:   %1 = dxsa.operand %0 {mask = 240 : i32, num_components = 4 : i32, type = 2 : i32}
 // CHECK-NEXT:   %2 = dxsa.index.imm {imm = 0 : i32}

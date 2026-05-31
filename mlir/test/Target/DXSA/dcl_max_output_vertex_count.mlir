@@ -1,6 +1,6 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_max_output_vertex_count.bin | FileCheck %s
 
-// CHECK:      module {
+// CHECK:      dxsa.module {
 // CHECK-NEXT:   dxsa.dcl_max_output_vertex_count 1
 // CHECK-NEXT:   dxsa.dcl_max_output_vertex_count 1024
 // CHECK-NEXT: }
