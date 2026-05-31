@@ -10,6 +10,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -40,6 +41,74 @@ void DXSADialect::initialize() {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/DXSA/IR/DXSAOps.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// ModuleOp
+//===----------------------------------------------------------------------===//
+
+void ModuleOp::build(OpBuilder &builder, OperationState &state,
+                     ProgramTypeAttr programType,
+                     ShaderVersionAttr shaderVersion) {
+  if (programType)
+    state.addAttribute("program_type", programType);
+  if (shaderVersion)
+    state.addAttribute("shader_version", shaderVersion);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.createBlock(state.addRegion());
+}
+
+ParseResult ModuleOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Parse optional shader information like `pixel_shader 5 0`.
+  StringRef typeKeyword;
+  auto typeLoc = parser.getCurrentLocation();
+  if (succeeded(parser.parseOptionalKeyword(&typeKeyword))) {
+    auto programType = symbolizeProgramType(typeKeyword);
+    if (!programType)
+      return parser.emitError(typeLoc)
+             << "unknown program type: " << typeKeyword;
+    result.addAttribute("program_type", ProgramTypeAttr::get(
+                                            parser.getContext(), *programType));
+
+    uint8_t major = 0, minor = 0;
+    if (parser.parseInteger(major) || parser.parseInteger(minor))
+      return failure();
+    result.addAttribute(
+        "shader_version",
+        ShaderVersionAttr::get(parser.getContext(), major, minor));
+  }
+
+  Region *body = result.addRegion();
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes) ||
+      parser.parseRegion(*body, /*arguments=*/{}))
+    return failure();
+
+  if (body->empty())
+    body->push_back(new Block());
+
+  return success();
+}
+
+void ModuleOp::print(OpAsmPrinter &printer) {
+  if (auto programType = getProgramType()) {
+    printer << ' ' << stringifyProgramType(*programType);
+    auto version = getShaderVersionAttr();
+    printer << ' ' << static_cast<unsigned>(version.getMajor()) << ' '
+            << static_cast<unsigned>(version.getMinor());
+  }
+  printer.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
+                                           {"program_type", "shader_version"});
+  printer << ' ';
+  printer.printRegion(getBody());
+}
+
+LogicalResult ModuleOp::verify() {
+  bool hasType = static_cast<bool>(getProgramTypeAttr());
+  bool hasVersion = static_cast<bool>(getShaderVersionAttr());
+  if (hasType != hasVersion)
+    return emitOpError(
+        "program_type and shader_version must both be present or both absent");
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // Op verifiers

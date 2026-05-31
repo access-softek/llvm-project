@@ -16,6 +16,112 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
+// DXSA op base class
+//===----------------------------------------------------------------------===//
+
+// Base class for all operations in this dialect.
+class DXSA_Op<string mnemonic, list<Trait> traits = []> :
+    Op<DXSADialect, mnemonic, traits>;
+
+//===----------------------------------------------------------------------===//
+// DXSA module — top-level container op for a DXBC tokenized program
+//===----------------------------------------------------------------------===//
+
+def DXSA_ProgramType_PixelShader         : I32EnumAttrCase<"pixel_shader",         0>;
+def DXSA_ProgramType_VertexShader        : I32EnumAttrCase<"vertex_shader",        1>;
+def DXSA_ProgramType_GeometryShader      : I32EnumAttrCase<"geometry_shader",      2>;
+def DXSA_ProgramType_HullShader          : I32EnumAttrCase<"hull_shader",          3>;
+def DXSA_ProgramType_DomainShader        : I32EnumAttrCase<"domain_shader",        4>;
+def DXSA_ProgramType_ComputeShader       : I32EnumAttrCase<"compute_shader",       5>;
+def DXSA_ProgramType_MeshShader          : I32EnumAttrCase<"mesh_shader",         13>;
+def DXSA_ProgramType_AmplificationShader : I32EnumAttrCase<"amplification_shader",14>;
+
+def DXSA_ProgramType : I32EnumAttr<
+    "ProgramType", "DXBC tokenized program type", [
+      DXSA_ProgramType_PixelShader,
+      DXSA_ProgramType_VertexShader,
+      DXSA_ProgramType_GeometryShader,
+      DXSA_ProgramType_HullShader,
+      DXSA_ProgramType_DomainShader,
+      DXSA_ProgramType_ComputeShader,
+      DXSA_ProgramType_MeshShader,
+      DXSA_ProgramType_AmplificationShader
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_ProgramTypeAttr :
+    EnumAttr<DXSADialect, DXSA_ProgramType, "program_type"> {
+  let assemblyFormat = "$value";
+}
+
+def DXSA_ShaderVersionAttr : AttrDef<DXSADialect, "ShaderVersion"> {
+  let mnemonic = "shader_version";
+  let summary = "DXBC shader version (major.minor)";
+  let description = [{
+    The `#dxsa.shader_version` attribute holds the major and minor
+    components of shader model version.
+
+    Example:
+
+    ```mlir
+    #dxsa.shader_version<5, 0>
+    ```
+  }];
+  let parameters = (ins "uint8_t":$major, "uint8_t":$minor);
+  let assemblyFormat = "`<` $major `,` $minor `>`";
+}
+
+def DXSA_ModuleOp : DXSA_Op<"module", [
+    IsolatedFromAbove, NoRegionArguments, NoTerminator, SingleBlock]> {
+  let summary = "the top-level container for a shader program";
+  let description = [{
+    The `dxsa.module` operation models the top-level container of a single
+    shader tokenized program (one SHEX section of the DXBC binary).
+
+    The two optional attributes are shader program type and version.
+    Both attributes are either both present (real binary with a SHEX
+    header) or both absent (header-less raw token streams).
+
+    Example:
+
+    ```mlir
+    // Binary content with a SHEX header
+    dxsa.module pixel_shader 5 0 {
+      dxsa.dcl_global_flags <refactoringAllowed>
+    }
+
+    // Binary content without a SHEX header
+    dxsa.module {
+      dxsa.dcl_global_flags <refactoringAllowed>
+    }
+    ```
+  }];
+
+  let arguments = (ins
+    OptionalAttr<DXSA_ProgramTypeAttr>:$program_type,
+    OptionalAttr<DXSA_ShaderVersionAttr>:$shader_version);
+  let regions = (region SizedRegion<1>:$body);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+      CArg<"::mlir::dxsa::ProgramTypeAttr",
+           "::mlir::dxsa::ProgramTypeAttr()">:$programType,
+      CArg<"::mlir::dxsa::ShaderVersionAttr",
+           "::mlir::dxsa::ShaderVersionAttr()">:$shaderVersion)>
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::Block *getBodyBlock() { return &getBody().front(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // DXSA enum definitions
 //===----------------------------------------------------------------------===//
 
@@ -333,10 +439,6 @@ def DXSA_UIntNonZero : AttrConstraint<
 //===----------------------------------------------------------------------===//
 // DXSA op definitions
 //===----------------------------------------------------------------------===//
-
-// Base class for the operation in this dialect
-class DXSA_Op<string mnemonic, list<Trait> traits = []> :
-    Op<DXSADialect, mnemonic, traits>;
 
 def DXSA_Operand : DXSA_Op<"operand"> {
   let summary = "defines an operand of an instruction";

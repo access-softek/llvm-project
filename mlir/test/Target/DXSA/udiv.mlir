@@ -1,7 +1,7 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/udiv.bin | FileCheck %s
 // udiv NULL, r0.x, vOutputControlPointID, 4
 
-// CHECK: module {
+// CHECK:      dxsa.module {
 // CHECK-NEXT:   %0 = dxsa.operand {num_components = 0 : i32, type = 13 : i32}
 // CHECK-NEXT:   %1 = dxsa.index.imm {imm = 0 : i32}
 // CHECK-NEXT:   %2 = dxsa.operand %1 {mask = 16 : i32, num_components = 4 : i32, type = 0 : i32}

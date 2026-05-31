@@ -9,18 +9,20 @@
 #ifndef MLIR_TARGET_DXSA_BINARYPARSER_H
 #define MLIR_TARGET_DXSA_BINARYPARSER_H
 
+#include "mlir/Dialect/DXSA/IR/DXSA.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "llvm/Support/SourceMgr.h"
 
 namespace mlir::dxsa {
+/// Deserializes the given binary \p source and creates a MLIR ModuleOp in the
+/// given \p context.
+OwningOpRef<dxsa::ModuleOp> deserialize(llvm::SourceMgr &source,
+                                        MLIRContext *context);
 
-/// Decode DXSA binary \p source and return an MLIR module.
-OwningOpRef<ModuleOp> importDxsaBinaryToModule(llvm::SourceMgr &source,
-                                               MLIRContext *context);
-/// Encode \p source to DXSA binary.
-LogicalResult exportModuleToDxsaBinary(ModuleOp source, raw_ostream &output);
+/// Serializes the given MLIR \p moduleOp and writes to \p output.
+LogicalResult serialize(mlir::ModuleOp moduleOp, raw_ostream &output);
 } // namespace mlir::dxsa
 
 #endif // MLIR_TARGET_DXSA_BINARYPARSER_H

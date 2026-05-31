@@ -19,7 +19,7 @@ void registerFromDxsaBinTranslation() {
       "import-dxsa-bin", "Translate DXSA binary to MLIR",
       [](llvm::SourceMgr &sourceMgr,
          MLIRContext *context) -> OwningOpRef<Operation *> {
-        return dxsa::importDxsaBinaryToModule(sourceMgr, context);
+        return dxsa::deserialize(sourceMgr, context);
       },
       [](DialectRegistry &registry) { registry.insert<dxsa::DXSADialect>(); }};
 }
@@ -28,7 +28,7 @@ void registerToDxsaBinTranslation() {
   TranslateFromMLIRRegistration registration{
       "export-dxsa-bin", "Translate MLIR to DXSA binary",
       [](ModuleOp source, raw_ostream &output) {
-        return dxsa::exportModuleToDxsaBinary(source, output);
+        return dxsa::serialize(source, output);
       },
       [](DialectRegistry &registry) { registry.insert<dxsa::DXSADialect>(); }};
 }
