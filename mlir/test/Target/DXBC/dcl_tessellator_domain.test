@@ -1,6 +1,6 @@
 // RUN: mlir-translate --import-dxbc-bin %S/inputs/dcl_tessellator_domain.bin | FileCheck %s
 
-// CHECK:      module {
+// CHECK:      dxbc.module {
 // CHECK-NEXT:   dxbc.dcl_tessellator_domain domain_isoline
 // CHECK-NEXT:   dxbc.dcl_tessellator_domain domain_tri
 // CHECK-NEXT:   dxbc.dcl_tessellator_domain domain_quad

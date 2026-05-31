@@ -16,6 +16,112 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
+// DXBC op base class
+//===----------------------------------------------------------------------===//
+
+// Base class for all operations in this dialect.
+class DXBC_Op<string mnemonic, list<Trait> traits = []> :
+    Op<DXBCDialect, mnemonic, traits>;
+
+//===----------------------------------------------------------------------===//
+// DXBC module — top-level container op for a DXBC tokenized program
+//===----------------------------------------------------------------------===//
+
+def DXBC_ProgramType_PixelShader         : I32EnumAttrCase<"pixel_shader",         0>;
+def DXBC_ProgramType_VertexShader        : I32EnumAttrCase<"vertex_shader",        1>;
+def DXBC_ProgramType_GeometryShader      : I32EnumAttrCase<"geometry_shader",      2>;
+def DXBC_ProgramType_HullShader          : I32EnumAttrCase<"hull_shader",          3>;
+def DXBC_ProgramType_DomainShader        : I32EnumAttrCase<"domain_shader",        4>;
+def DXBC_ProgramType_ComputeShader       : I32EnumAttrCase<"compute_shader",       5>;
+def DXBC_ProgramType_MeshShader          : I32EnumAttrCase<"mesh_shader",         13>;
+def DXBC_ProgramType_AmplificationShader : I32EnumAttrCase<"amplification_shader",14>;
+
+def DXBC_ProgramType : I32EnumAttr<
+    "ProgramType", "DXBC tokenized program type", [
+      DXBC_ProgramType_PixelShader,
+      DXBC_ProgramType_VertexShader,
+      DXBC_ProgramType_GeometryShader,
+      DXBC_ProgramType_HullShader,
+      DXBC_ProgramType_DomainShader,
+      DXBC_ProgramType_ComputeShader,
+      DXBC_ProgramType_MeshShader,
+      DXBC_ProgramType_AmplificationShader
+    ]> {
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+}
+
+def DXBC_ProgramTypeAttr :
+    EnumAttr<DXBCDialect, DXBC_ProgramType, "program_type"> {
+  let assemblyFormat = "$value";
+}
+
+def DXBC_ShaderVersionAttr : AttrDef<DXBCDialect, "ShaderVersion"> {
+  let mnemonic = "shader_version";
+  let summary = "DXBC shader version (major.minor)";
+  let description = [{
+    The `#dxbc.shader_version` attribute holds the major and minor
+    components of shader model version.
+
+    Example:
+
+    ```mlir
+    #dxbc.shader_version<5, 0>
+    ```
+  }];
+  let parameters = (ins "uint8_t":$major, "uint8_t":$minor);
+  let assemblyFormat = "`<` $major `,` $minor `>`";
+}
+
+def DXBC_ModuleOp : DXBC_Op<"module", [
+    IsolatedFromAbove, NoRegionArguments, NoTerminator, SingleBlock]> {
+  let summary = "the top-level container for a shader program";
+  let description = [{
+    The `dxbc.module` operation models the top-level container of a single
+    shader tokenized program (one SHEX section of the DXBC binary).
+
+    The two optional attributes are shader program type and version.
+    Both attributes are either both present (real binary with a SHEX
+    header) or both absent (header-less raw token streams).
+
+    Example:
+
+    ```mlir
+    // Binary content with a SHEX header
+    dxbc.module pixel_shader 5 0 {
+      dxbc.dcl_global_flags <refactoringAllowed>
+    }
+
+    // Binary content without a SHEX header
+    dxbc.module {
+      dxbc.dcl_global_flags <refactoringAllowed>
+    }
+    ```
+  }];
+
+  let arguments = (ins
+    OptionalAttr<DXBC_ProgramTypeAttr>:$program_type,
+    OptionalAttr<DXBC_ShaderVersionAttr>:$shader_version);
+  let regions = (region SizedRegion<1>:$body);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+      CArg<"::mlir::dxbc::ProgramTypeAttr",
+           "::mlir::dxbc::ProgramTypeAttr()">:$programType,
+      CArg<"::mlir::dxbc::ShaderVersionAttr",
+           "::mlir::dxbc::ShaderVersionAttr()">:$shaderVersion)>
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::Block *getBodyBlock() { return &getBody().front(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // DXBC enum definitions
 //===----------------------------------------------------------------------===//
 
@@ -391,10 +497,6 @@ def DXBC_UIntNonZero : AttrConstraint<
 //===----------------------------------------------------------------------===//
 // DXBC op definitions
 //===----------------------------------------------------------------------===//
-
-// Base class for the operation in this dialect
-class DXBC_Op<string mnemonic, list<Trait> traits = []> :
-    Op<DXBCDialect, mnemonic, traits>;
 
 def DXBC_Operand : DXBC_Op<"operand"> {
   let summary = "defines an operand of an instruction";

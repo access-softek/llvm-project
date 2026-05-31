@@ -19,7 +19,7 @@ void registerFromDxbcBinTranslation() {
       "import-dxbc-bin", "Translate DXBC binary to MLIR",
       [](llvm::SourceMgr &sourceMgr,
          MLIRContext *context) -> OwningOpRef<Operation *> {
-        return dxbc::importDxsaBinaryToModule(sourceMgr, context);
+        return dxbc::deserialize(sourceMgr, context);
       },
       [](DialectRegistry &registry) { registry.insert<dxbc::DXBCDialect>(); }};
 }
@@ -28,7 +28,7 @@ void registerToDxbcBinTranslation() {
   TranslateFromMLIRRegistration registration{
       "export-dxbc-bin", "Translate MLIR to DXBC binary",
       [](ModuleOp source, raw_ostream &output) {
-        return dxbc::exportModuleToDxsaBinary(source, output);
+        return dxbc::serialize(source, output);
       },
       [](DialectRegistry &registry) { registry.insert<dxbc::DXBCDialect>(); }};
 }

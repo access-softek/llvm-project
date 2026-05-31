@@ -1,6 +1,6 @@
 // RUN: mlir-translate --import-dxbc-bin %S/inputs/dcl_input_primitive.bin | FileCheck %s
 
-// CHECK:      module {
+// CHECK:      dxbc.module {
 // CHECK-NEXT:   dxbc.dcl_input_primitive point
 // CHECK-NEXT:   dxbc.dcl_input_primitive line
 // CHECK-NEXT:   dxbc.dcl_input_primitive triangle

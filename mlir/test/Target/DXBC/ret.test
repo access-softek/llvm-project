@@ -1,6 +1,6 @@
 // RUN: mlir-translate --import-dxbc-bin %S/inputs/ret.bin | FileCheck %s
 
-// CHECK:      module {
+// CHECK:      dxbc.module {
 // CHECK-NEXT:   dxbc.instruction "ret"
 // CHECK-NEXT: }
 

@@ -9,18 +9,20 @@
 #ifndef MLIR_TARGET_DXBC_BINARYPARSER_H
 #define MLIR_TARGET_DXBC_BINARYPARSER_H
 
+#include "mlir/Dialect/DXBC/IR/DXBC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "llvm/Support/SourceMgr.h"
 
 namespace mlir::dxbc {
+/// Deserializes the given binary \p source and creates a MLIR ModuleOp in the
+/// given \p context.
+OwningOpRef<dxbc::ModuleOp> deserialize(llvm::SourceMgr &source,
+                                        MLIRContext *context);
 
-/// Decode DXBC binary \p source and return an MLIR module.
-OwningOpRef<ModuleOp> importDxsaBinaryToModule(llvm::SourceMgr &source,
-                                               MLIRContext *context);
-/// Encode \p source to DXBC binary.
-LogicalResult exportModuleToDxsaBinary(ModuleOp source, raw_ostream &output);
+/// Serializes the given MLIR \p moduleOp and writes to \p output.
+LogicalResult serialize(mlir::ModuleOp moduleOp, raw_ostream &output);
 } // namespace mlir::dxbc
 
 #endif // MLIR_TARGET_DXBC_BINARYPARSER_H
