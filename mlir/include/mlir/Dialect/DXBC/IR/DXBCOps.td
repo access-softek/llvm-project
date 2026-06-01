@@ -24,7 +24,7 @@ class DXBC_Op<string mnemonic, list<Trait> traits = []> :
     Op<DXBCDialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
-// DXBC module — top-level container op for a DXBC tokenized program
+// DXBC module - top-level container op for a DXBC tokenized program
 //===----------------------------------------------------------------------===//
 
 def DXBC_ProgramType_PixelShader         : I32EnumAttrCase<"pixel_shader",         0>;
@@ -570,6 +570,28 @@ def DXBC_Instruction : DXBC_Op<"instruction"> {
   let arguments = (ins Variadic<DXBC_OperandType>:$operands, StrAttr:$mnemonic);
   let results = (outs);
   let assemblyFormat = "$mnemonic $operands attr-dict";
+}
+
+def DXBC_Unknown : DXBC_Op<"unknown"> {
+  let summary = "raw tokens fallback for an undecodable instruction";
+  let description = [{
+    The `dxbc.unknown` operation represents one instruction whose raw
+    tokens could not be decoded into a structured op - unknown opcode,
+    undecodable payload, length mismatch, truncated tail, etc. It acts
+    as a disassembler-style fallback so the surrounding well-formed
+    instructions still appear in IR.
+
+    Example:
+
+    ```mlir
+    dxbc.unknown <tokens = [0x030000FF, 0xDEADBEEF, 0x12345678]>
+    ```
+  }];
+
+  let arguments = (ins DenseI32ArrayAttr:$tokens);
+  let results = (outs);
+  let hasVerifier = 1;
+  let assemblyFormat = "custom<HexTokens>($tokens) attr-dict";
 }
 
 def DXBC_InlineOperandType_Temp                          : I32EnumAttrCase<"temp",                                  0>;
