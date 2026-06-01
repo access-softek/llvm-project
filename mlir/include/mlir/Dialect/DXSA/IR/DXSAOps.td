@@ -255,6 +255,22 @@ def DXSA_SystemValueNameAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
+def DXSA_Condition_Zero    : I32EnumAttrCase<"zero",     0>;
+def DXSA_Condition_NonZero : I32EnumAttrCase<"non_zero", 1>;
+
+def DXSA_Condition : I32EnumAttr<
+    "Condition", "DXBC boolean condition", [
+      DXSA_Condition_Zero,
+      DXSA_Condition_NonZero
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_ConditionAttr : EnumAttr<DXSADialect, DXSA_Condition, "condition"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 //===----------------------------------------------------------------------===//
 // DXSA ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
 //===----------------------------------------------------------------------===//
@@ -1070,6 +1086,95 @@ def DXSA_DclStream : DXSA_Op<"dcl_stream"> {
   let arguments = (ins ConfinedAttr<I32Attr,
       [IntNonNegative, IntMaxValue<3>]>:$index);
   let assemblyFormat = [{ $index attr-dict }];
+}
+
+// Base class for operations with a condition attribute and a single operand.
+class DXSA_CondOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins DXSA_ConditionAttr:$cond, DXSA_OperandType:$operand);
+  let assemblyFormat = [{ $cond `,` $operand attr-dict}];
+}
+
+def DXSA_If : DXSA_CondOp<"if"> {
+  let summary = "branch based on logical OR result";
+  let description = [{
+    Example:
+    ```mlir
+    module {
+      %0 = dxsa.index.imm {imm = 0 : i32}
+      %1 = dxsa.operand %0 {num_components = 4 : i32, one = 0 : i32, type = 0 : i32}
+      dxsa.if <non_zero>, %1
+    }
+    ```
+  }];
+}
+
+def DXSA_Breakc : DXSA_CondOp<"breakc"> {
+  let summary = "break (conditional)";
+  let description = [{
+    Conditionally move the point of execution to the instruction after the next
+    endloop or endswitch.
+
+    Example:
+    ```mlir
+    module {
+      %0 = dxsa.index.imm {imm = 0 : i32}
+      %1 = dxsa.operand %0 {num_components = 4 : i32, one = 0 : i32, type = 0 : i32}
+      dxsa.breakc <non_zero>, %1
+    }
+    ```
+  }];
+}
+
+def DXSA_Continuec : DXSA_CondOp<"continuec"> {
+  let summary = "continue (conditional)";
+  let description = [{
+    Conditionally continue execution at the beginning of the current loop.
+
+    Example:
+    ```mlir
+    module {
+      %0 = dxsa.index.imm {imm = 0 : i32}
+      %1 = dxsa.operand %0 {num_components = 4 : i32, one = 0 : i32, type = 0 : i32}
+      dxsa.continuec <non_zero>, %1
+    }
+    ```
+  }];
+}
+
+def DXSA_Retc : DXSA_CondOp<"retc"> {
+  let summary = "return (conditional)";
+  let description = [{
+    If within a subroutine, conditionally return to the instruction after the
+    call. If not inside a subroutine, terminate program execution.
+
+    Example:
+    ```mlir
+    module {
+      %0 = dxsa.index.imm {imm = 0 : i32}
+      %1 = dxsa.operand %0 {num_components = 4 : i32, one = 0 : i32, type = 0 : i32}
+      dxsa.retc <non_zero>, %1
+    }
+    ```
+  }];
+}
+
+def DXSA_Discard : DXSA_CondOp<"discard"> {
+  let summary = "conditionally flag results of Pixel Shader to be discarded when the end of the program is reached";
+  let description = [{
+    The `discard` instruction flags the current pixel as terminated, while
+    continuing execution, so that other pixels executing in parallel may obtain
+    derivatives if necessary. Even though execution continues, all Pixel Shader
+    output writes before or after the `discard` instruction are discarded.
+
+    Example:
+    ```mlir
+    module {
+      %0 = dxsa.index.imm {imm = 0 : i32}
+      %1 = dxsa.operand %0 {num_components = 4 : i32, one = 0 : i32, type = 0 : i32}
+      dxsa.discard <non_zero>, %1
+    }
+    ```
+  }];
 }
 
 #endif // DXSA_OPS
