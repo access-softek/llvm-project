@@ -523,11 +523,30 @@ public:
     return op->getResults()[0];
   }
 
+  size_t getNumOps() {
+    return builder.getInsertionBlock()->getOperations().size();
+  }
+
+  void rewindOpsTo(size_t numOps) {
+    auto *block = builder.getInsertionBlock();
+    while (block->getOperations().size() > numOps)
+      block->back().erase(); // reverse order: use-def stays valid
+    builder.setInsertionPointToEnd(block);
+  }
+
   Instruction buildInstruction(StringRef name, ArrayRef<Operand> operands,
                                const InstructionModifier &modifier,
                                FileLineColLoc loc) {
     return dxsa::Instruction::create(builder, loc, operands,
                                      builder.getStringAttr(name));
+  }
+
+  Instruction buildUnknown(ArrayRef<uint32_t> tokens, Location loc) {
+    auto signedTokens = llvm::map_to_vector(
+        tokens, [](uint32_t token) { return static_cast<int32_t>(token); });
+    return dxsa::Unknown::create(
+        builder, loc,
+        DenseI32ArrayAttr::get(builder.getContext(), signedTokens));
   }
 
   Instruction buildDclGlobalFlags(dxsa::GlobalFlags flags, Location loc) {
@@ -783,19 +802,30 @@ public:
 
   /// Width of the token in the program binary stream.
   static constexpr size_t tokenSize = sizeof(uint32_t);
+  uint32_t getRemainingBytes() { return buffer.size() - currentTokenOffset; }
 
   /// Parse the current token and move the cursor to the next one.
   Token parseToken() {
-    if ((currentTokenOffset + tokenSize) > buffer.size()) {
-      emitError(getLocation(), "unexpected end of file");
-      return failure();
+    if (getRemainingBytes() < tokenSize) {
+      return emitError(getLocation(), "unexpected end of file");
     }
 
-    uint32_t value = support::endian::read<uint32_t>(
+    auto value = support::endian::read<uint32_t>(
         buffer.begin() + currentTokenOffset, endianness::little);
     currentTokenOffset += tokenSize;
 
     return value;
+  }
+
+  FailureOr<SmallVector<uint32_t>> parseTokens(uint32_t numTokens) {
+    SmallVector<uint32_t> tokens(numTokens);
+    for (uint32_t i = 0; i < numTokens; ++i) {
+      auto token = parseToken();
+      if (failed(token))
+        return failure();
+      tokens[i] = *token;
+    }
+    return tokens;
   }
 
   /// Returns location where the last parsed token begins (at offset
@@ -1712,39 +1742,49 @@ public:
     return success();
   }
 
-  FailureOr<Instruction> parseInstruction() {
-    size_t beginOffset = currentTokenOffset;
-    Token token = parseToken();
-    if (failed(token))
+  FailureOr<Instruction> parseInstruction(uint32_t &instructionLengthInTokens) {
+    auto beginOffset = currentTokenOffset;
+    instructionLengthInTokens = 1; // Min instruction length
+    auto opcodeToken0 = parseToken();
+    if (failed(opcodeToken0))
       return failure();
 
-    FileLineColLoc loc = getLocation();
+    uint32_t opcode = DECODE_D3D10_SB_OPCODE_TYPE(*opcodeToken0);
 
-    uint32_t opcode = DECODE_D3D10_SB_OPCODE_TYPE(*token);
+    // CUSTOMDATA carries its total token count (>= 2) in token1.
+    // Just set the instruction length for the unknown fallback.
+    if (opcode == D3D10_SB_OPCODE_CUSTOMDATA) {
+      auto numTokensToken = parseToken();
+      FAILURE_IF_FAILED(numTokensToken);
+      instructionLengthInTokens = std::max(*numTokensToken, 2u);
+      return failure();
+    }
+
+    instructionLengthInTokens = std::max(
+        DECODE_D3D10_SB_TOKENIZED_INSTRUCTION_LENGTH(*opcodeToken0), 1u);
+
     InstructionModifier modifier;
-    modifier.preciseMask = DECODE_D3D11_SB_INSTRUCTION_PRECISE_VALUES(*token);
-    modifier.saturate = DECODE_IS_D3D10_SB_INSTRUCTION_SATURATE_ENABLED(*token);
-
-    uint32_t length = DECODE_D3D10_SB_TOKENIZED_INSTRUCTION_LENGTH(*token);
+    modifier.preciseMask =
+        DECODE_D3D11_SB_INSTRUCTION_PRECISE_VALUES(*opcodeToken0);
+    modifier.saturate =
+        DECODE_IS_D3D10_SB_INSTRUCTION_SATURATE_ENABLED(*opcodeToken0);
 
     // TODO: extended instructions:
     // BOOL b51PlusShader =
     // BOOL bExtended = DECODE_IS_D3D10_SB_OPCODE_EXTENDED(Token)
     // ...
 
-    if (opcode >= D3D10_SB_NUM_OPCODES) {
-      emitError(getLocation(), "unknown opcode");
-      return failure();
-    }
-
-    auto opcodeToken = *token;
+    if (opcode >= D3D10_SB_NUM_OPCODES)
+      return emitError(getLocation(), "unknown opcode: ") << opcode;
 
     Instruction dclInstruction;
-    auto parseResult = parseDclInstruction(opcodeToken, loc, dclInstruction);
+    auto parseResult =
+        parseDclInstruction(*opcodeToken0, getLocation(), dclInstruction);
     if (parseResult.has_value()) {
       if (failed(*parseResult))
         return failure();
-      if (failed(verifyInstructionLength(beginOffset, length)))
+      if (failed(
+              verifyInstructionLength(beginOffset, instructionLengthInTokens)))
         return failure();
       return dclInstruction;
     }
@@ -1759,11 +1799,48 @@ public:
       operands.push_back(*operand);
     }
 
-    if (failed(verifyInstructionLength(beginOffset, length)))
+    if (failed(verifyInstructionLength(beginOffset, instructionLengthInTokens)))
       return failure();
 
     return builder.buildInstruction(instrInfo[opcode].name, operands, modifier,
-                                    loc);
+                                    getLocation());
+  }
+
+  /// On failure, sets `instructionLengthInTokens` for the unknown fallback.
+  bool tryParseInstructionOrRewind(uint32_t &instructionLengthInTokens) {
+    auto numOpsBefore = builder.getNumOps();
+
+    // Scope for ScopedDiagnosticHandler
+    {
+      ScopedDiagnosticHandler suppress(name.getContext(),
+                                       [](Diagnostic &) { return success(); });
+      if (succeeded(parseInstruction(instructionLengthInTokens)))
+        return true;
+    }
+
+    builder.rewindOpsTo(numOpsBefore);
+    return false;
+  }
+
+  LogicalResult parseUnknownTokens(uint32_t numTokens) {
+    auto loc = getLocation();
+    numTokens = std::min<uint32_t>(numTokens, getRemainingBytes() / tokenSize);
+    auto tokens = parseTokens(numTokens);
+    FAILURE_IF_FAILED(tokens);
+    builder.buildUnknown(*tokens, loc);
+    return success();
+  }
+
+  LogicalResult parseNextInstruction() {
+    auto beginOffset = currentTokenOffset;
+    uint32_t instructionLengthInTokens = 0;
+    if (tryParseInstructionOrRewind(instructionLengthInTokens))
+      return success();
+
+    currentTokenOffset = beginOffset;
+    emitWarning(getLocation()) << "treating next " << instructionLengthInTokens
+                               << " token(s) as unknown";
+    return parseUnknownTokens(instructionLengthInTokens);
   }
 
   FailureOr<Module> parseModule() {
@@ -1779,12 +1856,13 @@ public:
           name.getContext(), (*header)->major, (*header)->minor);
     }
     auto module = builder.createModule(programType, shaderVersion, loc);
-    while (currentTokenOffset < buffer.size()) {
-      FailureOr<Instruction> inst = parseInstruction();
-      if (failed(inst)) {
+    while (getRemainingBytes() >= tokenSize) {
+      if (failed(parseNextInstruction()))
         return failure();
-      }
     }
+    if (auto trailingBytes = getRemainingBytes())
+      emitWarning(getLocation(0))
+          << "ignoring " << trailingBytes << " trailing byte(s)";
     return module;
   }
 
@@ -1799,7 +1877,7 @@ public:
   /// and shader version. Otherwise return without touching the parser current
   /// position.
   FailureOr<std::optional<ProgramHeader>> parseProgramHeader() {
-    auto remainingBytes = buffer.size() - currentTokenOffset;
+    auto remainingBytes = getRemainingBytes();
     if (remainingBytes < tokenSize)
       return std::optional<ProgramHeader>{};
 
@@ -1841,7 +1919,7 @@ public:
   }
 
   LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length) {
-    if (((currentTokenOffset - beginOffset) / 4) != length) {
+    if (((currentTokenOffset - beginOffset) / tokenSize) != length) {
       emitError(getLocation(), "instruction length mismatch");
       return failure();
     }

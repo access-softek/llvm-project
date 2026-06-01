@@ -13,6 +13,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Format.h"
 
 using namespace mlir;
 using namespace mlir::dxsa;
@@ -34,6 +35,12 @@ void DXSADialect::initialize() {
 #include "mlir/Dialect/DXSA/IR/DXSAOpsAttributes.cpp.inc"
       >();
 }
+
+/// Declarations for custom-directive helpers used by the
+/// TableGen-generated print/parse methods.
+static ParseResult parseHexTokens(OpAsmParser &parser, DenseI32ArrayAttr &attr);
+static void printHexTokens(OpAsmPrinter &printer, Operation *,
+                           DenseI32ArrayAttr attr);
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
@@ -209,6 +216,50 @@ LogicalResult DclResourceStructured::verify() {
     return emitOpError("expected lbound <= ubound, got lbound=")
            << *lbound << ", ubound=" << *ubound;
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UnknownOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult Unknown::verify() {
+  if (getTokens().empty())
+    return emitOpError("tokens must not be empty");
+  return success();
+}
+
+/// Parse `<tokens = [0x..., ...]>` for the unknown op.
+static ParseResult parseHexTokens(OpAsmParser &parser,
+                                  DenseI32ArrayAttr &attr) {
+  SmallVector<int32_t> tokens;
+  auto parseOneToken = [&]() -> ParseResult {
+    uint32_t value;
+    if (parser.parseInteger(value))
+      return failure();
+    tokens.push_back(static_cast<int32_t>(value));
+    return success();
+  };
+
+  if (parser.parseLess() || parser.parseKeyword("tokens") ||
+      parser.parseEqual() ||
+      parser.parseCommaSeparatedList(OpAsmParser::Delimiter::Square,
+                                     parseOneToken) ||
+      parser.parseGreater())
+    return failure();
+
+  attr = DenseI32ArrayAttr::get(parser.getContext(), tokens);
+  return success();
+}
+
+/// Print the tokens array as uppercase, 8-digit, 0x-prefixed hex.
+static void printHexTokens(OpAsmPrinter &printer, Operation *,
+                           DenseI32ArrayAttr attr) {
+  printer << "<tokens = [";
+  llvm::interleaveComma(attr.asArrayRef(), printer.getStream(), [&](int32_t t) {
+    printer.getStream() << llvm::format_hex(static_cast<uint32_t>(t),
+                                            /*Width=*/10, /*Upper=*/true);
+  });
+  printer << "]>";
 }
 
 //===----------------------------------------------------------------------===//
