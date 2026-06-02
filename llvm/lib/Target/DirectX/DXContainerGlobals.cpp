@@ -158,14 +158,10 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   Globals.emplace_back(
       buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH"));
 
-  // Emit ILDN part in debug info mode.
   // TODO should we check for compile units or for module metadata here?
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   if (!MMI.SourceInfo)
-    return;
-
-  if (!EmbedDebug && PdbDebugPath.empty())
     return;
 
   SmallString<40> DebugNameStr;
@@ -193,6 +189,7 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
         "dx.pdb.hash", ModuleHashSectionName));
   }
 
+  // Emit ILDN part in debug info mode.
   mcdxbc::DebugName DebugName;
   DebugName.setFilename(DebugNameStr);
   SmallString<64> ILDNData;
