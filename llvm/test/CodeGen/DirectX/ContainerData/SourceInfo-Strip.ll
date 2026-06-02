@@ -1,14 +1,14 @@
 ; Compare source info emission with and without --dx-source-in-debug-module flag.
 
-; RUN: llc %s --filetype=obj -o %t.dxbc
-; RUN: obj2yaml %t.dxbc | FileCheck %s --check-prefix=DXC
+; RUN: llc %s --filetype=obj -o %t.dxbc --dx-embed-debug --dx-Fd=%t.pdb
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=DXC
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.dxil.bc %t.dxbc
 ; RUN: llvm-objcopy --dump-section=ILDB=%t.ildb.bc %t.dxbc
 ; RUN: llvm-dis %t.dxil.bc -o - | FileCheck %s --check-prefix=DXIL-DIS
 ; RUN: llvm-dis %t.ildb.bc -o - | FileCheck %s --check-prefix=ILDB-DIS
 
-; RUN: llc %s --filetype=obj -o %t.dxbc --dx-source-in-debug-module
-; RUN: obj2yaml %t.dxbc | FileCheck %s --check-prefix=DXC-SOURCE
+; RUN: llc %s --filetype=obj -o %t.dxbc --dx-embed-debug --dx-Fd=%t.pdb --dx-source-in-debug-module
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=DXC-SOURCE
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.dxil.bc %t.dxbc
 ; RUN: llvm-objcopy --dump-section=ILDB=%t.ildb.bc %t.dxbc
 ; RUN: llvm-dis %t.dxil.bc -o - | FileCheck %s --check-prefix=DXIL-SOURCE-DIS
@@ -25,7 +25,7 @@
 ; ILDB-DIS: ![[EMPTY_ARR]] = !{}
 ; ILDB-DIS: ![[MAIN]] = !{!""}
 
-; Without the flag, SRCI should be emitted.
+; Without the flag, SRCI should be emitted to the PDB container.
 ; DXC:      - Name:            SRCI
 ; DXC-NEXT:   Size:            348
 ; DXC-NEXT:   SourceInfo:
@@ -77,7 +77,7 @@
 ; ILDB-SOURCE-DIS: ![[MAIN]] = !{!"C:\\dx-source-metadata.hlsl"}
 ; ILDB-SOURCE-DIS: ![[DEFINES]] = !{!"USER_DEF0=42", !"USER_DEF1=43"}
 
-; With the flag, SRCI should not be emitted.
+; With the flag, SRCI should not be emitted to the PDB container.
 ; DXC-SOURCE-NOT: - Name: SRCI
 
 target triple = "dxilv1.3-pc-shadermodel6.3-library"

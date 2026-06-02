@@ -141,6 +141,8 @@ bool DXContainerObjectWriter::shouldSkipSection(StringRef SectionName,
   // Do not write ILDB part if we're not embedding it.
   if (!EmbedDebug && SectionName == "ILDB")
     return true;
+  if (SectionName == "SRCI")
+    return true;
   return MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize);
 }
 
