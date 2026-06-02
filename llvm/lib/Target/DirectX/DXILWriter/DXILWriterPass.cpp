@@ -151,12 +151,12 @@ static void replaceNamedMetadataArray(Module &M, StringRef Name,
 }
 
 class EmbedDXILPass : public llvm::ModulePass {
-  std::string writeModule(Module &M, bool HasDebugInfo, bool IsDebug) {
+  std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug) {
     std::string Data;
     llvm::raw_string_ostream OS(Data);
 
     if (HasDebugInfo) {
-      if (IsDebug) {
+      if (WriteDebug) {
         // Replace dx.source metadata nodes with stubs.
         // TODO: Add /Qsource_in_debug_module flag to enable/disable this.
         LLVMContext &Ctx = M.getContext();
@@ -188,7 +188,6 @@ class EmbedDXILPass : public llvm::ModulePass {
             NMD.eraseFromParent();
       }
     }
-
     const auto DIMap = DXILDebugInfoPass::run(M);
     WriteDXILToFile(M, OS, DIMap);
     return Data;
@@ -227,13 +226,13 @@ public:
       // Clone the module to avoid alternating it with DebugInfoPass
       // before stripping the debug info later.
       ILDBData =
-          writeModule(*llvm::CloneModule(M), HasDebugInfo, /*IsDebug=*/true);
+          writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/true);
     }
 
     // Clone the module to save dx.source metadata nodes from stripping, as they
     // are needed for DXILMetadataAnalysisWrapperPass.
     std::string DXILData =
-        writeModule(*llvm::CloneModule(M), HasDebugInfo, /*IsDebug=*/false);
+        writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/false);
 
     // We no longer need lifetime intrinsics after bitcode serialization, so we
     // simply remove them to keep the Module Verifier happy after our
