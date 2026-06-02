@@ -175,14 +175,12 @@ class EmbedDXILPass : public llvm::ModulePass {
           SmallVector<llvm::Module::ModuleFlagEntry, 4> FlagEntries;
           M.getModuleFlagsMetadata(FlagEntries);
           Flags->eraseFromParent();
-          for (unsigned I : seq(FlagEntries.size())) {
-            llvm::Module::ModuleFlagEntry &Entry = FlagEntries[I];
+          for (llvm::Module::ModuleFlagEntry &Entry : FlagEntries) {
             if (Entry.Key->getString() == "Dwarf Version" ||
                 Entry.Key->getString() == "Debug Info Version") {
               continue;
             }
-            M.addModuleFlag(Entry.Behavior, Entry.Key->getString(),
-                            cast<ConstantAsMetadata>(Entry.Val)->getValue());
+            M.addModuleFlag(Entry.Behavior, Entry.Key->getString(), Entry.Val);
           }
         }
         for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata()))
