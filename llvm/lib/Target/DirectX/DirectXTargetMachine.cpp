@@ -110,8 +110,12 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
+    CodeGenOptLevel OptLevel = getDirectXTargetMachine().getOptLevel();
+
     addPass(createDXILFinalizeLinkageLegacyPass());
-    addPass(createGlobalDCEPass());
+    if (OptLevel != CodeGenOptLevel::None) {
+      addPass(createGlobalDCEPass());
+    }
     addPass(createDXILMemIntrinsicsLegacyPass());
     addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
@@ -122,7 +126,9 @@ public:
     addPass(createScalarizerPass(DxilScalarOptions));
     addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
-    addPass(createDeadStoreEliminationPass());
+    if (OptLevel != CodeGenOptLevel::None) {
+      addPass(createDeadStoreEliminationPass());
+    }
     addPass(createDXILLegalizeLegacyPass());
     addPass(createDXILResourceImplicitBindingLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
