@@ -252,7 +252,7 @@ public:
       reportFatalUsageError("Missing debug info for writing to the PDB file");
 
     std::string ILDBData;
-    if (HasDebugInfo && (EmbedDebug || !PdbDebugPath.empty())) {
+    if (HasDebugInfo) {
       // Write DXIL with debug info to ILDB part.
       // Clone the module to avoid alternating it with DebugInfoPass
       // before stripping the debug info later.
@@ -273,7 +273,7 @@ public:
     removeLifetimeIntrinsics(M);
 
     SmallVector<GlobalValue *, 2> Globals;
-    if (HasDebugInfo && (EmbedDebug || !PdbDebugPath.empty())) {
+    if (HasDebugInfo) {
       // Create a GV after both parts are written, otherwise it gets
       // added to DXIL when `writeModule` is called the second time.
       Globals.emplace_back(createSectionGlobal(M, ILDBData, "dx.ildb", "ILDB"));
