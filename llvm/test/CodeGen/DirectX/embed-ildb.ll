@@ -16,12 +16,20 @@ define i32 @add(i32 %a, i32 %b) {
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
+!dx.source.contents = !{!5}
+!dx.source.defines = !{!6}
+!dx.source.mainFileName = !{!7}
+!dx.source.args = !{!8}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "Some Compiler", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "hlsl.hlsl", directory: "/some-path")
 !2 = !{}
 !3 = !{i32 7, !"Dwarf Version", i32 2}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
+!5 = !{!"hlsl.hlsl", !"int add(int a, int b) { return a + b; }"}
+!6 = !{}
+!7 = !{!"hlsl.hlsl"}
+!8 = !{!"-T", !"lib_6_5", !"-g", !"hlsl.hlsl"}
 
 ; Check that both parts are emitted as a GV and used by the compiler.
 
@@ -42,8 +50,8 @@ define i32 @add(i32 %a, i32 %b) {
 ; YAML-NEXT:     Minor:           0
 ; YAML-NEXT:   FileSize:        [[#]]
 ; YAML-NEXT:   PartCount:       [[#]]
-; YAML-NEXT:   PartOffsets:     [ {{[0-9, ]+}} ]
-; YAML-NEXT: Parts:
+; YAML-NEXT:   PartOffsets:     [ {{[0-9, ]+}}
+; YAML:   Parts:
 
 ; In verifying the DXIL and ILDB parts, this test captures the size of the part,
 ; and derives the program header and dxil size fields from the part's size.
@@ -77,8 +85,14 @@ define i32 @add(i32 %a, i32 %b) {
 ; ILDB-DIS: !llvm.dbg.cu
 ; ILDB-DIS: !DICompileUnit
 ; ILDB-DIS: !DIFile
+; ILDB-DIS: !"Dwarf Version"
+; ILDB-DIS: !"Debug Info Version"
 
 ; DXIL-DIS: define i32 @add(i32 %a, i32 %b)
 ; DXIL-DIS-NOT: !llvm.dbg.cu
+; DXIL-DIS-NOT: !dx.source
 ; DXIL-DIS-NOT: !DICompileUnit
 ; DXIL-DIS-NOT: !DIFile
+; DXIL-DIS-NOT: !"Dwarf Version"
+; DXIL-DIS-NOT: !"Debug Info Version"
+; DXIL-DIS-NOT: "hlsl.hlsl"
