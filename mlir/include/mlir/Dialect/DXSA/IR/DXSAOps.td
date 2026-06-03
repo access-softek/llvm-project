@@ -777,22 +777,22 @@ def DXSA_DclInterface : DXSA_Op<"dcl_interface"> {
   let summary = "declares function table pointers (interfaces)";
   let description = [{
     Declare an `array_length` of function table pointers (interfaces). Each
-    table can be bound at runtime, and it should contain `table_length` function
-    bodies.
+    table can be bound at runtime, and it should contain `num_call_sites`
+    function bodies.
 
     Example:
     ```mlir
     dxsa.dcl_function_body 0
     dxsa.dcl_function_body 1
     dxsa.dcl_function_table 0, <functions = [0, 1]>
-    dxsa.dcl_interface 1, <access = dynamic, array_length = 1, table_length = 2, tables = [0]>
+    dxsa.dcl_interface 1, <access = dynamic, array_length = 1, num_call_sites = 2, tables = [0]>
     ```
   }];
-  let arguments = (ins I32Attr:$index, DXSA_InterfaceAccessAttr:$access, I32Attr:$array_length, I32Attr:$table_length, DenseI32ArrayAttr:$tables);
+  let arguments = (ins I32Attr:$index, DXSA_InterfaceAccessAttr:$access, I32Attr:$array_length, I32Attr:$num_call_sites, DenseI32ArrayAttr:$tables);
   let assemblyFormat = [{ $index `,` `<`
     `access` `=` $access `,`
     `array_length` `=` $array_length `,`
-    `table_length` `=` $table_length `,`
+    `num_call_sites` `=` $num_call_sites `,`
     `tables` `=` $tables `>` attr-dict
   }];
 }

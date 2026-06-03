@@ -647,11 +647,11 @@ public:
   }
 
   Instruction buildDclInterface(uint32_t index, dxsa::InterfaceAccess access,
-                                uint32_t arrayLength, uint32_t tableLength,
+                                uint32_t arrayLength, uint32_t numCallSites,
                                 ArrayRef<int32_t> tables, Location loc) {
     auto *ctx = builder.getContext();
     return dxsa::DclInterface::create(builder, loc, index, access, arrayLength,
-                                      tableLength,
+                                      numCallSites,
                                       DenseI32ArrayAttr::get(ctx, tables));
   }
 
@@ -1220,37 +1220,35 @@ public:
 
   FailureOr<Instruction> parseDclInterface(uint32_t opcodeToken, Location loc) {
     bool isDynamic = DECODE_D3D11_SB_INTERFACE_INDEXED_BIT(opcodeToken);
-    auto access = dxsa::symbolizeInterfaceAccess(isDynamic);
-    assert(access && "unhandled interface access kind"); // access kind is 1 bit
+    auto access = isDynamic ? dxsa::InterfaceAccess::dynamic
+                            : dxsa::InterfaceAccess::immediate;
 
     // Index of the interface (start index for an array).
     auto index = parseToken();
     FAILURE_IF_FAILED(index);
 
     // Number of call sites (number of bodies in each table).
-    auto tableLength = parseToken();
-    FAILURE_IF_FAILED(tableLength);
+    auto numCallSites = parseToken();
+    FAILURE_IF_FAILED(numCallSites);
 
-    auto interfaceArrayLength = parseToken();
-    FAILURE_IF_FAILED(interfaceArrayLength);
+    auto packedLenghts = parseToken();
+    FAILURE_IF_FAILED(packedLenghts);
 
     // Number of tables (variants).
-    uint32_t interfaceLength =
-        DECODE_D3D11_SB_INTERFACE_TABLE_LENGTH(*interfaceArrayLength);
+    auto tableLength = DECODE_D3D11_SB_INTERFACE_TABLE_LENGTH(*packedLenghts);
 
     // Number of slots to be defined at runtime.
-    uint32_t arrayLength =
-        DECODE_D3D11_SB_INTERFACE_ARRAY_LENGTH(*interfaceArrayLength);
+    auto arrayLength = DECODE_D3D11_SB_INTERFACE_ARRAY_LENGTH(*packedLenghts);
 
     SmallVector<int32_t, 16> tables;
-    tables.resize(interfaceLength);
-    for (uint32_t i = 0; i < interfaceLength; ++i) {
+    tables.resize(tableLength);
+    for (uint32_t i = 0; i < tableLength; ++i) {
       auto tableIndex = parseToken();
       FAILURE_IF_FAILED(tableIndex);
       tables[i] = *tableIndex;
     }
 
-    return builder.buildDclInterface(*index, *access, arrayLength, *tableLength,
+    return builder.buildDclInterface(*index, access, arrayLength, *numCallSites,
                                      tables, loc);
   }
 
