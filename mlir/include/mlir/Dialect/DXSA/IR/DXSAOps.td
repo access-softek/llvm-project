@@ -1072,4 +1072,33 @@ def DXSA_DclStream : DXSA_Op<"dcl_stream"> {
   let assemblyFormat = [{ $index attr-dict }];
 }
 
+def DXSA_InterfaceCall : DXSA_Op<"interface_call"> {
+  let summary = "interface function call (fcall)";
+  let description = [{
+    Call the function body at the following location:
+      - Interface `operand` selects a function table from an interface.
+      - `call_site` is an immediate unsigned integer offset into the selected
+        function table, selecting a function body # to execute.
+
+    If the interface is declared with `access = dynamic` attribute, the operand
+    can use relative indexing.
+
+    Example:
+    ```mlir
+    module {
+      %0 = dxsa.index.imm {imm = 0 : i32}
+      %1 = dxsa.index.imm {imm = 0 : i32}
+      %2 = dxsa.operand %1 {num_components = 4 : i32, one = 0 : i32, type = 0 : i32}
+      %3 = dxsa.index.rel %2
+      %4 = dxsa.operand %0, %3 {num_components = 0 : i32, type = 19 : i32}
+      dxsa.interface_call %4, <call_site = 0>
+    }
+    ```
+  }];
+  let arguments = (ins DXSA_OperandType:$operand, ConfinedAttr<I32Attr, [IntNonNegative]>:$call_site);
+  let assemblyFormat = [{ $operand `,` `<`
+    `call_site` `=` $call_site `>` attr-dict
+  }];
+}
+
 #endif // DXSA_OPS
