@@ -733,6 +733,12 @@ public:
         optionalToAttr(space));
   }
 
+  template <typename Inst>
+  Instruction buildConditionInstruction(dxsa::Condition cond, Operand operand,
+                                        Location loc) {
+    return Inst::create(builder, loc, cond, operand);
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1476,6 +1482,19 @@ public:
     return builder.buildDclSampler(id, lbound, ubound, space, *mode, loc);
   }
 
+  template <typename Inst>
+  FailureOr<Instruction> parseConditionInstruction(uint32_t opcodeToken,
+                                                   Location loc) {
+    dxsa::Condition cond = DECODE_D3D10_SB_INSTRUCTION_TEST_BOOLEAN(opcodeToken)
+                               ? dxsa::Condition::non_zero
+                               : dxsa::Condition::zero;
+
+    auto operand = parseOperand();
+    FAILURE_IF_FAILED(operand);
+
+    return builder.buildConditionInstruction<Inst>(cond, *operand, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1566,6 +1585,21 @@ public:
       break;
     case D3D10_SB_OPCODE_DCL_SAMPLER:
       result = parseDclSampler(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_IF:
+      result = parseConditionInstruction<dxsa::If>(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_BREAKC:
+      result = parseConditionInstruction<dxsa::Breakc>(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_CONTINUEC:
+      result = parseConditionInstruction<dxsa::Continuec>(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_RETC:
+      result = parseConditionInstruction<dxsa::Retc>(opcodeToken, loc);
+      break;
+    case D3D10_SB_OPCODE_DISCARD:
+      result = parseConditionInstruction<dxsa::Discard>(opcodeToken, loc);
       break;
     default:
       return std::nullopt;
