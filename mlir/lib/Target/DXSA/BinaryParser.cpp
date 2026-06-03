@@ -646,6 +646,15 @@ public:
         builder, loc, index, DenseI32ArrayAttr::get(ctx, functions));
   }
 
+  Instruction buildDclInterface(uint32_t index, dxsa::InterfaceAccess access,
+                                uint32_t arrayLength, uint32_t numCallSites,
+                                ArrayRef<int32_t> tables, Location loc) {
+    auto *ctx = builder.getContext();
+    return dxsa::DclInterface::create(builder, loc, index, access, arrayLength,
+                                      numCallSites,
+                                      DenseI32ArrayAttr::get(ctx, tables));
+  }
+
 private:
   MLIRContext *context;
   ModuleOp module;
@@ -1209,6 +1218,40 @@ public:
     return builder.buildDclFunctionTable(*index, functions, loc);
   }
 
+  FailureOr<Instruction> parseDclInterface(uint32_t opcodeToken, Location loc) {
+    bool isDynamic = DECODE_D3D11_SB_INTERFACE_INDEXED_BIT(opcodeToken);
+    auto access = isDynamic ? dxsa::InterfaceAccess::dynamic
+                            : dxsa::InterfaceAccess::immediate;
+
+    // Index of the interface (start index for an array).
+    auto index = parseToken();
+    FAILURE_IF_FAILED(index);
+
+    // Number of call sites (number of bodies in each table).
+    auto numCallSites = parseToken();
+    FAILURE_IF_FAILED(numCallSites);
+
+    auto packedLenghts = parseToken();
+    FAILURE_IF_FAILED(packedLenghts);
+
+    // Number of tables (variants).
+    auto tableLength = DECODE_D3D11_SB_INTERFACE_TABLE_LENGTH(*packedLenghts);
+
+    // Number of slots to be defined at runtime.
+    auto arrayLength = DECODE_D3D11_SB_INTERFACE_ARRAY_LENGTH(*packedLenghts);
+
+    SmallVector<int32_t, 16> tables;
+    tables.resize(tableLength);
+    for (uint32_t i = 0; i < tableLength; ++i) {
+      auto tableIndex = parseToken();
+      FAILURE_IF_FAILED(tableIndex);
+      tables[i] = *tableIndex;
+    }
+
+    return builder.buildDclInterface(*index, access, arrayLength, *numCallSites,
+                                     tables, loc);
+  }
+
   OptionalParseResult parseDclInstruction(uint32_t opcodeToken, Location loc,
                                           Instruction &out) {
     FailureOr<Instruction> result;
@@ -1260,6 +1303,9 @@ public:
       break;
     case D3D11_SB_OPCODE_DCL_FUNCTION_TABLE:
       result = parseDclFunctionTable(loc);
+      break;
+    case D3D11_SB_OPCODE_DCL_INTERFACE:
+      result = parseDclInterface(opcodeToken, loc);
       break;
     default:
       return std::nullopt;

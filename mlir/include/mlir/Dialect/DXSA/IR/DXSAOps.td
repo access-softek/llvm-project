@@ -255,6 +255,23 @@ def DXSA_SystemValueNameAttr :
   let assemblyFormat = "$value";
 }
 
+def DXSA_InterfaceAccess_Immediate : I32EnumAttrCase<"immediate", 0>;
+def DXSA_InterfaceAccess_Dynamic   : I32EnumAttrCase<"dynamic",   1>;
+
+def DXSA_InterfaceAccess : I32EnumAttr<
+    "InterfaceAccess", "DXBC access kind for an interface", [
+      DXSA_InterfaceAccess_Immediate,
+      DXSA_InterfaceAccess_Dynamic
+    ]> {
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+}
+
+def DXSA_InterfaceAccessAttr :
+    EnumAttr<DXSADialect, DXSA_InterfaceAccess, "interface_access"> {
+  let assemblyFormat = "$value";
+}
+
 //===----------------------------------------------------------------------===//
 // DXSA ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
 //===----------------------------------------------------------------------===//
@@ -754,6 +771,30 @@ def DXSA_DclFunctionTable : DXSA_Op<"dcl_function_table"> {
                        DenseI32ArrayAttr:$functions);
   let assemblyFormat = "$index `,` `<` `functions` `=` $functions `>` attr-dict";
   let hasVerifier = 1;
+}
+
+def DXSA_DclInterface : DXSA_Op<"dcl_interface"> {
+  let summary = "declares function table pointers (interfaces)";
+  let description = [{
+    Declare an `array_length` of function table pointers (interfaces). Each
+    table can be bound at runtime, and it should contain `num_call_sites`
+    function bodies.
+
+    Example:
+    ```mlir
+    dxsa.dcl_function_body 0
+    dxsa.dcl_function_body 1
+    dxsa.dcl_function_table 0, <functions = [0, 1]>
+    dxsa.dcl_interface 1, <access = dynamic, array_length = 1, num_call_sites = 2, tables = [0]>
+    ```
+  }];
+  let arguments = (ins I32Attr:$index, DXSA_InterfaceAccessAttr:$access, I32Attr:$array_length, I32Attr:$num_call_sites, DenseI32ArrayAttr:$tables);
+  let assemblyFormat = [{ $index `,` `<`
+    `access` `=` $access `,`
+    `array_length` `=` $array_length `,`
+    `num_call_sites` `=` $num_call_sites `,`
+    `tables` `=` $tables `>` attr-dict
+  }];
 }
 
 #endif // DXSA_OPS
