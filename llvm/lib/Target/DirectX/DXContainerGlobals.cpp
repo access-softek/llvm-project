@@ -157,10 +157,7 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   Globals.emplace_back(
       buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH"));
 
-  // TODO should we check for compile units or for module metadata here?
-  dxil::ModuleMetadataInfo &MMI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-  if (!MMI.SourceInfo)
+  if (M.debug_compile_units().empty())
     return;
 
   SmallString<40> DebugNameStr;
