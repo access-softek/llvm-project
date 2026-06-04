@@ -242,10 +242,6 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    // Enable EmbedDebug if there is debug info, but it is not being written
-    // to a PDB file.
-    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
-      EmbedDebug = true;
     if (!HasDebugInfo && EmbedDebug)
       reportFatalUsageError(
           "Missing debug info for embedding into the container");
