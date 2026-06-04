@@ -54,9 +54,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EmbedDebug;
-extern cl::opt<std::string> PdbDebugPath;
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());

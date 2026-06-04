@@ -39,7 +39,6 @@ using namespace llvm;
 using namespace llvm::dxil;
 using namespace llvm::mcdxbc;
 
-extern llvm::cl::opt<bool> EmbedDebug;
 cl::opt<std::string> PdbDebugPath(
     "dx-Fd",
     cl::desc("Write debug information to the given file, or automatically "
