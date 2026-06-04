@@ -504,7 +504,7 @@ def DXSA_IndexRelImm : DXSA_Op<"index.rel.imm"> {
     TODO
   }];
 
-  let arguments = (ins DXSA_LegacyOperandType:$operand, StrAttr:$op, I64Attr:$imm);
+  let arguments = (ins DXSA_LegacyOperandType:$operand, StrAttr:$op, I32Attr:$imm);
   let results = (outs DXSA_IndexType:$index);
   let assemblyFormat = "$operand attr-dict";
 }
