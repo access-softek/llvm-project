@@ -3790,11 +3790,11 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
     D.Diag(diag::err_drv_no_debug_info_for_Fd);
   if (Qembed_debug) {
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-dx-embed-debug");
+    CmdArgs.push_back("--dx-embed-debug");
   }
   if (Fd) {
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(Args.MakeArgString("-dx-Fd=" + Twine(Fd->getValue())));
+    CmdArgs.push_back(Args.MakeArgString("--dx-Fd=" + Twine(Fd->getValue())));
   }
 }
 

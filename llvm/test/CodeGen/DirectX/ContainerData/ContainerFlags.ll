@@ -1,18 +1,18 @@
-;; Check that -dx-embed-debug is enabled by default when debug info is present
+;; Check that --dx-embed-debug is enabled by default when debug info is present
 ; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.cso
 ; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=DEFAULT-EMBED
 ; DEFAULT-EMBED: Parts:
 ; DEFAULT-EMBED:   - Name:            ILDB
 
 ;; Check that debug info is not embedded if only the PDB ouput is specified
-; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -dx-Fd=%t.pdb -o %t.cso
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-Fd=%t.pdb -o %t.cso
 ; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=NO-EMBED
 ; NO-EMBED: Parts:
 ; NO-EMBED-NOT:   - Name:            ILDB
 
 ;; Check that debug info is both embedded and output to the PDB
 ;; if both options are specified
-; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -dx-embed-debug -dx-Fd=%t.pdb -o %t.cso
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-embed-debug --dx-Fd=%t.pdb -o %t.cso
 ; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=EMBED
 ; EMBED: Parts:
 ; EMBED:   - Name:            ILDB
@@ -22,9 +22,9 @@
 ; PDB:   ILDB
 
 ;; Check errors when trying to output debug info with no debug info present
-; RUN: not llc %s --filetype=obj -dx-embed-debug -o %t.cso 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG
+; RUN: not llc %s --filetype=obj --dx-embed-debug -o %t.cso 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG
 ; ERROR-NODBG: Missing debug info for embedding into the container
-; RUN: not llc %s --filetype=obj -dx-Fd=%t.pdb -o %t.cso 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG-PDB
+; RUN: not llc %s --filetype=obj --dx-Fd=%t.pdb -o %t.cso 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG-PDB
 ; ERROR-NODBG-PDB: Missing debug info for writing to the PDB file
 
 target triple = "dxil-unknown-shadermodel6.5-library"
