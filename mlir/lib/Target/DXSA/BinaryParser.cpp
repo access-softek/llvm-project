@@ -1602,13 +1602,14 @@ public:
     }
 
     auto opcodeToken = *token;
+    StringRef opcodeName = instrInfo[opcode].name;
 
     Instruction dclInstruction;
     auto parseResult = parseDclInstruction(opcodeToken, loc, dclInstruction);
     if (parseResult.has_value()) {
       if (failed(*parseResult))
         return failure();
-      if (failed(verifyInstructionLength(beginOffset, length)))
+      if (failed(verifyInstructionLength(beginOffset, length, opcodeName)))
         return failure();
       return dclInstruction;
     }
@@ -1623,11 +1624,10 @@ public:
       operands.push_back(*operand);
     }
 
-    if (failed(verifyInstructionLength(beginOffset, length)))
+    if (failed(verifyInstructionLength(beginOffset, length, opcodeName)))
       return failure();
 
-    return builder.buildInstruction(instrInfo[opcode].name, operands, modifier,
-                                    loc);
+    return builder.buildInstruction(opcodeName, operands, modifier, loc);
   }
 
   FailureOr<Module> parseModule() {
@@ -1643,10 +1643,13 @@ public:
     return builder.buildModule(instructions, loc);
   }
 
-  LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length) {
-    if (((currentTokenOffset - beginOffset) / 4) != length) {
-      emitError(getLocation(), "instruction length mismatch");
-      return failure();
+  LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length,
+                                        StringRef opcodeName) {
+    size_t actualLength = (currentTokenOffset - beginOffset) / 4;
+    if ((actualLength) != length) {
+      return emitError(getLocation(), "length mismatch for ")
+             << opcodeName << ": expected " << length << " tokens, got "
+             << actualLength;
     }
     return success();
   }
