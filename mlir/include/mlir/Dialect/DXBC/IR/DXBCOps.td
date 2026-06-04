@@ -504,7 +504,7 @@ def DXBC_IndexRelImm : DXBC_Op<"index.rel.imm"> {
     TODO
   }];
 
-  let arguments = (ins DXBC_LegacyOperandType:$operand, StrAttr:$op, I64Attr:$imm);
+  let arguments = (ins DXBC_LegacyOperandType:$operand, StrAttr:$op, I32Attr:$imm);
   let results = (outs DXBC_IndexType:$index);
   let assemblyFormat = "$operand attr-dict";
 }
