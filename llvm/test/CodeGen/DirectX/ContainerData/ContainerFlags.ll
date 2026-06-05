@@ -1,5 +1,5 @@
-;; Check that --dx-embed-debug embeds ILDB part into the container
-; RUN: llc %S/Inputs/SourceInfo.ll --dx-embed-debug --filetype=obj -o %t.cso
+;; Check that --dx-embed-debug is enabled by default when debug info is present
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.cso
 ; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=DEFAULT-EMBED
 ; DEFAULT-EMBED: Parts:
 ; DEFAULT-EMBED:   - Name:            ILDB

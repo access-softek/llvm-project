@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=dxil-pc-shadermodel6.3-library --filetype=obj --dx-embed-debug -O0 -o %t.dxbc %s
+; RUN: llc -mtriple=dxil-pc-shadermodel6.3-library --filetype=obj -O0 -o %t.dxbc %s
 ; RUN: llvm-objcopy --dump-section=ILDB=%t.bc %t.dxbc
 ; RUN: llvm-dis %t.bc -o - | %python %S/di_stat.py > %t.stat
 ; RUN: FileCheck %s --input-file %t.stat
