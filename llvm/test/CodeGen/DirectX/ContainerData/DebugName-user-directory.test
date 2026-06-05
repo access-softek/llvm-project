@@ -6,8 +6,6 @@ RUN: obj2yaml %t.dxbc >%t.yaml
 RUN: cat %t.yaml %t0.bc.md5 | FileCheck %s --implicit-check-not PDBN --implicit-check-not PDBH
 RUN: %python %S/Inputs/check_pdb_exists.py "%t" "%t0.bc.md5"
 
-CHECK-NOT:   - Name:            PDBN
-CHECK-NOT:   - Name:            PDBH
 CHECK:       - Name:            ILDN
 CHECK-NEXT:    Size:            {{.*}}
 CHECK-NEXT:    DebugName:

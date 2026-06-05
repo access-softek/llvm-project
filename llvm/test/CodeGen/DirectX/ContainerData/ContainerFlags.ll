@@ -3,12 +3,14 @@
 ; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=DEFAULT-EMBED
 ; DEFAULT-EMBED: Parts:
 ; DEFAULT-EMBED:   - Name:            ILDB
+; DEFAULT-EMBED:   - Name:            ILDN
 
 ;; Check that debug info is not embedded if only the PDB ouput is specified
 ; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-Fd=%t.pdb -o %t.cso
 ; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=NO-EMBED
 ; NO-EMBED: Parts:
 ; NO-EMBED-NOT:   - Name:            ILDB
+; NO-EMBED:       - Name:            ILDN
 
 ;; Check that debug info is both embedded and output to the PDB
 ;; if both options are specified
@@ -16,10 +18,12 @@
 ; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=EMBED
 ; EMBED: Parts:
 ; EMBED:   - Name:            ILDB
+; EMBED:   - Name:            ILDN
 ; RUN: llvm-pdbutil dump --dxcontainer %t.pdb | FileCheck %s --check-prefix=PDB
 ; Check that PDB file contains only debug-info relevant parts.
 ; PDB: Parts:
 ; PDB:   ILDB
+; PDB:   ILDN
 
 ;; Check errors when trying to output debug info with no debug info present
 ; RUN: not llc %s --filetype=obj --dx-embed-debug -o %t.cso 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG
