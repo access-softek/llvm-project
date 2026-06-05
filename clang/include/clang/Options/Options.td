@@ -9654,7 +9654,7 @@ def dxc_Frs : DXCJoinedOrSeparate<"Frs">,
 def dxc_Fd
     : DXCJoinedOrSeparate<"Fd">,
       HelpText<"Write debug information to the given file, or automatically "
-               "named file in directory when ending in '\\'">;
+               "named file in directory when ending in '/'">;
 def dxc_Qembed_debug
     : DXCFlag<"Qembed_debug">,
       HelpText<"Embed PDB in shader container (must be used with /Zi)">;
