@@ -40,6 +40,7 @@ in the sections that follow.
     reconstructed.
   * :ref:`merge_subcommand` - Given two PDBs, produce a third PDB that is the
     result of merging the two input PDBs.
+  * :ref:`export_subcommand` - Write the contents of a PDB stream to a file.
 
 .. _pretty_subcommand:
 
@@ -407,6 +408,15 @@ Miscellaneous Options
 
  Dump image section headers.
 
+.. option:: -dxcontainer
+
+ When used with :option:`-streams`, dump a summary of the DXContainer stored in
+ the PDB file's DXContainer stream. Shader companion PDB files produced by the
+ DirectX backend store debug-related container parts in this stream. For
+ example::
+
+   llvm-pdbutil dump --streams --dxcontainer shader.pdb
+
 .. option:: -section-map
 
  Dump section map.
@@ -539,8 +549,22 @@ USAGE: :program:`llvm-pdbutil` pdb2yaml [*options*] <input PDB file>
 Summary
 ^^^^^^^
 
+Produce a YAML description of some or all of a PDB file's contents.
+
 Options
 ^^^^^^^
+
+.. option:: -all
+
+ Dump everything :program:`llvm-pdbutil` knows how to dump, including the
+ DXContainer stream when present.
+
+.. option:: -dxcontainer
+
+ Dump the DXContainer stored in the PDB file's DXContainer stream to YAML.
+ For example::
+
+   llvm-pdbutil pdb2yaml --dxcontainer shader.pdb
 
 .. _yaml2pdb_subcommand:
 
@@ -564,6 +588,54 @@ Options
 .. option:: -pdb=<file-name>
 
 Write the resulting PDB to the specified file.
+
+.. _export_subcommand:
+
+export
+~~~~~~
+
+USAGE: :program:`llvm-pdbutil` export --out=<file> [*options*] <input PDB file>
+
+.. program:: llvm-pdbutil export
+
+Summary
+^^^^^^^
+
+Write the binary contents of a PDB stream to a file.
+
+DirectX Shader PDBs
+^^^^^^^^^^^^^^^^^^^
+
+When a DirectX shader is compiled with debug information and a companion PDB
+file is requested, the PDB contains a DXContainer stream with debug-related
+parts such as ILDB, ILDN, SRCI, and VERS. To extract that container as a
+standalone DXContainer file::
+
+  llvm-pdbutil export --dxcontainer --out=shader.dxbc shader.pdb
+
+The resulting file can be inspected with the same DXContainer tooling used for
+the main shader output, such as :program:`obj2yaml` and
+:program:`llvm-objcopy`. See :doc:`../DirectX/DXContainer` for part format
+details. To inspect the embedded container without extracting it, use
+:ref:`llvm-pdbutil dump <dump_subcommand>` or
+:ref:`llvm-pdbutil pdb2yaml <pdb2yaml_subcommand>`.
+
+Options
+^^^^^^^
+
+.. option:: --out=<file>
+
+ The file to write the exported stream data to.
+
+.. option:: --dxcontainer
+
+ Export the DXContainer stored in the PDB file's DXContainer stream. This is
+ the usual way to recover the debug-related container parts from a shader
+ companion PDB file.
+
+.. option:: --stream=<index-or-name>
+
+ Export the contents of the specified PDB stream.
 
 .. _merge_subcommand:
 
