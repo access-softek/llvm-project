@@ -410,12 +410,11 @@ Miscellaneous Options
 
 .. option:: -dxcontainer
 
- When used with :option:`-streams`, dump a summary of the DXContainer stored in
- the PDB file's DXContainer stream. Shader companion PDB files produced by the
- DirectX backend store debug-related container parts in this stream. For
- example::
+ Dump a summary of the DXContainer stored in the PDB file's DXContainer stream.
+ Shader companion PDB files produced by the DirectX backend store debug-related
+ container parts in this stream. For example::
 
-   llvm-pdbutil dump --streams --dxcontainer shader.pdb
+   llvm-pdbutil dump --dxcontainer shader.pdb
 
 .. option:: -section-map
 
@@ -556,8 +555,7 @@ Options
 
 .. option:: -all
 
- Dump everything :program:`llvm-pdbutil` knows how to dump, including the
- DXContainer stream when present.
+ Implies most other options in this category.
 
 .. option:: -dxcontainer
 
@@ -629,6 +627,7 @@ Options
 
 .. option:: --dxcontainer
 
+ A synonym for the :option:`--stream=5` option.
  Export the DXContainer stored in the PDB file's DXContainer stream. This is
  the usual way to recover the debug-related container parts from a shader
  companion PDB file.
