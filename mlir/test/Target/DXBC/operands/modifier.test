@@ -1,0 +1,17 @@
+// RUN: mlir-opt %s -split-input-file --verify-roundtrip | FileCheck %s
+
+// Negation.
+// CHECK: dxbc.add r<0>, -r<1>, r<2>
+dxbc.add r<0>, -r<1>, r<2>
+
+// -----
+
+// Absolute value.
+// CHECK: dxbc.add r<0>, |r<1>|, r<2>
+dxbc.add r<0>, |r<1>|, r<2>
+
+// -----
+
+// Negated absolute value.
+// CHECK: dxbc.add r<0>, -|r<1>|, r<2>
+dxbc.add r<0>, -|r<1>|, r<2>

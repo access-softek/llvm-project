@@ -9,19 +9,12 @@
 #ifndef DXBC_OPS
 #define DXBC_OPS
 
-include "mlir/Dialect/DXBC/IR/DXBCDialect.td"
+include "mlir/Dialect/DXBC/IR/DXBCOpBase.td"
 include "mlir/Dialect/DXBC/IR/DXBCTypes.td"
+include "mlir/Dialect/DXBC/IR/DXBCFPArithOps.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
-
-//===----------------------------------------------------------------------===//
-// DXBC op base class
-//===----------------------------------------------------------------------===//
-
-// Base class for all operations in this dialect.
-class DXBC_Op<string mnemonic, list<Trait> traits = []> :
-    Op<DXBCDialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // DXBC module - top-level container op for a DXBC tokenized program
@@ -70,7 +63,7 @@ def DXBC_ShaderVersionAttr : AttrDef<DXBCDialect, "ShaderVersion"> {
     ```
   }];
   let parameters = (ins "uint8_t":$major, "uint8_t":$minor);
-  let assemblyFormat = "`<` $major `,` $minor `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def DXBC_ModuleOp : DXBC_Op<"module", [
@@ -419,32 +412,6 @@ def DXBC_ResourceReturnTypeAttr :
   let assemblyFormat = "$value";
 }
 
-//===----------------------------------------------------------------------===//
-// DXBC ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
-//===----------------------------------------------------------------------===//
-
-def DXBC_ComponentMask_X : I32BitEnumAttrCaseBit<"x", 0>;
-def DXBC_ComponentMask_Y : I32BitEnumAttrCaseBit<"y", 1>;
-def DXBC_ComponentMask_Z : I32BitEnumAttrCaseBit<"z", 2>;
-def DXBC_ComponentMask_W : I32BitEnumAttrCaseBit<"w", 3>;
-
-def DXBC_ComponentMask : I32BitEnumAttr<
-    "ComponentMask", "component mask (subset of x, y, z, w)", [
-      DXBC_ComponentMask_X,
-      DXBC_ComponentMask_Y,
-      DXBC_ComponentMask_Z,
-      DXBC_ComponentMask_W
-    ]> {
-  let separator = ", ";
-  let cppNamespace = "::mlir::dxbc";
-  let genSpecializedAttr = 0;
-}
-
-def DXBC_ComponentMaskAttr :
-    EnumAttr<DXBCDialect, DXBC_ComponentMask, "component_mask"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 def DXBC_ConstantBufferAccessPattern_ImmediateIndexed : I32EnumAttrCase<"immediateIndexed", 0>;
 def DXBC_ConstantBufferAccessPattern_DynamicIndexed   : I32EnumAttrCase<"dynamicIndexed",   1>;
 
@@ -513,7 +480,7 @@ def DXBC_Operand : DXBC_Op<"operand"> {
 		       OptionalAttr<I32Attr>:$modifier,
 		       OptionalAttr<I32Attr>:$min_precision,
 		       OptionalAttr<I32Attr>:$non_uniform);
-  let results = (outs DXBC_OperandType:$operand);
+  let results = (outs DXBC_LegacyOperandType:$operand);
   let assemblyFormat = "$operands attr-dict";
 }
 
@@ -524,7 +491,7 @@ def DXBC_OperandImm : DXBC_Op<"operand.imm"> {
   }];
 
   let arguments = (ins AnyAttrOf<[I32ElementsAttr, I64ElementsAttr]>:$imm);
-  let results = (outs DXBC_OperandType:$operand);
+  let results = (outs DXBC_LegacyOperandType:$operand);
   let assemblyFormat = "attr-dict";
 }
 
@@ -545,7 +512,7 @@ def DXBC_IndexRel : DXBC_Op<"index.rel"> {
     TODO
   }];
 
-  let arguments = (ins DXBC_OperandType:$operand);
+  let arguments = (ins DXBC_LegacyOperandType:$operand);
   let results = (outs DXBC_IndexType:$index);
   let assemblyFormat = "$operand attr-dict";
 }
@@ -556,7 +523,7 @@ def DXBC_IndexRelImm : DXBC_Op<"index.rel.imm"> {
     TODO
   }];
 
-  let arguments = (ins DXBC_OperandType:$operand, StrAttr:$op, I64Attr:$imm);
+  let arguments = (ins DXBC_LegacyOperandType:$operand, StrAttr:$op, I64Attr:$imm);
   let results = (outs DXBC_IndexType:$index);
   let assemblyFormat = "$operand attr-dict";
 }
@@ -567,7 +534,7 @@ def DXBC_Instruction : DXBC_Op<"instruction"> {
     TODO
   }];
 
-  let arguments = (ins Variadic<DXBC_OperandType>:$operands, StrAttr:$mnemonic);
+  let arguments = (ins Variadic<DXBC_LegacyOperandType>:$operands, StrAttr:$mnemonic);
   let results = (outs);
   let assemblyFormat = "$mnemonic $operands attr-dict";
 }
@@ -868,7 +835,7 @@ def DXBC_DclInputPs : DXBC_Op<"dcl_input_ps"> {
     ```
   }];
   let arguments = (ins DXBC_InterpolationModeAttr:$mode,
-                       DXBC_OperandType:$operand);
+                       DXBC_LegacyOperandType:$operand);
   let assemblyFormat = "$mode $operand attr-dict";
 }
 
@@ -886,7 +853,7 @@ def DXBC_DclInputPsSiv : DXBC_Op<"dcl_input_ps_siv"> {
     ```
   }];
   let arguments = (ins DXBC_InterpolationModeAttr:$mode,
-                       DXBC_OperandType:$operand,
+                       DXBC_LegacyOperandType:$operand,
                        DXBC_SystemValueNameAttr:$name);
   let assemblyFormat = "$mode $operand `,` $name attr-dict";
 }
@@ -903,7 +870,7 @@ def DXBC_DclInputPsSgv : DXBC_Op<"dcl_input_ps_sgv"> {
     dxbc.dcl_input_ps_sgv %v0, <sampleIndex>
     ```
   }];
-  let arguments = (ins DXBC_OperandType:$operand,
+  let arguments = (ins DXBC_LegacyOperandType:$operand,
                        DXBC_SystemValueNameAttr:$name);
   let assemblyFormat = "$operand `,` $name attr-dict";
 }

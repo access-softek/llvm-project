@@ -1,0 +1,14 @@
+// RUN: mlir-opt %s -split-input-file --mlir-print-op-generic --verify-roundtrip | FileCheck %s
+
+// CHECK: "dxbc.add"() <{dst = #dxbc.dst_operand<r<0, <x, y>>>, lhs = #dxbc.src_operand<-|r<1, min16f, nonuniform>|>, rhs = #dxbc.src_operand<d(0x3FF0000000000000, 0x4000000000000000)>}>
+dxbc.add r<0, <x, y>>, -|r<1, min16f, nonuniform>|, d(0x3FF0000000000000, 0x4000000000000000)
+
+// -----
+
+// CHECK: "dxbc.add"() <{dst = #dxbc.dst_operand<null>, lhs = #dxbc.src_operand<r<1>>, rhs = #dxbc.src_operand<r<2>>}>
+dxbc.add null, r<1>, r<2>
+
+// -----
+
+// CHECK: "dxbc.add"() <{dst = #dxbc.dst_operand<null<vector>>, lhs = #dxbc.src_operand<l(0x2A)>, rhs = #dxbc.src_operand<v<42 : i64>>}>
+dxbc.add null<vector>, l(0x2A), v<42 : i64>

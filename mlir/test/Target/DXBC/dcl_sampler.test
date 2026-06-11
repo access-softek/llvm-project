@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxbc-bin %S/inputs/dcl_sampler.bin | FileCheck %s
+// RUN: mlir-translate --import-dxbc-bin %S/inputs/dcl_sampler.bin | mlir-opt --verify-roundtrip
 
 // CHECK:      module {
 // CHECK-NEXT:   dxbc.dcl_sampler <id = 0, mode = default>
