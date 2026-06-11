@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/unknown.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/unknown.bin | mlir-opt --verify-roundtrip
 
 // CHECK:      dxsa.module {
 // CHECK-NEXT:   dxsa.dcl_temps 1

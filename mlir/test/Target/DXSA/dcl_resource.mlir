@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_resource.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_resource.bin | mlir-opt --verify-roundtrip
 
 // CHECK:      module {
 // CHECK-NEXT:   dxsa.dcl_resource <id = 0>, <dim = buffer>, <x = unorm, y = snorm, z = sint, w = uint>

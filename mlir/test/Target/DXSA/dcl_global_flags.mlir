@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_global_flags.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_global_flags.bin | mlir-opt --verify-roundtrip
 
 // 9 individual flags (one per instruction), then multi-flag combo, then all flags.
 

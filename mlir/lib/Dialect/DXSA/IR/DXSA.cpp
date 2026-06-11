@@ -30,10 +30,7 @@ void DXSADialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/DXSA/IR/DXSAOpsTypes.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/DXSA/IR/DXSAOpsAttributes.cpp.inc"
-      >();
+  registerAttributes();
 }
 
 /// Declarations for custom-directive helpers used by the
@@ -115,6 +112,25 @@ LogicalResult ModuleOp::verify() {
     return emitOpError(
         "program_type and shader_version must both be present or both absent");
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ShaderVersionAttr
+//===----------------------------------------------------------------------===//
+
+Attribute ShaderVersionAttr::parse(AsmParser &parser, Type) {
+  uint8_t major = 0, minor = 0;
+  if (parser.parseLess() || parser.parseInteger(major) || parser.parseComma() ||
+      parser.parseInteger(minor) || parser.parseGreater())
+    return {};
+  return ShaderVersionAttr::get(parser.getContext(), major, minor);
+}
+
+void ShaderVersionAttr::print(AsmPrinter &printer) const {
+  // major & minor are bytes, so a bare out would emit them as raw chars,
+  // use cast for proper printing.
+  printer << '<' << static_cast<unsigned>(getMajor()) << ", "
+          << static_cast<unsigned>(getMinor()) << '>';
 }
 
 //===----------------------------------------------------------------------===//
@@ -274,13 +290,6 @@ static void printHexTokens(OpAsmPrinter &printer, Operation *,
   });
   printer << "]>";
 }
-
-//===----------------------------------------------------------------------===//
-// TableGen'd attribute method definitions
-//===----------------------------------------------------------------------===//
-
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/DXSA/IR/DXSAOpsAttributes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // TableGen'd type method definitions

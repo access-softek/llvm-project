@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/mov.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/mov.bin | mlir-opt --verify-roundtrip
 // mov r0.x, l(3.000000)
 
 // CHECK:      dxsa.module {

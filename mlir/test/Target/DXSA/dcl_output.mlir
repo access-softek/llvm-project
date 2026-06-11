@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_output.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_output.bin | mlir-opt --verify-roundtrip
 
 // CHECK-LABEL: module
 module {

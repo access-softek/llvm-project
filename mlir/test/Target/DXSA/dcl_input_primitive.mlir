@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_input_primitive.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_input_primitive.bin | mlir-opt --verify-roundtrip
 
 // CHECK:      dxsa.module {
 // CHECK-NEXT:   dxsa.dcl_input_primitive point

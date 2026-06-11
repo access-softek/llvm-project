@@ -28,8 +28,12 @@ def DXSA_IndexType : DXSA_Type<"Index", "index"> {
   }];
 }
 
-def DXSA_OperandType : DXSA_Type<"Operand", "operand"> {
-  let summary = "dxsa operand type";
+// The `Legacy` prefix frees the bare `OperandType` C++ name for the new
+// `DXSA_OperandType` enum (the operand-kind classifier shared by
+// `#dxsa.dst_operand` / `#dxsa.src_operand`). The textual mnemonic
+// `!dxsa.operand` is unchanged so existing tests keep working.
+def DXSA_LegacyOperandType : DXSA_Type<"LegacyOperand", "operand"> {
+  let summary = "dxsa legacy operand type";
   let description = [{
     TODO
   }];

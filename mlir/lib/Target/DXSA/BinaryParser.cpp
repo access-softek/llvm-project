@@ -467,14 +467,14 @@ public:
 
   Operand buildOperandImm32(ArrayRef<int32_t> values, FileLineColLoc loc) {
     Operation *op = dxsa::OperandImm::create(
-        builder, loc, builder.getType<dxsa::OperandType>(),
+        builder, loc, builder.getType<dxsa::LegacyOperandType>(),
         builder.getI32VectorAttr(values));
     return op->getResults()[0];
   }
 
   Operand buildOperandImm64(ArrayRef<int64_t> values, FileLineColLoc loc) {
     Operation *op = dxsa::OperandImm::create(
-        builder, loc, builder.getType<dxsa::OperandType>(),
+        builder, loc, builder.getType<dxsa::LegacyOperandType>(),
         builder.getI64VectorAttr(values));
     return op->getResults()[0];
   }
@@ -519,7 +519,8 @@ public:
       break;
     }
     Operation *op = dxsa::Operand::create(
-        builder, loc, builder.getType<dxsa::OperandType>(), indices, attrs);
+        builder, loc, builder.getType<dxsa::LegacyOperandType>(), indices,
+        attrs);
     return op->getResults()[0];
   }
 
@@ -662,6 +663,134 @@ public:
                          : DenseI64ArrayAttr::get(ctx, indexArray);
     return dxsa::InlineOperandAttr::get(ctx, operandType, components, maskAttr,
                                         indexAttr);
+  }
+
+  dxsa::DstOperandAttr
+  buildDstOperandAttr(dxsa::OperandType operandType,
+                      const OperandComponents &components,
+                      ArrayRef<dxsa::IndexAttr> indexEntries,
+                      std::optional<OperandModifier> opModifier) {
+    auto componentsValue = components.num == 0 ? dxsa::OperandComponents::none
+                           : components.num == 1
+                               ? dxsa::OperandComponents::scalar
+                               : dxsa::OperandComponents::vector;
+    auto componentsAttr =
+        dxsa::OperandComponentsAttr::get(context, componentsValue);
+
+    dxsa::ComponentMaskAttr maskAttr;
+    if (components.kind == OperandComponentsKind::Mask)
+      maskAttr = dxsa::ComponentMaskAttr::get(
+          context, decodeComponentMask(components.mask));
+
+    dxsa::OperandIndexAttr indexAttr;
+    if (!indexEntries.empty())
+      indexAttr = dxsa::OperandIndexAttr::get(context, indexEntries);
+
+    dxsa::OperandMinPrecisionAttr minPrecisionAttr;
+    if (opModifier && opModifier->minPrecision != 0) {
+      if (auto p = dxsa::symbolizeOperandMinPrecision(opModifier->minPrecision))
+        minPrecisionAttr = dxsa::OperandMinPrecisionAttr::get(context, *p);
+    }
+
+    return dxsa::DstOperandAttr::get(context, operandType, indexAttr,
+                                     componentsAttr, minPrecisionAttr,
+                                     maskAttr);
+  }
+
+  dxsa::SrcOperandAttr
+  buildSrcOperandAttr(dxsa::OperandType operandType,
+                      const OperandComponents &components,
+                      ArrayRef<dxsa::IndexAttr> indexEntries,
+                      std::optional<OperandModifier> opModifier,
+                      ArrayRef<int32_t> values, ArrayRef<int64_t> values64) {
+    auto componentsValue = components.num == 0 ? dxsa::OperandComponents::none
+                           : components.num == 1
+                               ? dxsa::OperandComponents::scalar
+                               : dxsa::OperandComponents::vector;
+    auto componentsAttr =
+        dxsa::OperandComponentsAttr::get(context, componentsValue);
+
+    dxsa::SwizzleAttr swizzleAttr;
+    if (components.kind == OperandComponentsKind::Swizzle) {
+      SmallVector<unsigned, 4> swizzleComponents;
+      for (unsigned int i : components.swizzle)
+        swizzleComponents.push_back(i);
+      swizzleAttr = dxsa::SwizzleAttr::get(context, swizzleComponents);
+    } else if (components.kind == OperandComponentsKind::One) {
+      swizzleAttr = dxsa::SwizzleAttr::get(
+          context, ArrayRef<unsigned>{static_cast<unsigned>(components.one)});
+    }
+
+    dxsa::OperandIndexAttr indexAttr;
+    if (!indexEntries.empty())
+      indexAttr = dxsa::OperandIndexAttr::get(context, indexEntries);
+
+    dxsa::OperandModifierAttr modifierAttr;
+    dxsa::OperandMinPrecisionAttr minPrecisionAttr;
+    UnitAttr nonUniformAttr;
+    if (opModifier) {
+      if (opModifier->modifier != 0) {
+        if (auto m = dxsa::symbolizeOperandModifier(opModifier->modifier))
+          modifierAttr = dxsa::OperandModifierAttr::get(context, *m);
+      }
+      if (opModifier->minPrecision != 0) {
+        if (auto p =
+                dxsa::symbolizeOperandMinPrecision(opModifier->minPrecision))
+          minPrecisionAttr = dxsa::OperandMinPrecisionAttr::get(context, *p);
+      }
+      if (opModifier->nonUniform != 0)
+        nonUniformAttr = UnitAttr::get(context);
+    }
+
+    auto valuesAttr = values.empty() ? DenseI32ArrayAttr()
+                                     : DenseI32ArrayAttr::get(context, values);
+    auto values64Attr = values64.empty()
+                            ? DenseI64ArrayAttr()
+                            : DenseI64ArrayAttr::get(context, values64);
+
+    return dxsa::SrcOperandAttr::get(
+        context, operandType, indexAttr, componentsAttr, minPrecisionAttr,
+        nonUniformAttr, swizzleAttr, modifierAttr, valuesAttr, values64Attr);
+  }
+
+  dxsa::IndexAttr buildOperandIndexImm32(int32_t imm) {
+    return dxsa::IndexAttr::get(context, builder.getI32IntegerAttr(imm),
+                                dxsa::SrcOperandAttr());
+  }
+
+  dxsa::IndexAttr buildOperandIndexImm64(int64_t imm) {
+    return dxsa::IndexAttr::get(context, builder.getI64IntegerAttr(imm),
+                                dxsa::SrcOperandAttr());
+  }
+
+  dxsa::IndexAttr buildOperandIndexRelative(dxsa::SrcOperandAttr relative) {
+    return dxsa::IndexAttr::get(context, IntegerAttr(), relative);
+  }
+
+  dxsa::IndexAttr
+  buildOperandIndexImm32PlusRelative(int32_t imm,
+                                     dxsa::SrcOperandAttr relative) {
+    return dxsa::IndexAttr::get(context, builder.getI32IntegerAttr(imm),
+                                relative);
+  }
+
+  dxsa::IndexAttr
+  buildOperandIndexImm64PlusRelative(int64_t imm,
+                                     dxsa::SrcOperandAttr relative) {
+    return dxsa::IndexAttr::get(context, builder.getI64IntegerAttr(imm),
+                                relative);
+  }
+
+  template <typename OpT>
+  Instruction buildBinaryOp(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr lhs,
+                            dxsa::SrcOperandAttr rhs, uint32_t preciseMask,
+                            Location loc) {
+    auto preciseAttr =
+        preciseMask
+            ? dxsa::ComponentMaskAttr::get(
+                  context, static_cast<dxsa::ComponentMask>(preciseMask))
+            : dxsa::ComponentMaskAttr();
+    return OpT::create(builder, loc, dst, lhs, rhs, preciseAttr);
   }
 
   Instruction buildDclInput(dxsa::InlineOperandAttr operand, Location loc) {
@@ -1371,6 +1500,153 @@ public:
                                           indices);
   }
 
+  struct OperandFields {
+    dxsa::OperandType type;
+    OperandComponents components;
+    SmallVector<dxsa::IndexAttr, 3> indexEntries;
+    std::optional<OperandModifier> modifier;
+    SmallVector<int32_t, 4> values;
+    SmallVector<int64_t, 2> values64;
+  };
+
+  FailureOr<dxsa::IndexAttr> parseOperandIndex(uint32_t indexType) {
+    switch (indexType) {
+    case D3D10_SB_OPERAND_INDEX_IMMEDIATE32: {
+      auto value = parseToken();
+      FAILURE_IF_FAILED(value);
+      return builder.buildOperandIndexImm32(static_cast<int32_t>(*value));
+    }
+    case D3D10_SB_OPERAND_INDEX_IMMEDIATE64: {
+      auto high = parseToken();
+      FAILURE_IF_FAILED(high);
+      auto low = parseToken();
+      FAILURE_IF_FAILED(low);
+      return builder.buildOperandIndexImm64((((int64_t)*high) << 32) | *low);
+    }
+    case D3D10_SB_OPERAND_INDEX_RELATIVE: {
+      auto relative = parseSrcOperand();
+      FAILURE_IF_FAILED(relative);
+      return builder.buildOperandIndexRelative(*relative);
+    }
+    case D3D10_SB_OPERAND_INDEX_IMMEDIATE32_PLUS_RELATIVE: {
+      auto value = parseToken();
+      FAILURE_IF_FAILED(value);
+      auto relative = parseSrcOperand();
+      FAILURE_IF_FAILED(relative);
+      return builder.buildOperandIndexImm32PlusRelative(
+          static_cast<int32_t>(*value), *relative);
+    }
+    case D3D10_SB_OPERAND_INDEX_IMMEDIATE64_PLUS_RELATIVE: {
+      auto high = parseToken();
+      FAILURE_IF_FAILED(high);
+      auto low = parseToken();
+      FAILURE_IF_FAILED(low);
+      auto relative = parseSrcOperand();
+      FAILURE_IF_FAILED(relative);
+      return builder.buildOperandIndexImm64PlusRelative(
+          (((int64_t)*high) << 32) | *low, *relative);
+    }
+    default:
+      return emitError(getLocation(), "invalid operand index representation: ")
+             << indexType;
+    }
+  }
+
+  FailureOr<OperandFields> parseOperandFields() {
+    auto token = parseToken();
+    FAILURE_IF_FAILED(token);
+
+    auto loc = getLocation();
+    auto rawOperandType = DECODE_D3D10_SB_OPERAND_TYPE(*token);
+    auto isExtended = DECODE_IS_D3D10_SB_OPERAND_EXTENDED(*token);
+
+    auto type = dxsa::symbolizeOperandType(rawOperandType);
+    if (!type)
+      return emitError(loc, "unknown operand type: ") << rawOperandType;
+
+    auto components = parseOperandComponents(*token);
+    FAILURE_IF_FAILED(components);
+
+    auto indexTypes = parseOperandIndexTypes(*token);
+    FAILURE_IF_FAILED(indexTypes);
+
+    OperandFields decoded;
+    decoded.type = *type;
+    decoded.components = *components;
+
+    if (isExtended) {
+      auto extToken = parseToken();
+      FAILURE_IF_FAILED(extToken);
+      auto opMod = parseOperandExtendedModifier(*extToken);
+      FAILURE_IF_FAILED(opMod);
+      decoded.modifier = *opMod;
+    }
+
+    if (isImmOperand(*token)) {
+      if (rawOperandType == D3D10_SB_OPERAND_TYPE_IMMEDIATE64) {
+        for (unsigned i = 0; i < 2; ++i) {
+          auto high = parseToken();
+          FAILURE_IF_FAILED(high);
+          auto low = parseToken();
+          FAILURE_IF_FAILED(low);
+          decoded.values64.push_back((((int64_t)*high) << 32) | *low);
+        }
+        return decoded;
+      }
+      for (uint32_t i = 0; i < components->num; ++i) {
+        auto value = parseToken();
+        FAILURE_IF_FAILED(value);
+        decoded.values.push_back(static_cast<int32_t>(*value));
+      }
+      return decoded;
+    }
+
+    for (uint32_t indexType : *indexTypes) {
+      auto entry = parseOperandIndex(indexType);
+      FAILURE_IF_FAILED(entry);
+      decoded.indexEntries.push_back(*entry);
+    }
+    return decoded;
+  }
+
+  FailureOr<dxsa::DstOperandAttr> parseDstOperand() {
+    auto loc = getLocation();
+    auto fields = parseOperandFields();
+    FAILURE_IF_FAILED(fields);
+    if (!fields->values.empty() || !fields->values64.empty())
+      return emitError(loc, "immediate operand `")
+             << dxsa::stringifyOperandType(fields->type)
+             << "` cannot be a destination";
+    return builder.buildDstOperandAttr(fields->type, fields->components,
+                                       fields->indexEntries, fields->modifier);
+  }
+
+  FailureOr<dxsa::SrcOperandAttr> parseSrcOperand() {
+    auto fields = parseOperandFields();
+    FAILURE_IF_FAILED(fields);
+    return builder.buildSrcOperandAttr(fields->type, fields->components,
+                                       fields->indexEntries, fields->modifier,
+                                       fields->values, fields->values64);
+  }
+
+  template <typename BinOpT, typename BinOpSatT>
+  FailureOr<Instruction>
+  decodeSaturableBinaryOp(size_t beginOffset, uint32_t length, bool saturate,
+                          uint32_t preciseMask, Location loc) {
+    auto dst = parseDstOperand();
+    FAILURE_IF_FAILED(dst);
+    auto lhs = parseSrcOperand();
+    FAILURE_IF_FAILED(lhs);
+    auto rhs = parseSrcOperand();
+    FAILURE_IF_FAILED(rhs);
+    if (failed(verifyInstructionLength(beginOffset, length)))
+      return failure();
+    if (saturate)
+      return builder.buildBinaryOp<BinOpSatT>(*dst, *lhs, *rhs, preciseMask,
+                                              loc);
+    return builder.buildBinaryOp<BinOpT>(*dst, *lhs, *rhs, preciseMask, loc);
+  }
+
   FailureOr<Instruction> parseDclInput(Location loc) {
     auto operand = parseInlineOperand();
     FAILURE_IF_FAILED(operand);
@@ -1827,6 +2103,13 @@ public:
     }
 
     unsigned numOperands = instrInfo[opcode].numOperands;
+
+    switch (opcode) {
+    case D3D10_SB_OPCODE_ADD:
+      return decodeSaturableBinaryOp<dxsa::Add, dxsa::AddSat>(
+          beginOffset, instructionLengthInTokens, modifier.saturate,
+          modifier.preciseMask, getLocation());
+    }
 
     SmallVector<Operand, 8> operands;
     for (unsigned i = 0; i < numOperands; ++i) {

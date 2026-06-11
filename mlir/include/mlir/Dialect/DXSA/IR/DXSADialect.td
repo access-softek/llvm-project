@@ -29,7 +29,16 @@ def DXSADialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let useDefaultAttributePrinterParser = 0;
+  let extraClassDeclaration = [{
+    // The following are defined in DXSAOperand.cpp where GET_ATTRDEF_CLASSES is
+    // instantiated, so the generated attribute dispatch helpers are in scope.
+    void registerAttributes();
+    ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
+                                     ::mlir::Type type) const override;
+    void printAttribute(::mlir::Attribute attr,
+                        ::mlir::DialectAsmPrinter &printer) const override;
+  }];
 }
 
 #endif // DXSA_DIALECT_TD

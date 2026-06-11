@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_constant_buffer.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_constant_buffer.bin | mlir-opt --verify-roundtrip
 
 // CHECK:      dxsa.module {
 // CHECK-NEXT:   dxsa.dcl_constant_buffer <id = 0, size = 1>, <immediateIndexed>

@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/unknown_past_eof.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/unknown_past_eof.bin | mlir-opt --verify-roundtrip
 
 // Opcode declares length 5, but only 3 tokens remain in the file.
 // The unknown fallback clamps the span to the actual remainder, never past EOF.

@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_resource_structured.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_resource_structured.bin | mlir-opt --verify-roundtrip
 
 // CHECK:      module {
 // CHECK-NEXT:   dxsa.dcl_resource_structured <id = 3, struct_byte_stride = 16>

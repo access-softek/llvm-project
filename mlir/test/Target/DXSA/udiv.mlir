@@ -1,4 +1,5 @@
 // RUN: mlir-translate --import-dxsa-bin %S/inputs/udiv.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-bin %S/inputs/udiv.bin | mlir-opt --verify-roundtrip
 // udiv NULL, r0.x, vOutputControlPointID, 4
 
 // CHECK:      dxsa.module {

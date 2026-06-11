@@ -9,19 +9,12 @@
 #ifndef DXSA_OPS
 #define DXSA_OPS
 
-include "mlir/Dialect/DXSA/IR/DXSADialect.td"
+include "mlir/Dialect/DXSA/IR/DXSAOpBase.td"
 include "mlir/Dialect/DXSA/IR/DXSATypes.td"
+include "mlir/Dialect/DXSA/IR/DXSAFPArithOps.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
-
-//===----------------------------------------------------------------------===//
-// DXSA op base class
-//===----------------------------------------------------------------------===//
-
-// Base class for all operations in this dialect.
-class DXSA_Op<string mnemonic, list<Trait> traits = []> :
-    Op<DXSADialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // DXSA module - top-level container op for a DXBC tokenized program
@@ -70,7 +63,7 @@ def DXSA_ShaderVersionAttr : AttrDef<DXSADialect, "ShaderVersion"> {
     ```
   }];
   let parameters = (ins "uint8_t":$major, "uint8_t":$minor);
-  let assemblyFormat = "`<` $major `,` $minor `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def DXSA_ModuleOp : DXSA_Op<"module", [
@@ -419,32 +412,6 @@ def DXSA_ResourceReturnTypeAttr :
   let assemblyFormat = "$value";
 }
 
-//===----------------------------------------------------------------------===//
-// DXSA ComponentMask bit-enum (mask field of operand, normalized to bits 0..3)
-//===----------------------------------------------------------------------===//
-
-def DXSA_ComponentMask_X : I32BitEnumAttrCaseBit<"x", 0>;
-def DXSA_ComponentMask_Y : I32BitEnumAttrCaseBit<"y", 1>;
-def DXSA_ComponentMask_Z : I32BitEnumAttrCaseBit<"z", 2>;
-def DXSA_ComponentMask_W : I32BitEnumAttrCaseBit<"w", 3>;
-
-def DXSA_ComponentMask : I32BitEnumAttr<
-    "ComponentMask", "component mask (subset of x, y, z, w)", [
-      DXSA_ComponentMask_X,
-      DXSA_ComponentMask_Y,
-      DXSA_ComponentMask_Z,
-      DXSA_ComponentMask_W
-    ]> {
-  let separator = ", ";
-  let cppNamespace = "::mlir::dxsa";
-  let genSpecializedAttr = 0;
-}
-
-def DXSA_ComponentMaskAttr :
-    EnumAttr<DXSADialect, DXSA_ComponentMask, "component_mask"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 def DXSA_ConstantBufferAccessPattern_ImmediateIndexed : I32EnumAttrCase<"immediateIndexed", 0>;
 def DXSA_ConstantBufferAccessPattern_DynamicIndexed   : I32EnumAttrCase<"dynamicIndexed",   1>;
 
@@ -513,7 +480,7 @@ def DXSA_Operand : DXSA_Op<"operand"> {
 		       OptionalAttr<I32Attr>:$modifier,
 		       OptionalAttr<I32Attr>:$min_precision,
 		       OptionalAttr<I32Attr>:$non_uniform);
-  let results = (outs DXSA_OperandType:$operand);
+  let results = (outs DXSA_LegacyOperandType:$operand);
   let assemblyFormat = "$operands attr-dict";
 }
 
@@ -524,7 +491,7 @@ def DXSA_OperandImm : DXSA_Op<"operand.imm"> {
   }];
 
   let arguments = (ins AnyAttrOf<[I32ElementsAttr, I64ElementsAttr]>:$imm);
-  let results = (outs DXSA_OperandType:$operand);
+  let results = (outs DXSA_LegacyOperandType:$operand);
   let assemblyFormat = "attr-dict";
 }
 
@@ -545,7 +512,7 @@ def DXSA_IndexRel : DXSA_Op<"index.rel"> {
     TODO
   }];
 
-  let arguments = (ins DXSA_OperandType:$operand);
+  let arguments = (ins DXSA_LegacyOperandType:$operand);
   let results = (outs DXSA_IndexType:$index);
   let assemblyFormat = "$operand attr-dict";
 }
@@ -556,7 +523,7 @@ def DXSA_IndexRelImm : DXSA_Op<"index.rel.imm"> {
     TODO
   }];
 
-  let arguments = (ins DXSA_OperandType:$operand, StrAttr:$op, I64Attr:$imm);
+  let arguments = (ins DXSA_LegacyOperandType:$operand, StrAttr:$op, I64Attr:$imm);
   let results = (outs DXSA_IndexType:$index);
   let assemblyFormat = "$operand attr-dict";
 }
@@ -567,7 +534,7 @@ def DXSA_Instruction : DXSA_Op<"instruction"> {
     TODO
   }];
 
-  let arguments = (ins Variadic<DXSA_OperandType>:$operands, StrAttr:$mnemonic);
+  let arguments = (ins Variadic<DXSA_LegacyOperandType>:$operands, StrAttr:$mnemonic);
   let results = (outs);
   let assemblyFormat = "$mnemonic $operands attr-dict";
 }
@@ -868,7 +835,7 @@ def DXSA_DclInputPs : DXSA_Op<"dcl_input_ps"> {
     ```
   }];
   let arguments = (ins DXSA_InterpolationModeAttr:$mode,
-                       DXSA_OperandType:$operand);
+                       DXSA_LegacyOperandType:$operand);
   let assemblyFormat = "$mode $operand attr-dict";
 }
 
@@ -886,7 +853,7 @@ def DXSA_DclInputPsSiv : DXSA_Op<"dcl_input_ps_siv"> {
     ```
   }];
   let arguments = (ins DXSA_InterpolationModeAttr:$mode,
-                       DXSA_OperandType:$operand,
+                       DXSA_LegacyOperandType:$operand,
                        DXSA_SystemValueNameAttr:$name);
   let assemblyFormat = "$mode $operand `,` $name attr-dict";
 }
@@ -903,7 +870,7 @@ def DXSA_DclInputPsSgv : DXSA_Op<"dcl_input_ps_sgv"> {
     dxsa.dcl_input_ps_sgv %v0, <sampleIndex>
     ```
   }];
-  let arguments = (ins DXSA_OperandType:$operand,
+  let arguments = (ins DXSA_LegacyOperandType:$operand,
                        DXSA_SystemValueNameAttr:$name);
   let assemblyFormat = "$operand `,` $name attr-dict";
 }
