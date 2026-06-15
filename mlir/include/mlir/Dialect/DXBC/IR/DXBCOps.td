@@ -49,22 +49,8 @@ def DXBC_ProgramTypeAttr :
   let assemblyFormat = "$value";
 }
 
-def DXBC_ShaderVersionAttr : AttrDef<DXBCDialect, "ShaderVersion"> {
-  let mnemonic = "shader_version";
-  let summary = "DXBC shader version (major.minor)";
-  let description = [{
-    The `#dxbc.shader_version` attribute holds the major and minor
-    components of shader model version.
-
-    Example:
-
-    ```mlir
-    #dxbc.shader_version<5, 0>
-    ```
-  }];
-  let parameters = (ins "uint8_t":$major, "uint8_t":$minor);
-  let hasCustomAssemblyFormat = 1;
-}
+def DXBC_ShaderVersionComponent :
+    ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<255>]>;
 
 def DXBC_ModuleOp : DXBC_Op<"module", [
     IsolatedFromAbove, NoRegionArguments, NoTerminator, SingleBlock]> {
@@ -73,9 +59,10 @@ def DXBC_ModuleOp : DXBC_Op<"module", [
     The `dxbc.module` operation models the top-level container of a single
     shader tokenized program (one SHEX section of the DXBC binary).
 
-    The two optional attributes are shader program type and version.
-    Both attributes are either both present (real binary with a SHEX
-    header) or both absent (header-less raw token streams).
+    The optional attributes are the shader program type and the major
+    and minor version components. They are either all present (real
+    binary with a SHEX header) or all absent (header-less raw token
+    streams).
 
     Example:
 
@@ -94,20 +81,12 @@ def DXBC_ModuleOp : DXBC_Op<"module", [
 
   let arguments = (ins
     OptionalAttr<DXBC_ProgramTypeAttr>:$program_type,
-    OptionalAttr<DXBC_ShaderVersionAttr>:$shader_version);
+    OptionalAttr<DXBC_ShaderVersionComponent>:$major_version,
+    OptionalAttr<DXBC_ShaderVersionComponent>:$minor_version);
   let regions = (region SizedRegion<1>:$body);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins
-      CArg<"::mlir::dxbc::ProgramTypeAttr",
-           "::mlir::dxbc::ProgramTypeAttr()">:$programType,
-      CArg<"::mlir::dxbc::ShaderVersionAttr",
-           "::mlir::dxbc::ShaderVersionAttr()">:$shaderVersion)>
-  ];
 
   let extraClassDeclaration = [{
     ::mlir::Block *getBodyBlock() { return &getBody().front(); }

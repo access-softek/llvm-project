@@ -50,17 +50,6 @@ static void printHexTokens(OpAsmPrinter &printer, Operation *,
 // ModuleOp
 //===----------------------------------------------------------------------===//
 
-void ModuleOp::build(OpBuilder &builder, OperationState &state,
-                     ProgramTypeAttr programType,
-                     ShaderVersionAttr shaderVersion) {
-  if (programType)
-    state.addAttribute("program_type", programType);
-  if (shaderVersion)
-    state.addAttribute("shader_version", shaderVersion);
-  OpBuilder::InsertionGuard guard(builder);
-  builder.createBlock(state.addRegion());
-}
-
 ParseResult ModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse optional shader information like `pixel_shader 5 0`.
   StringRef typeKeyword;
@@ -72,13 +61,13 @@ ParseResult ModuleOp::parse(OpAsmParser &parser, OperationState &result) {
              << "unknown program type: " << typeKeyword;
     result.addAttribute("program_type", ProgramTypeAttr::get(
                                             parser.getContext(), *programType));
-
-    uint8_t major = 0, minor = 0;
-    if (parser.parseInteger(major) || parser.parseInteger(minor))
+    auto intType = parser.getBuilder().getI32Type();
+    IntegerAttr major, minor;
+    if (parser.parseAttribute(major, intType, "major_version",
+                              result.attributes) ||
+        parser.parseAttribute(minor, intType, "minor_version",
+                              result.attributes))
       return failure();
-    result.addAttribute(
-        "shader_version",
-        ShaderVersionAttr::get(parser.getContext(), major, minor));
   }
 
   Region *body = result.addRegion();
@@ -95,42 +84,24 @@ ParseResult ModuleOp::parse(OpAsmParser &parser, OperationState &result) {
 void ModuleOp::print(OpAsmPrinter &printer) {
   if (auto programType = getProgramType()) {
     printer << ' ' << stringifyProgramType(*programType);
-    auto version = getShaderVersionAttr();
-    printer << ' ' << static_cast<unsigned>(version.getMajor()) << ' '
-            << static_cast<unsigned>(version.getMinor());
+    printer << ' ' << *getMajorVersion() << ' ' << *getMinorVersion();
   }
-  printer.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                           {"program_type", "shader_version"});
+  printer.printOptionalAttrDictWithKeyword(
+      (*this)->getAttrs(), {"program_type", "major_version", "minor_version"});
   printer << ' ';
   printer.printRegion(getBody());
 }
 
 LogicalResult ModuleOp::verify() {
   bool hasType = static_cast<bool>(getProgramTypeAttr());
-  bool hasVersion = static_cast<bool>(getShaderVersionAttr());
-  if (hasType != hasVersion)
-    return emitOpError(
-        "program_type and shader_version must both be present or both absent");
+  bool hasMajor = static_cast<bool>(getMajorVersionAttr());
+  bool hasMinor = static_cast<bool>(getMinorVersionAttr());
+  bool allPresent = hasType && hasMajor && hasMinor;
+  bool allAbsent = !hasType && !hasMajor && !hasMinor;
+  if (!allPresent && !allAbsent)
+    return emitOpError("program_type, major_version and minor_version must all "
+                       "be present or all absent");
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// ShaderVersionAttr
-//===----------------------------------------------------------------------===//
-
-Attribute ShaderVersionAttr::parse(AsmParser &parser, Type) {
-  uint8_t major = 0, minor = 0;
-  if (parser.parseLess() || parser.parseInteger(major) || parser.parseComma() ||
-      parser.parseInteger(minor) || parser.parseGreater())
-    return {};
-  return ShaderVersionAttr::get(parser.getContext(), major, minor);
-}
-
-void ShaderVersionAttr::print(AsmPrinter &printer) const {
-  // major & minor are bytes, so a bare out would emit them as raw chars,
-  // use cast for proper printing.
-  printer << '<' << static_cast<unsigned>(getMajor()) << ", "
-          << static_cast<unsigned>(getMinor()) << '>';
 }
 
 //===----------------------------------------------------------------------===//
