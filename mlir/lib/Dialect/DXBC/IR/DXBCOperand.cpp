@@ -17,6 +17,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cmath>
 #include <functional>
@@ -354,14 +355,26 @@ LogicalResult IndexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-/// Parses an index entry that begins with the already-parsed integer `value`,
-/// e.g. `2`, `2 : i64`, `2 : i64 + r<...>`.
-static IndexAttr parseIntIndexEntry(AsmParser &parser, MLIRContext *ctx,
-                                    SMLoc loc, uint64_t value) {
-  auto immType = IntegerType::get(ctx, 32);
-  if (succeeded(parser.parseOptionalColon()))
+/// Parses the tail of an index entry whose leading integer `value` was already
+/// parsed by the caller, i.e. the optional `: type` width and `+ relative`
+/// suffix (e.g. `2`, `2 : i64`, `2 : i64 + r<...>`).
+static IndexAttr parseImmIndexEntryTail(AsmParser &parser, MLIRContext *ctx,
+                                        SMLoc loc, uint64_t value) {
+  IntegerType immType = IntegerType::get(ctx, 32);
+  auto typeLoc = parser.getCurrentLocation();
+  if (succeeded(parser.parseOptionalColon())) {
+    typeLoc = parser.getCurrentLocation();
     if (parser.parseType(immType))
       return {};
+  }
+
+  // The width is taken as i32 by default. A value that does not fit must be
+  // spelled with an explicit `: i64`. Widths other than i32/i64 are rejected
+  // later by the verifier.
+  if (immType.getWidth() < 64 && !llvm::isUIntN(immType.getWidth(), value)) {
+    parser.emitError(typeLoc) << value << " does not fit in " << immType;
+    return {};
+  }
   auto immAttr = IntegerAttr::get(immType, value);
 
   SrcOperandAttr relative;
@@ -380,7 +393,7 @@ Attribute IndexAttr::parse(AsmParser &parser, Type) {
   if (intResult.has_value()) {
     if (failed(*intResult))
       return {};
-    return parseIntIndexEntry(parser, ctx, loc, value);
+    return parseImmIndexEntryTail(parser, ctx, loc, value);
   }
 
   SrcOperandAttr relative;
@@ -488,7 +501,7 @@ static OptionalParseResult tryParseImmIndex(AsmParser &parser, MLIRContext *ctx,
   if (failed(*intResult))
     return failure();
 
-  IndexAttr entry = parseIntIndexEntry(parser, ctx, loc, value);
+  auto entry = parseImmIndexEntryTail(parser, ctx, loc, value);
   if (!entry)
     return failure();
   return setSingleIndexEntry(parser, ctx, fieldLoc, index, entry);
