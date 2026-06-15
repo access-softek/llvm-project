@@ -695,9 +695,8 @@ public:
         minPrecisionAttr = dxbc::OperandMinPrecisionAttr::get(context, *p);
     }
 
-    return dxbc::DstOperandAttr::get(context, operandType, indexAttr,
-                                     componentsAttr, minPrecisionAttr,
-                                     maskAttr);
+    return dxbc::DstOperandAttr::get(context, operandType, indexAttr, maskAttr,
+                                     componentsAttr, minPrecisionAttr);
   }
 
   dxbc::SrcOperandAttr
