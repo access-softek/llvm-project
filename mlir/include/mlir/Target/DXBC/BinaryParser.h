@@ -21,6 +21,13 @@ namespace mlir::dxbc {
 OwningOpRef<dxbc::ModuleOp> deserialize(llvm::SourceMgr &source,
                                         MLIRContext *context);
 
+/// Deserializes a textual listing of little-endian hex DWORDs,
+/// separated by whitespace or comma.
+/// This method is used in tests to store hexadeciman tokens representation
+/// right inside the text body.
+OwningOpRef<dxbc::ModuleOp> deserializeHex(llvm::SourceMgr &source,
+                                           MLIRContext *context);
+
 /// Serializes the given MLIR \p moduleOp and writes to \p output.
 LogicalResult serialize(mlir::ModuleOp moduleOp, raw_ostream &output);
 } // namespace mlir::dxbc

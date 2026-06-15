@@ -22,6 +22,7 @@ void registerFromLLVMIRTranslation();
 void registerFromSPIRVTranslation();
 void registerFromWasmTranslation();
 void registerFromDxbcBinTranslation();
+void registerFromDxbcHexTranslation();
 void registerToCppTranslation();
 void registerToDxbcBinTranslation();
 void registerToLLVMIRTranslation();
@@ -41,6 +42,7 @@ inline void registerAllTranslations() {
     registerIRDLToCppTranslation();
     registerFromWasmTranslation();
     registerFromDxbcBinTranslation();
+    registerFromDxbcHexTranslation();
     registerToCppTranslation();
     registerToDxbcBinTranslation();
     registerToLLVMIRTranslation();

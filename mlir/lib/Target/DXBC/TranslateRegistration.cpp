@@ -24,6 +24,16 @@ void registerFromDxbcBinTranslation() {
       [](DialectRegistry &registry) { registry.insert<dxbc::DXBCDialect>(); }};
 }
 
+void registerFromDxbcHexTranslation() {
+  TranslateToMLIRRegistration registration{
+      "import-dxbc-hex", "Translate a DXBC hex DWORD listing to MLIR",
+      [](llvm::SourceMgr &sourceMgr,
+         MLIRContext *context) -> OwningOpRef<Operation *> {
+        return dxbc::deserializeHex(sourceMgr, context);
+      },
+      [](DialectRegistry &registry) { registry.insert<dxbc::DXBCDialect>(); }};
+}
+
 void registerToDxbcBinTranslation() {
   TranslateFromMLIRRegistration registration{
       "export-dxbc-bin", "Translate MLIR to DXBC binary",
