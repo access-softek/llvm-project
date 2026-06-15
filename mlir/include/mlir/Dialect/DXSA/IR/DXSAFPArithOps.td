@@ -56,4 +56,45 @@ def DXSA_AddSat : DXSA_BinaryOp<"add_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.div
+//===----------------------------------------------------------------------===//
+
+def DXSA_Div : DXSA_BinaryOp<"div"> {
+  let summary = "component-wise floating-point divide";
+  let description = [{
+    The `dxsa.div` operation computes the component-wise floating-point
+    quotient `$dst = $lhs / $rhs`.
+
+    Example:
+
+    ```mlir
+    dxsa.div r<0>, r<1>, r<2>
+    dxsa.div r<0>, -r<1>, -|r<2>|
+    dxsa.div r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.div_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_DivSat : DXSA_BinaryOp<"div_sat"> {
+  let summary = "component-wise floating-point divide, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.div_sat` operation computes the component-wise floating-point
+    quotient of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.div_sat r<0>, r<1>, r<2>
+    dxsa.div_sat r<0>, -r<1>, -|r<2>|
+    dxsa.div_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAFPARITHOPS
