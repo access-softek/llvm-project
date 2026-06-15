@@ -56,4 +56,45 @@ def DXBC_AddSat : DXBC_BinaryOp<"add_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxbc.div
+//===----------------------------------------------------------------------===//
+
+def DXBC_Div : DXBC_BinaryOp<"div"> {
+  let summary = "component-wise floating-point divide";
+  let description = [{
+    The `dxbc.div` operation computes the component-wise floating-point
+    quotient `$dst = $lhs / $rhs`.
+
+    Example:
+
+    ```mlir
+    dxbc.div r<0>, r<1>, r<2>
+    dxbc.div r<0>, -r<1>, -|r<2>|
+    dxbc.div r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.div_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_DivSat : DXBC_BinaryOp<"div_sat"> {
+  let summary = "component-wise floating-point divide, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.div_sat` operation computes the component-wise floating-point
+    quotient of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.div_sat r<0>, r<1>, r<2>
+    dxbc.div_sat r<0>, -r<1>, -|r<2>|
+    dxbc.div_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCFPARITHOPS
