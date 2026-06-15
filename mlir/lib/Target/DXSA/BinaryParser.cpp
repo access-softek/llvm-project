@@ -2109,12 +2109,18 @@ public:
 
     unsigned numOperands = instrInfo[opcode].numOperands;
 
+#define SATURABLE_BINARY_OP(OP)                                                \
+  decodeSaturableBinaryOp<dxsa::OP, dxsa::OP##Sat>(                            \
+      beginOffset, instructionLengthInTokens, modifier.saturate,               \
+      modifier.preciseMask, getLocation())
+
     switch (opcode) {
     case D3D10_SB_OPCODE_ADD:
-      return decodeSaturableBinaryOp<dxsa::Add, dxsa::AddSat>(
-          beginOffset, instructionLengthInTokens, modifier.saturate,
-          modifier.preciseMask, getLocation());
+      return SATURABLE_BINARY_OP(Add);
+    case D3D10_SB_OPCODE_DIV:
+      return SATURABLE_BINARY_OP(Div);
     }
+#undef SATURABLE_BINARY_OP
 
     SmallVector<Operand, 8> operands;
     for (unsigned i = 0; i < numOperands; ++i) {
