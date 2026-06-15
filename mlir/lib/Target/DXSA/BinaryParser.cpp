@@ -695,9 +695,8 @@ public:
         minPrecisionAttr = dxsa::OperandMinPrecisionAttr::get(context, *p);
     }
 
-    return dxsa::DstOperandAttr::get(context, operandType, indexAttr,
-                                     componentsAttr, minPrecisionAttr,
-                                     maskAttr);
+    return dxsa::DstOperandAttr::get(context, operandType, indexAttr, maskAttr,
+                                     componentsAttr, minPrecisionAttr);
   }
 
   dxsa::SrcOperandAttr

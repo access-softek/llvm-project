@@ -31,6 +31,8 @@ using namespace mlir::dxsa;
 //===----------------------------------------------------------------------===//
 
 static OperandComponents defaultComponentsFor(OperandType type);
+static std::optional<OperandComponents> immComponentsFor(OperandType type,
+                                                         size_t count);
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/DXSA/IR/DXSAOpsAttributes.cpp.inc"
@@ -448,19 +450,6 @@ static OptionalParseResult tryParseIndexList(AsmParser &parser, SMLoc fieldLoc,
   return success();
 }
 
-static SwizzleAttr identitySwizzle(MLIRContext *ctx) {
-  return SwizzleAttr::get(ctx, ArrayRef<unsigned>{0, 1, 2, 3});
-}
-
-static void applySrcOperandDefaults(MLIRContext *ctx, OperandType type,
-                                    SrcOperandBody &body) {
-  if (!body.components)
-    body.components =
-        OperandComponentsAttr::get(ctx, defaultComponentsFor(type));
-  if (!body.swizzle && body.components.getValue() == OperandComponents::vector)
-    body.swizzle = identitySwizzle(ctx);
-}
-
 static OptionalParseResult parseSrcOperandBody(AsmParser &parser,
                                                SrcOperandBody &body);
 
@@ -471,9 +460,10 @@ static FailureOr<SrcOperandAttr> parseRelativeSrcOperand(AsmParser &parser,
   OptionalParseResult bodyResult = parseSrcOperandBody(parser, body);
   if (bodyResult.has_value() && failed(*bodyResult))
     return failure();
-  applySrcOperandDefaults(ctx, type, body);
-  return SrcOperandAttr::get(ctx, type, body.index, body.components,
-                             body.minPrecision, body.nonUniform, body.swizzle);
+  // The builder fills in canonical components and the identity swizzle.
+  return SrcOperandAttr::get(ctx, type, body.index, body.swizzle,
+                             body.components, body.minPrecision,
+                             OperandModifierAttr(), body.nonUniform);
 }
 
 static ParseResult setSingleIndexEntry(AsmParser &parser, MLIRContext *ctx,
@@ -733,8 +723,8 @@ Attribute DstOperandAttr::parse(AsmParser &parser, Type) {
     return {};
 
   return parser.getChecked<DstOperandAttr>(loc, ctx, *operandType, body.index,
-                                           body.components, body.minPrecision,
-                                           body.mask);
+                                           body.mask, body.components,
+                                           body.minPrecision);
 }
 
 void DstOperandAttr::print(AsmPrinter &printer) const {
@@ -779,17 +769,10 @@ static Attribute parseImmSrcOperand(AsmParser &parser, MLIRContext *ctx,
   default:
     llvm_unreachable("non-immediate operand type in immediate parser");
   }
-  auto count = values32 ? values32.size() : values64.size();
-  auto components = immComponentsFor(type, count);
-  if (!components) {
-    parser.emitError(loc) << "type `" << stringifyOperandType(type)
-                          << "` immediate has an invalid element count: "
-                          << count;
-    return {};
-  }
-  auto componentsAttr = OperandComponentsAttr::get(ctx, *components);
-  return parser.getChecked<SrcOperandAttr>(loc, ctx, type, componentsAttr,
-                                           modifier, values32, values64);
+  // The component count is derived from the payload by the builder; an invalid
+  // element count is reported by the verifier.
+  return parser.getChecked<SrcOperandAttr>(loc, ctx, values32, values64,
+                                           modifier);
 }
 
 static Attribute
@@ -979,10 +962,10 @@ Attribute SrcOperandAttr::parse(AsmParser &parser, Type) {
         if (bodyResult.has_value() && failed(*bodyResult))
           return {};
 
-        applySrcOperandDefaults(ctx, *type, body);
+        // The builder fills in canonical components and the identity swizzle.
         return parser.getChecked<SrcOperandAttr>(
-            loc, ctx, *type, body.index, body.components, body.minPrecision,
-            body.nonUniform, body.swizzle, modifier);
+            loc, ctx, *type, body.index, body.swizzle, body.components,
+            body.minPrecision, modifier, body.nonUniform);
       });
 }
 

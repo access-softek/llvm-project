@@ -480,11 +480,17 @@ def DXSA_DstOperandAttr : AttrDef<DXSADialect, "DstOperand"> {
         "destination writemask">:$mask);
   let skipDefaultBuilders = 1;
   let builders = [
+    // Builder args after the required type are ordered by how often they
+    // appear in a real-world HLSL shader corpus:
+    // - index (almost all)
+    // - mask (~40%)
+    // - explicit components (~4%)
+    // - minPrecision (~2%)
     AttrBuilder<(ins "OperandType":$type,
                      CArg<"OperandIndexAttr", "{}">:$index,
+                     CArg<"ComponentMaskAttr", "{}">:$mask,
                      CArg<"OperandComponentsAttr", "{}">:$components,
-                     CArg<"OperandMinPrecisionAttr", "{}">:$minPrecision,
-                     CArg<"ComponentMaskAttr", "{}">:$mask), [{
+                     CArg<"OperandMinPrecisionAttr", "{}">:$minPrecision), [{
       if (!components)
         components =
             OperandComponentsAttr::get($_ctxt, defaultComponentsFor(type));
@@ -573,22 +579,45 @@ def DXSA_SrcOperandAttr : AttrDef<DXSADialect, "SrcOperand"> {
         "64-bit immediate literal payload (for the `d` operand type)"
         >:$values64);
   let builders = [
-    // Non-immediate operand: carries no `l(...)` / `d(...)` payload.
-    AttrBuilder<(ins "OperandType":$type, "OperandIndexAttr":$index,
-                     "OperandComponentsAttr":$components,
-                     "OperandMinPrecisionAttr":$minPrecision,
-                     "UnitAttr":$nonUniform, "SwizzleAttr":$swizzle,
-                     CArg<"OperandModifierAttr", "{}">:$modifier), [{
+    // Register/resource operand. Builder args after the required type are
+    // ordered by how often they appear in a real-world HLSL shader corpus:
+    // - index (almost all)
+    // - swizzle (~14%)
+    // - explicit components (~4%)
+    // - minPrecision (~2%)
+    // - modifier (<1%)
+    // - nonUniform (<0.1%)
+    AttrBuilder<(ins "OperandType":$type,
+                     CArg<"OperandIndexAttr", "{}">:$index,
+                     CArg<"SwizzleAttr", "{}">:$swizzle,
+                     CArg<"OperandComponentsAttr", "{}">:$components,
+                     CArg<"OperandMinPrecisionAttr", "{}">:$minPrecision,
+                     CArg<"OperandModifierAttr", "{}">:$modifier,
+                     CArg<"UnitAttr", "{}">:$nonUniform), [{
+      if (!components)
+        components =
+            OperandComponentsAttr::get($_ctxt, defaultComponentsFor(type));
+      if (!swizzle && components.getValue() == OperandComponents::vector)
+        swizzle = SwizzleAttr::get($_ctxt, ArrayRef<unsigned>{0, 1, 2, 3});
       return $_get($_ctxt, type, index, components, minPrecision, nonUniform,
                    swizzle, modifier, DenseI32ArrayAttr(), DenseI64ArrayAttr());
     }]>,
-    // Immediate operand: only the type, components and payload are relevant.
-    AttrBuilder<(ins "OperandType":$type,
-                     "OperandComponentsAttr":$components,
-                     "OperandModifierAttr":$modifier,
-                     "DenseI32ArrayAttr":$values32,
-                     "DenseI64ArrayAttr":$values64), [{
-      return $_get($_ctxt, type, OperandIndexAttr(), components,
+    // Immediate operand. Both the operand type and the component count are
+    // implied by the payload:
+    // 32-bit payload means `l`
+    // 64-bit payload means `d`
+    // the element count fixes scalar vs vector (invalid counts are left for
+    // the verifier to report).
+    AttrBuilder<(ins "DenseI32ArrayAttr":$values32,
+                     "DenseI64ArrayAttr":$values64,
+                     CArg<"OperandModifierAttr", "{}">:$modifier), [{
+      OperandType type = values32 ? OperandType::l : OperandType::d;
+      auto count = values32 ? values32.size() : values64.size();
+      auto components =
+          immComponentsFor(type, count);
+      auto componentsAttr = OperandComponentsAttr::get(
+          $_ctxt, components.value_or(OperandComponents::vector));
+      return $_get($_ctxt, type, OperandIndexAttr(), componentsAttr,
                    OperandMinPrecisionAttr(), UnitAttr(), SwizzleAttr(),
                    modifier, values32, values64);
     }]>
