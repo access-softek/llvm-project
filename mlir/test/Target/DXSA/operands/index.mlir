@@ -15,6 +15,11 @@ dxsa.add r<0>, v<42 : i64>, r<2>
 
 // -----
 
+// CHECK: dxsa.add r<0>, v<4294967296 : i64>, r<2>
+dxsa.add r<0>, v<4294967296 : i64>, r<2>
+
+// -----
+
 // CHECK: dxsa.add r<0>, v<r<3, <x>>>, r<2>
 dxsa.add r<0>, v<r<3, <x>>>, r<2>
 
