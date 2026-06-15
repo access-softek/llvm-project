@@ -429,11 +429,14 @@ public:
   using Module = dxsa::ModuleOp;
 
   Module createModule(dxsa::ProgramTypeAttr programType,
-                      dxsa::ShaderVersionAttr shaderVersion, Location loc) {
-    OperationState state(loc, Module::getOperationName());
-    Module::build(builder, state, programType, shaderVersion);
-    auto module = cast<Module>(Operation::create(state));
-    builder.setInsertionPointToStart(&module.getBody().front());
+                      std::optional<uint32_t> majorVersion,
+                      std::optional<uint32_t> minorVersion, Location loc) {
+    auto major =
+        majorVersion ? builder.getI32IntegerAttr(*majorVersion) : IntegerAttr();
+    auto minor =
+        minorVersion ? builder.getI32IntegerAttr(*minorVersion) : IntegerAttr();
+    auto module = Module::create(builder, loc, programType, major, minor);
+    builder.createBlock(&module.getBody());
     return module;
   }
 
@@ -2168,14 +2171,16 @@ public:
     auto header = parseProgramHeader();
     FAILURE_IF_FAILED(header);
     dxsa::ProgramTypeAttr programType;
-    dxsa::ShaderVersionAttr shaderVersion;
+    std::optional<uint32_t> majorVersion;
+    std::optional<uint32_t> minorVersion;
     if (*header) {
       programType =
           dxsa::ProgramTypeAttr::get(name.getContext(), (*header)->type);
-      shaderVersion = dxsa::ShaderVersionAttr::get(
-          name.getContext(), (*header)->major, (*header)->minor);
+      majorVersion = (*header)->major;
+      minorVersion = (*header)->minor;
     }
-    auto module = builder.createModule(programType, shaderVersion, loc);
+    auto module =
+        builder.createModule(programType, majorVersion, minorVersion, loc);
     while (getRemainingBytes() >= tokenSize) {
       if (failed(parseNextInstruction()))
         return failure();
