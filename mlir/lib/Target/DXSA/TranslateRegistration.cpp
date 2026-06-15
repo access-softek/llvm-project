@@ -24,6 +24,16 @@ void registerFromDxsaBinTranslation() {
       [](DialectRegistry &registry) { registry.insert<dxsa::DXSADialect>(); }};
 }
 
+void registerFromDxsaHexTranslation() {
+  TranslateToMLIRRegistration registration{
+      "import-dxsa-hex", "Translate a DXSA hex DWORD listing to MLIR",
+      [](llvm::SourceMgr &sourceMgr,
+         MLIRContext *context) -> OwningOpRef<Operation *> {
+        return dxsa::deserializeHex(sourceMgr, context);
+      },
+      [](DialectRegistry &registry) { registry.insert<dxsa::DXSADialect>(); }};
+}
+
 void registerToDxsaBinTranslation() {
   TranslateFromMLIRRegistration registration{
       "export-dxsa-bin", "Translate MLIR to DXSA binary",

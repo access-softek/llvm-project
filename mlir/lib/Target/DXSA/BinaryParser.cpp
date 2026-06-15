@@ -12,11 +12,14 @@
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 
@@ -2259,19 +2262,8 @@ private:
 };
 
 namespace mlir::dxsa {
-OwningOpRef<ModuleOp> deserialize(llvm::SourceMgr &source,
-                                  MLIRContext *context) {
-
-  if (source.getNumBuffers() != 1) {
-    emitError(UnknownLoc::get(context), "one source file should be provided");
-    return nullptr;
-  }
-
-  uint32_t sourceBufId = source.getMainFileID();
-  StringRef buffer = source.getMemoryBuffer(sourceBufId)->getBuffer();
-  StringAttr name = StringAttr::get(
-      context, source.getMemoryBuffer(sourceBufId)->getBufferIdentifier());
-
+static OwningOpRef<ModuleOp> parseProgram(StringRef buffer, StringAttr name,
+                                          MLIRContext *context) {
   // FIXME:
   context->allowUnregisteredDialects();
   context->loadAllAvailableDialects();
@@ -2283,4 +2275,60 @@ OwningOpRef<ModuleOp> deserialize(llvm::SourceMgr &source,
     return {nullptr};
   return {*mod};
 }
+
+OwningOpRef<ModuleOp> deserialize(llvm::SourceMgr &source,
+                                  MLIRContext *context) {
+  if (source.getNumBuffers() != 1) {
+    emitError(UnknownLoc::get(context), "one source file should be provided");
+    return nullptr;
+  }
+
+  const auto *memBuffer = source.getMemoryBuffer(source.getMainFileID());
+  return parseProgram(
+      memBuffer->getBuffer(),
+      StringAttr::get(context, memBuffer->getBufferIdentifier()), context);
+}
+
+static FailureOr<std::string> hexDwordsToBytes(StringRef buffer,
+                                               StringAttr name) {
+  std::string bytes;
+  raw_string_ostream os(bytes);
+  support::endian::Writer writer(os, endianness::little);
+  static constexpr StringRef tokenDelimiters = ", \t\v\f\r";
+  SmallVector<StringRef> lines;
+  buffer.split(lines, '\n');
+  for (auto [index, line] : llvm::enumerate(lines)) {
+    StringRef rest = line.split("//").first;
+    auto [token, tail] = llvm::getToken(rest, tokenDelimiters);
+    while (!token.empty()) {
+      uint32_t value = 0;
+      if (token.getAsInteger(/*Radix=*/0, value)) {
+        auto column = token.data() - line.data() + 1;
+        return emitError(FileLineColLoc::get(name, index + 1, column),
+                         "invalid hex DWORD: ")
+               << token;
+      }
+      writer.write(value);
+      std::tie(token, tail) = llvm::getToken(tail, tokenDelimiters);
+    }
+  }
+  return bytes;
+}
+
+OwningOpRef<ModuleOp> deserializeHex(llvm::SourceMgr &source,
+                                     MLIRContext *context) {
+  if (source.getNumBuffers() != 1) {
+    emitError(UnknownLoc::get(context), "one source file should be provided");
+    return nullptr;
+  }
+
+  const auto *memBuffer = source.getMemoryBuffer(source.getMainFileID());
+  auto name = StringAttr::get(context, memBuffer->getBufferIdentifier());
+
+  auto bytes = hexDwordsToBytes(memBuffer->getBuffer(), name);
+  if (failed(bytes))
+    return nullptr;
+  return parseProgram(*bytes, name, context);
+}
+
 } // namespace mlir::dxsa
