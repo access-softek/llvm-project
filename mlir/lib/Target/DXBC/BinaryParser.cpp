@@ -2181,6 +2181,10 @@ public:
 
     unsigned numOperands = instrInfo[opcode].numOperands;
 
+#define SATURABLE_UNARY_OP(OP)                                                 \
+  decodeSaturableUnaryOp<dxbc::OP, dxbc::OP##Sat>(                             \
+      beginOffset, instructionLengthInTokens, modifier.saturate,               \
+      modifier.preciseMask, getLocation())
 #define SATURABLE_BINARY_OP(OP)                                                \
   decodeSaturableBinaryOp<dxbc::OP, dxbc::OP##Sat>(                            \
       beginOffset, instructionLengthInTokens, modifier.saturate,               \
@@ -2188,12 +2192,6 @@ public:
 #define BINARY_OP(OP)                                                          \
   decodeBinaryOp<dxbc::OP>(beginOffset, instructionLengthInTokens,             \
                            modifier.preciseMask, getLocation())
-
-#define SATURABLE_UNARY_OP(OP)                                                 \
-  decodeSaturableUnaryOp<dxbc::OP, dxbc::OP##Sat>(                             \
-      beginOffset, instructionLengthInTokens, modifier.saturate,               \
-      modifier.preciseMask, getLocation())
-
     switch (opcode) {
     case D3D10_SB_OPCODE_ADD:
       return SATURABLE_BINARY_OP(Add);
@@ -2245,9 +2243,11 @@ public:
       return BINARY_OP(Uge);
     case D3D10_SB_OPCODE_ULT:
       return BINARY_OP(Ult);
+    case D3D10_SB_OPCODE_AND:
+      return BINARY_OP(And);
     }
-#undef SATURABLE_BINARY_OP
 #undef SATURABLE_UNARY_OP
+#undef SATURABLE_BINARY_OP
 #undef BINARY_OP
 
     SmallVector<Operand, 8> operands;
