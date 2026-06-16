@@ -2109,6 +2109,10 @@ public:
     if (opcode >= D3D10_SB_NUM_OPCODES)
       return emitError(getLocation(), "unknown opcode: ") << opcode;
 
+    if (failed(verifyInstructionLengthFitsBufferSize(
+            beginOffset, instructionLengthInTokens)))
+      return failure();
+
     Instruction dclInstruction;
     auto parseResult =
         parseDclInstruction(*opcodeToken0, getLocation(), dclInstruction);
@@ -2269,6 +2273,14 @@ public:
     FAILURE_IF_FAILED(parseToken()); // VersionToken
     FAILURE_IF_FAILED(parseToken()); // LengthToken
     return std::optional<ProgramHeader>{{*programType, major, minor}};
+  }
+
+  LogicalResult verifyInstructionLengthFitsBufferSize(size_t beginOffset,
+                                                      uint32_t length) {
+    if (beginOffset + static_cast<size_t>(length) * tokenSize > buffer.size())
+      return emitError(getLocation(),
+                       "instruction length exceeds program size");
+    return success();
   }
 
   LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length) {
