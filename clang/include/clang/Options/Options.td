@@ -9330,7 +9330,8 @@ def _SLASH_Zp_flag : CLFlag<"Zp">,
   Alias<fpack_struct_EQ>, AliasArgs<["1"]>;
 def _SLASH_Zs
     : CLFlag<"Zs", [CLOption, DXCOption]>,
-      HelpText<"Run the preprocessor, parser and semantic analysis stages">;
+      HelpText<"Run the preprocessor, parser and semantic analysis stages">,
+      HelpTextForVariants<[DXCOption], "Emit slim PDB debug info">;
 def _SLASH_openmp_ : CLFlag<"openmp-">,
   HelpText<"Disable OpenMP support">, Alias<fno_openmp>;
 def _SLASH_openmp : CLFlag<"openmp">, HelpText<"Enable OpenMP support">,
