@@ -1,4 +1,4 @@
-// Shader hash should be the same whenever /Zs or /Zi are used, with PDB output on.
+// Shader hash should be the same when /Zss is used with either /Zs or /Zi, with PDB output on.
 // RUN: %clang_dxc -Tlib_6_7 %s /Fd %t.pdb /Fo %t.zi.zss.dxbc /Zss /Zi
 // RUN: %clang_dxc -Tlib_6_7 %s /Fd %t.pdb /Fo %t.zs.zss.dxbc /Zss /Zs
 // RUN: %clang_dxc -Tlib_6_7 %s /Fd %t.pdb /Fo %t.zi.dxbc /Zi
