@@ -1541,7 +1541,10 @@ public:
 
     auto type = dxsa::symbolizeInlineOperandType(rawOperandType);
     if (!type)
-      return emitError(loc, "unknown operand type: ") << rawOperandType;
+      return emitError(loc, "unknown operand type: ")
+             // Streaming the raw enum would print the value as a byte, use cast
+             // to prevent it.
+             << static_cast<unsigned>(rawOperandType);
 
     auto components = parseOperandComponents(*token);
     FAILURE_IF_FAILED(components);
@@ -1638,7 +1641,10 @@ public:
 
     auto type = dxsa::symbolizeOperandType(rawOperandType);
     if (!type)
-      return emitError(loc, "unknown operand type: ") << rawOperandType;
+      // Streaming the raw enum would print the value as a byte, use cast to
+      // prevent it.
+      return emitError(loc, "unknown operand type: ")
+             << static_cast<unsigned>(rawOperandType);
 
     auto components = parseOperandComponents(*token);
     FAILURE_IF_FAILED(components);
@@ -2306,7 +2312,7 @@ public:
       auto numTokensToken = parseToken();
       FAILURE_IF_FAILED(numTokensToken);
       instructionLengthInTokens = std::max(*numTokensToken, 2u);
-      return failure();
+      return emitError(getLocation(), "customdata is not supported yet");
     }
 
     instructionLengthInTokens = std::max(
@@ -2456,14 +2462,20 @@ public:
                                     getLocation());
   }
 
-  /// On failure, sets `instructionLengthInTokens` for the unknown fallback.
-  bool tryParseInstructionOrRewind(uint32_t &instructionLengthInTokens) {
+  /// On failure, reports the declared token length for the unknown fallback
+  /// and the first nested diagnostic that explains the failure.
+  bool tryParseInstructionOrRewind(uint32_t &instructionLengthInTokens,
+                                   std::string &errorMessage) {
     auto numOpsBefore = builder.getNumOps();
 
     // Scope for ScopedDiagnosticHandler
     {
-      ScopedDiagnosticHandler suppress(name.getContext(),
-                                       [](Diagnostic &) { return success(); });
+      ScopedDiagnosticHandler capture(name.getContext(), [&](Diagnostic &d) {
+        if (errorMessage.empty() &&
+            d.getSeverity() == DiagnosticSeverity::Error)
+          errorMessage = d.str();
+        return success();
+      });
       if (succeeded(parseInstruction(instructionLengthInTokens)))
         return true;
     }
@@ -2484,12 +2496,15 @@ public:
   LogicalResult parseNextInstruction() {
     auto beginOffset = currentTokenOffset;
     uint32_t instructionLengthInTokens = 0;
-    if (tryParseInstructionOrRewind(instructionLengthInTokens))
+    std::string errorMessage;
+    if (tryParseInstructionOrRewind(instructionLengthInTokens, errorMessage))
       return success();
 
     currentTokenOffset = beginOffset;
-    emitWarning(getLocation()) << "treating next " << instructionLengthInTokens
-                               << " token(s) as unknown";
+    emitWarning(getLocation())
+        << "treating next " << instructionLengthInTokens
+        << " token(s) as unknown"
+        << (errorMessage.empty() ? "" : ": " + errorMessage);
     return parseUnknownTokens(instructionLengthInTokens);
   }
 
