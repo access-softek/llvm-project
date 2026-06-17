@@ -230,4 +230,174 @@ def DXSA_Dp4Sat : DXSA_BinaryOp<"dp4_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.round_ne
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundNe : DXSA_UnaryOp<"round_ne"> {
+  let summary =
+      "component-wise floating-point round to integral float, towards nearest even";
+  let description = [{
+    The `dxsa.round_ne` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards nearest even.
+
+    Example:
+
+    ```mlir
+    dxsa.round_ne r<0>, r<1>
+    dxsa.round_ne r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.round_ne_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundNeSat : DXSA_UnaryOp<"round_ne_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "nearest even, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.round_ne_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards nearest even.
+
+    Example:
+
+    ```mlir
+    dxsa.round_ne_sat r<0>, r<1>
+    dxsa.round_ne_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.round_ni
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundNi : DXSA_UnaryOp<"round_ni"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "negative infinity";
+  let description = [{
+    The `dxsa.round_ni` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards negative infinity (floor).
+
+    Example:
+
+    ```mlir
+    dxsa.round_ni r<0>, r<1>
+    dxsa.round_ni r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.round_ni_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundNiSat : DXSA_UnaryOp<"round_ni_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "negative infinity, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.round_ni_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards negative
+    infinity (floor).
+
+    Example:
+
+    ```mlir
+    dxsa.round_ni_sat r<0>, r<1>
+    dxsa.round_ni_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.round_pi
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundPi : DXSA_UnaryOp<"round_pi"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "positive infinity";
+  let description = [{
+    The `dxsa.round_pi` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards positive infinity (ceil).
+
+    Example:
+
+    ```mlir
+    dxsa.round_pi r<0>, r<1>
+    dxsa.round_pi r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.round_pi_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundPiSat : DXSA_UnaryOp<"round_pi_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "positive infinity, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.round_pi_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards positive
+    infinity (ceil).
+
+    Example:
+
+    ```mlir
+    dxsa.round_pi_sat r<0>, r<1>
+    dxsa.round_pi_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.round_z
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundZ : DXSA_UnaryOp<"round_z"> {
+  let summary =
+      "component-wise floating-point round to integral float, towards zero";
+  let description = [{
+    The `dxsa.round_z` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards zero.
+
+    Example:
+
+    ```mlir
+    dxsa.round_z r<0>, r<1>
+    dxsa.round_z r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.round_z_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_RoundZSat : DXSA_UnaryOp<"round_z_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "zero, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.round_z_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards zero.
+
+    Example:
+
+    ```mlir
+    dxsa.round_z_sat r<0>, r<1>
+    dxsa.round_z_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAFPARITHOPS

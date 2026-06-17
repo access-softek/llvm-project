@@ -28,6 +28,16 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
 // DXSA shared bases for ops with inline operands
 //===----------------------------------------------------------------------===//
 
+class DXSA_UnaryOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $src attr-dict";
+}
+
 class DXSA_BinaryOp<string mnemonic> : DXSA_Op<mnemonic> {
   let arguments = (ins
       DXSA_DstOperandAttr:$dst,
