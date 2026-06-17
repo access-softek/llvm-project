@@ -12,7 +12,6 @@
 include "mlir/Dialect/DXSA/IR/DXSAOpBase.td"
 include "mlir/Dialect/DXSA/IR/DXSATypes.td"
 include "mlir/Dialect/DXSA/IR/DXSAFPArithOps.td"
-include "mlir/Dialect/DXSA/IR/DXSABitwiseOps.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"

@@ -1634,20 +1634,6 @@ public:
                                        fields->values, fields->values64);
   }
 
-  template <typename BinOpT>
-  FailureOr<Instruction> decodeBinaryOp(size_t beginOffset, uint32_t length,
-                                        uint32_t preciseMask, Location loc) {
-    auto dst = parseDstOperand();
-    FAILURE_IF_FAILED(dst);
-    auto lhs = parseSrcOperand();
-    FAILURE_IF_FAILED(lhs);
-    auto rhs = parseSrcOperand();
-    FAILURE_IF_FAILED(rhs);
-    if (failed(verifyInstructionLength(beginOffset, length)))
-      return failure();
-    return builder.buildBinaryOp<BinOpT>(*dst, *lhs, *rhs, preciseMask, loc);
-  }
-
   template <typename BinOpT, typename BinOpSatT>
   FailureOr<Instruction>
   decodeSaturableBinaryOp(size_t beginOffset, uint32_t length, bool saturate,
@@ -2123,9 +2109,6 @@ public:
 
     unsigned numOperands = instrInfo[opcode].numOperands;
 
-#define BINARY_OP(OP)                                                          \
-  decodeBinaryOp<dxsa::OP>(beginOffset, instructionLengthInTokens,             \
-                           modifier.preciseMask, getLocation())
 #define SATURABLE_BINARY_OP(OP)                                                \
   decodeSaturableBinaryOp<dxsa::OP, dxsa::OP##Sat>(                            \
       beginOffset, instructionLengthInTokens, modifier.saturate,               \
@@ -2136,11 +2119,8 @@ public:
       return SATURABLE_BINARY_OP(Add);
     case D3D10_SB_OPCODE_DIV:
       return SATURABLE_BINARY_OP(Div);
-    case D3D10_SB_OPCODE_AND:
-      return BINARY_OP(And);
     }
 #undef SATURABLE_BINARY_OP
-#undef BINARY_OP
 
     SmallVector<Operand, 8> operands;
     for (unsigned i = 0; i < numOperands; ++i) {
