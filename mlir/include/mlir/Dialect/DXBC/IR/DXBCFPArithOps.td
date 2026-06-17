@@ -230,4 +230,174 @@ def DXBC_Dp4Sat : DXBC_BinaryOp<"dp4_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxbc.round_ne
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundNe : DXBC_UnaryOp<"round_ne"> {
+  let summary =
+      "component-wise floating-point round to integral float, towards nearest even";
+  let description = [{
+    The `dxbc.round_ne` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards nearest even.
+
+    Example:
+
+    ```mlir
+    dxbc.round_ne r<0>, r<1>
+    dxbc.round_ne r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.round_ne_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundNeSat : DXBC_UnaryOp<"round_ne_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "nearest even, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.round_ne_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards nearest even.
+
+    Example:
+
+    ```mlir
+    dxbc.round_ne_sat r<0>, r<1>
+    dxbc.round_ne_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.round_ni
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundNi : DXBC_UnaryOp<"round_ni"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "negative infinity";
+  let description = [{
+    The `dxbc.round_ni` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards negative infinity (floor).
+
+    Example:
+
+    ```mlir
+    dxbc.round_ni r<0>, r<1>
+    dxbc.round_ni r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.round_ni_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundNiSat : DXBC_UnaryOp<"round_ni_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "negative infinity, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.round_ni_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards negative
+    infinity (floor).
+
+    Example:
+
+    ```mlir
+    dxbc.round_ni_sat r<0>, r<1>
+    dxbc.round_ni_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.round_pi
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundPi : DXBC_UnaryOp<"round_pi"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "positive infinity";
+  let description = [{
+    The `dxbc.round_pi` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards positive infinity (ceil).
+
+    Example:
+
+    ```mlir
+    dxbc.round_pi r<0>, r<1>
+    dxbc.round_pi r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.round_pi_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundPiSat : DXBC_UnaryOp<"round_pi_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "positive infinity, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.round_pi_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards positive
+    infinity (ceil).
+
+    Example:
+
+    ```mlir
+    dxbc.round_pi_sat r<0>, r<1>
+    dxbc.round_pi_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.round_z
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundZ : DXBC_UnaryOp<"round_z"> {
+  let summary =
+      "component-wise floating-point round to integral float, towards zero";
+  let description = [{
+    The `dxbc.round_z` operation performs a component-wise floating-point
+    round of `$src` to an integral float, writing the integral floating-point
+    values to `$dst`. Rounding is towards zero.
+
+    Example:
+
+    ```mlir
+    dxbc.round_z r<0>, r<1>
+    dxbc.round_z r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.round_z_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_RoundZSat : DXBC_UnaryOp<"round_z_sat"> {
+  let summary = "component-wise floating-point round to integral float, towards "
+                "zero, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.round_z_sat` operation performs a component-wise floating-point
+    round of `$src` to an integral float, clamps each resulting component to
+    `[0.0, 1.0]`, and writes it to `$dst`. Rounding is towards zero.
+
+    Example:
+
+    ```mlir
+    dxbc.round_z_sat r<0>, r<1>
+    dxbc.round_z_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCFPARITHOPS

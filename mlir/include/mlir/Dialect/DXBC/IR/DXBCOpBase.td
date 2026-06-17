@@ -28,6 +28,16 @@ class DXBC_Op<string mnemonic, list<Trait> traits = []> :
 // DXBC shared bases for ops with inline operands
 //===----------------------------------------------------------------------===//
 
+class DXBC_UnaryOp<string mnemonic> : DXBC_Op<mnemonic> {
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src,
+      OptionalAttr<DXBC_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $src attr-dict";
+}
+
 class DXBC_BinaryOp<string mnemonic> : DXBC_Op<mnemonic> {
   let arguments = (ins
       DXBC_DstOperandAttr:$dst,
