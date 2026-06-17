@@ -97,4 +97,137 @@ def DXBC_DivSat : DXBC_BinaryOp<"div_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxbc.dp2
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dp2 : DXBC_BinaryOp<"dp2"> {
+  let summary = "2D floating-point dot product";
+  let description = [{
+    The `dxbc.dp2` operation computes the 2D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    two components are summed into a single scalar that is replicated to
+    every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.dp2 r<0>, r<1>, r<2>
+    dxbc.dp2 r<0>, -r<1>, -|r<2>|
+    dxbc.dp2 r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dp2_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dp2Sat : DXBC_BinaryOp<"dp2_sat"> {
+  let summary = "2D floating-point dot product, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.dp2_sat` operation computes the 2D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    two components are summed into a single scalar, clamped to `[0.0, 1.0]`,
+    and replicated to every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.dp2_sat r<0>, r<1>, r<2>
+    dxbc.dp2_sat r<0>, -r<1>, -|r<2>|
+    dxbc.dp2_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dp3
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dp3 : DXBC_BinaryOp<"dp3"> {
+  let summary = "3D floating-point dot product";
+  let description = [{
+    The `dxbc.dp3` operation computes the 3D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    three components are summed into a single scalar that is replicated to
+    every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.dp3 r<0>, r<1>, r<2>
+    dxbc.dp3 r<0>, -r<1>, -|r<2>|
+    dxbc.dp3 r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dp3_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dp3Sat : DXBC_BinaryOp<"dp3_sat"> {
+  let summary = "3D floating-point dot product, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.dp3_sat` operation computes the 3D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    three components are summed into a single scalar, clamped to
+    `[0.0, 1.0]`, and replicated to every component selected by the write
+    mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.dp3_sat r<0>, r<1>, r<2>
+    dxbc.dp3_sat r<0>, -r<1>, -|r<2>|
+    dxbc.dp3_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dp4
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dp4 : DXBC_BinaryOp<"dp4"> {
+  let summary = "4D floating-point dot product";
+  let description = [{
+    The `dxbc.dp4` operation computes the 4D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their four
+    components are summed into a single scalar that is replicated to every
+    component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.dp4 r<0>, r<1>, r<2>
+    dxbc.dp4 r<0>, -r<1>, -|r<2>|
+    dxbc.dp4 r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dp4_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dp4Sat : DXBC_BinaryOp<"dp4_sat"> {
+  let summary = "4D floating-point dot product, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.dp4_sat` operation computes the 4D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their four
+    components are summed into a single scalar, clamped to `[0.0, 1.0]`, and
+    replicated to every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.dp4_sat r<0>, r<1>, r<2>
+    dxbc.dp4_sat r<0>, -r<1>, -|r<2>|
+    dxbc.dp4_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCFPARITHOPS

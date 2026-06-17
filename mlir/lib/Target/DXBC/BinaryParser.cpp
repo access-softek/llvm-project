@@ -2160,6 +2160,12 @@ public:
       return SATURABLE_BINARY_OP(Add);
     case D3D10_SB_OPCODE_DIV:
       return SATURABLE_BINARY_OP(Div);
+    case D3D10_SB_OPCODE_DP2:
+      return SATURABLE_BINARY_OP(Dp2);
+    case D3D10_SB_OPCODE_DP3:
+      return SATURABLE_BINARY_OP(Dp3);
+    case D3D10_SB_OPCODE_DP4:
+      return SATURABLE_BINARY_OP(Dp4);
     }
 #undef SATURABLE_BINARY_OP
 
