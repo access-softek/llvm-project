@@ -889,6 +889,8 @@ def err_drv_no_debug_info_for_embed_debug
     : Error<"must enable debug info with /Zi for /Qembed_debug">;
 def err_drv_dxc_Zs_embed_debug_incompatible
     : Error<"/Qembed_debug is not compatible with /Zs">;
+def err_drv_dxc_Zs_source_in_debug_module_mutually_exclusive
+    : Error<"cannot specify both /Qsource_in_debug_module and /Zs">;
 def err_drv_no_debug_info_for_Fd
     : Error<"/Fd specified, but no Debug Info was found in the shader; "
             "please use the /Zi or /Zs switch to generate debug information "

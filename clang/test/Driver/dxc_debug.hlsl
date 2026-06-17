@@ -43,3 +43,6 @@
 // ERROR-ZI-ZS: error: cannot specify both /Zi and /Zs
 // RUN: not %clang_dxc -Tlib_6_7 -### /Zs /Qembed_debug %s 2>&1 | FileCheck %s --check-prefix=ERROR-ZS-EMBED
 // ERROR-ZS-EMBED: error: /Qembed_debug is not compatible with /Zs
+// RUN: not %clang_dxc -Tlib_6_7 -### /Zs /Qsource_in_debug_module %s 2>&1 | FileCheck %s --check-prefix=ERROR-ZS-SOURCE
+// ERROR-ZS-SOURCE: error: cannot specify both /Qsource_in_debug_module and /Zs
+// RUN: not %clang_dxc -Tlib_6_7 -### /Qsource_in_debug_module /Zs %s 2>&1 | FileCheck %s --check-prefix=ERROR-ZS-SOURCE

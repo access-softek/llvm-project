@@ -3847,15 +3847,19 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_dxc_Zsb))
     A->claim(); // /Zsb is the default behavior, no need to forward it to llc.
 
+  bool Zs = Args.hasArg(options::OPT__SLASH_Zs);
+  if (Args.hasArg(options::OPT_g_Flag) && Zs)
+    D.Diag(diag::err_drv_dxc_Zi_Zs_mutually_exclusive);
+
+  bool Zi = Args.hasArg(options::OPT_g_Flag) && !Zs;
+  if (Args.hasArg(options::OPT_dxc_source_in_debug_module) && Zs)
+    D.Diag(diag::err_drv_dxc_Zs_source_in_debug_module_mutually_exclusive);
+
   if (Args.hasArg(options::OPT_dxc_source_in_debug_module)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-source-in-debug-module");
   }
 
-  bool Zs = Args.hasArg(options::OPT__SLASH_Zs);
-  if (Args.hasArg(options::OPT_g_Flag) && Zs)
-    D.Diag(diag::err_drv_dxc_Zi_Zs_mutually_exclusive);
-  bool Zi = Args.hasArg(options::OPT_g_Flag) && !Zs;
   if (Zs) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-dx-Zs");
