@@ -97,4 +97,137 @@ def DXSA_DivSat : DXSA_BinaryOp<"div_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.dp2
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dp2 : DXSA_BinaryOp<"dp2"> {
+  let summary = "2D floating-point dot product";
+  let description = [{
+    The `dxsa.dp2` operation computes the 2D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    two components are summed into a single scalar that is replicated to
+    every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.dp2 r<0>, r<1>, r<2>
+    dxsa.dp2 r<0>, -r<1>, -|r<2>|
+    dxsa.dp2 r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dp2_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dp2Sat : DXSA_BinaryOp<"dp2_sat"> {
+  let summary = "2D floating-point dot product, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.dp2_sat` operation computes the 2D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    two components are summed into a single scalar, clamped to `[0.0, 1.0]`,
+    and replicated to every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.dp2_sat r<0>, r<1>, r<2>
+    dxsa.dp2_sat r<0>, -r<1>, -|r<2>|
+    dxsa.dp2_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dp3
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dp3 : DXSA_BinaryOp<"dp3"> {
+  let summary = "3D floating-point dot product";
+  let description = [{
+    The `dxsa.dp3` operation computes the 3D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    three components are summed into a single scalar that is replicated to
+    every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.dp3 r<0>, r<1>, r<2>
+    dxsa.dp3 r<0>, -r<1>, -|r<2>|
+    dxsa.dp3 r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dp3_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dp3Sat : DXSA_BinaryOp<"dp3_sat"> {
+  let summary = "3D floating-point dot product, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.dp3_sat` operation computes the 3D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their first
+    three components are summed into a single scalar, clamped to
+    `[0.0, 1.0]`, and replicated to every component selected by the write
+    mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.dp3_sat r<0>, r<1>, r<2>
+    dxsa.dp3_sat r<0>, -r<1>, -|r<2>|
+    dxsa.dp3_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dp4
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dp4 : DXSA_BinaryOp<"dp4"> {
+  let summary = "4D floating-point dot product";
+  let description = [{
+    The `dxsa.dp4` operation computes the 4D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their four
+    components are summed into a single scalar that is replicated to every
+    component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.dp4 r<0>, r<1>, r<2>
+    dxsa.dp4 r<0>, -r<1>, -|r<2>|
+    dxsa.dp4 r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dp4_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dp4Sat : DXSA_BinaryOp<"dp4_sat"> {
+  let summary = "4D floating-point dot product, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.dp4_sat` operation computes the 4D dot product of `$lhs` and
+    `$rhs`. Each source is swizzled first, then the products of their four
+    components are summed into a single scalar, clamped to `[0.0, 1.0]`, and
+    replicated to every component selected by the write mask of `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.dp4_sat r<0>, r<1>, r<2>
+    dxsa.dp4_sat r<0>, -r<1>, -|r<2>|
+    dxsa.dp4_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAFPARITHOPS
