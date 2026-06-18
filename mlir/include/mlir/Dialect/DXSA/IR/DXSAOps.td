@@ -896,15 +896,17 @@ def DXSA_DclIndexRange : DXSA_Op<"dcl_index_range"> {
   let summary = "declares a range of input or output registers to be indexed";
   let description = [{
     The `dxsa.dcl_index_range` operation declares a range of input or output
-    registers to be indexed.
+    registers to be indexed. `$operand` is the first register of the range
+    and `$count` is the number of registers it spans.
 
     Example:
 
     ```mlir
-    dxsa.dcl_index_range <type = output, components = 4, mask = <x>, index = [0]>, 4
+    dxsa.dcl_index_range o<0, <x>>, 4
+    dxsa.dcl_index_range vpc<7, <x, y, z>>, 3
     ```
   }];
-  let arguments = (ins DXSA_InlineOperandAttr:$operand,
+  let arguments = (ins DXSA_DstOperandAttr:$operand,
                        ConfinedAttr<I32Attr, [IntPositive]>:$count);
   let assemblyFormat = "$operand `,` $count attr-dict";
   let hasVerifier = 1;

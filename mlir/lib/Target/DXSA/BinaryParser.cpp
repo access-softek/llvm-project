@@ -817,8 +817,8 @@ public:
     return dxsa::DclOutput::create(builder, loc, operand);
   }
 
-  Instruction buildDclIndexRange(dxsa::InlineOperandAttr operand,
-                                 uint32_t count, Location loc) {
+  Instruction buildDclIndexRange(dxsa::DstOperandAttr operand, uint32_t count,
+                                 Location loc) {
     return dxsa::DclIndexRange::create(builder, loc, operand,
                                        builder.getI32IntegerAttr(count));
   }
@@ -1711,7 +1711,7 @@ public:
   }
 
   FailureOr<Instruction> parseDclIndexRange(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     auto count = parseToken();
     FAILURE_IF_FAILED(count);

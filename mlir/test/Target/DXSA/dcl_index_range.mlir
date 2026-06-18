@@ -1,7 +1,18 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_index_range.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_index_range.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      dxsa.module {
-// CHECK-NEXT:   dxsa.dcl_index_range <type = input, components = 4, mask = <x, y, z, w>, index = [4]>, 6
-// CHECK-NEXT:   dxsa.dcl_index_range <type = output, components = 4, mask = <x>, index = [0]>, 4
+
+// CHECK-NEXT:   dxsa.dcl_index_range v<1, <x>>, 3
+0x0400005b, 0x00101012, 0x00000001, 0x00000003
+
+// CHECK-NEXT:   dxsa.dcl_index_range v<4>, 6
+0x0400005b, 0x001010f2, 0x00000004, 0x00000006
+
+// CHECK-NEXT:   dxsa.dcl_index_range o<0, <x>>, 4
+0x0400005b, 0x00102012, 0x00000000, 0x00000004
+
+// CHECK-NEXT:   dxsa.dcl_index_range vpc<7, <x, y, z>>, 3
+0x0400005b, 0x0011b072, 0x00000007, 0x00000003
+
 // CHECK-NEXT: }
