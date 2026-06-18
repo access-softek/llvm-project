@@ -1675,10 +1675,9 @@ public:
     return builder.buildUnaryOp<UnOpT>(*dst, *src, preciseMask, loc);
   }
 
-  template <typename BinOpT, typename BinOpSatT>
-  FailureOr<Instruction>
-  decodeSaturableBinaryOp(size_t beginOffset, uint32_t length, bool saturate,
-                          uint32_t preciseMask, Location loc) {
+  template <typename BinOpT>
+  FailureOr<Instruction> decodeBinaryOp(size_t beginOffset, uint32_t length,
+                                        uint32_t preciseMask, Location loc) {
     auto dst = parseDstOperand();
     FAILURE_IF_FAILED(dst);
     auto lhs = parseSrcOperand();
@@ -1687,10 +1686,16 @@ public:
     FAILURE_IF_FAILED(rhs);
     if (failed(verifyInstructionLength(beginOffset, length)))
       return failure();
-    if (saturate)
-      return builder.buildBinaryOp<BinOpSatT>(*dst, *lhs, *rhs, preciseMask,
-                                              loc);
     return builder.buildBinaryOp<BinOpT>(*dst, *lhs, *rhs, preciseMask, loc);
+  }
+
+  template <typename BinOpT, typename BinOpSatT>
+  FailureOr<Instruction>
+  decodeSaturableBinaryOp(size_t beginOffset, uint32_t length, bool saturate,
+                          uint32_t preciseMask, Location loc) {
+    if (saturate)
+      return decodeBinaryOp<BinOpSatT>(beginOffset, length, preciseMask, loc);
+    return decodeBinaryOp<BinOpT>(beginOffset, length, preciseMask, loc);
   }
 
   FailureOr<Instruction> parseDclInput(Location loc) {
@@ -2180,6 +2185,9 @@ public:
   decodeSaturableBinaryOp<dxsa::OP, dxsa::OP##Sat>(                            \
       beginOffset, instructionLengthInTokens, modifier.saturate,               \
       modifier.preciseMask, getLocation())
+#define BINARY_OP(OP)                                                          \
+  decodeBinaryOp<dxsa::OP>(beginOffset, instructionLengthInTokens,             \
+                           modifier.preciseMask, getLocation())
 
 #define SATURABLE_UNARY_OP(OP)                                                 \
   decodeSaturableUnaryOp<dxsa::OP, dxsa::OP##Sat>(                             \
@@ -2205,9 +2213,30 @@ public:
       return SATURABLE_UNARY_OP(RoundPi);
     case D3D10_SB_OPCODE_ROUND_Z:
       return SATURABLE_UNARY_OP(RoundZ);
+    case D3D10_SB_OPCODE_EQ:
+      return BINARY_OP(Eq);
+    case D3D10_SB_OPCODE_GE:
+      return BINARY_OP(Ge);
+    case D3D10_SB_OPCODE_LT:
+      return BINARY_OP(Lt);
+    case D3D10_SB_OPCODE_NE:
+      return BINARY_OP(Ne);
+    case D3D10_SB_OPCODE_IEQ:
+      return BINARY_OP(Ieq);
+    case D3D10_SB_OPCODE_IGE:
+      return BINARY_OP(Ige);
+    case D3D10_SB_OPCODE_ILT:
+      return BINARY_OP(Ilt);
+    case D3D10_SB_OPCODE_INE:
+      return BINARY_OP(Ine);
+    case D3D10_SB_OPCODE_UGE:
+      return BINARY_OP(Uge);
+    case D3D10_SB_OPCODE_ULT:
+      return BINARY_OP(Ult);
     }
 #undef SATURABLE_BINARY_OP
 #undef SATURABLE_UNARY_OP
+#undef BINARY_OP
 
     SmallVector<Operand, 8> operands;
     for (unsigned i = 0; i < numOperands; ++i) {
