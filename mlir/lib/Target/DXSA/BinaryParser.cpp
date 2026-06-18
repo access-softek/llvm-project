@@ -22,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <optional>
+#include <utility>
 
 // d3d12TokenizedProgramFormat.hpp references the `UINT` type in some DECODE_*
 // macros. Mirror the Windows SDK alias (`typedef unsigned int UINT`) to use the
@@ -780,39 +781,13 @@ public:
         context, static_cast<dxsa::ComponentMask>(preciseMask));
   }
 
-  template <typename OpT>
-  Instruction buildUnaryOp(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr src,
-                           uint32_t preciseMask, Location loc) {
-    auto preciseAttr =
-        preciseMask
-            ? dxsa::ComponentMaskAttr::get(
-                  context, static_cast<dxsa::ComponentMask>(preciseMask))
-            : dxsa::ComponentMaskAttr();
-    return OpT::create(builder, loc, dst, src, preciseAttr);
-  }
-
-  template <typename OpT>
-  Instruction buildBinaryOp(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr lhs,
-                            dxsa::SrcOperandAttr rhs, uint32_t preciseMask,
-                            Location loc) {
-    return OpT::create(builder, loc, dst, lhs, rhs,
-                       buildPreciseAttr(preciseMask));
-  }
-
-  template <typename OpT>
-  Instruction
-  buildMultiplyAddOp(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr lhs,
-                     dxsa::SrcOperandAttr rhs, dxsa::SrcOperandAttr acc,
-                     uint32_t preciseMask, Location loc) {
-    return OpT::create(builder, loc, dst, lhs, rhs, acc,
-                       buildPreciseAttr(preciseMask));
-  }
-
-  template <typename OpT>
-  Instruction buildSincosOp(dxsa::DstOperandAttr sin, dxsa::DstOperandAttr cos,
-                            dxsa::SrcOperandAttr operand, uint32_t preciseMask,
-                            Location loc) {
-    return OpT::create(builder, loc, sin, cos, operand,
+  template <typename OpT, std::size_t... DstIdx, std::size_t... SrcIdx>
+  Instruction buildOpWithPreciseMask(uint32_t preciseMask, Location loc,
+                                     ArrayRef<dxsa::DstOperandAttr> dsts,
+                                     ArrayRef<dxsa::SrcOperandAttr> srcs,
+                                     std::index_sequence<DstIdx...>,
+                                     std::index_sequence<SrcIdx...>) {
+    return OpT::create(builder, loc, dsts[DstIdx]..., srcs[SrcIdx]...,
                        buildPreciseAttr(preciseMask));
   }
 
@@ -1670,89 +1645,42 @@ public:
     return indices;
   }
 
-  template <typename UnOpT>
-  FailureOr<Instruction> decodeUnaryOp(size_t beginOffset, uint32_t length,
-                                       uint32_t preciseMask, Location loc) {
-    auto dst = parseDstOperand();
-    FAILURE_IF_FAILED(dst);
-    auto src = parseSrcOperand();
-    FAILURE_IF_FAILED(src);
+  template <std::size_t N, typename OperandT>
+  FailureOr<SmallVector<OperandT, N>>
+  parseOperands(FailureOr<OperandT> (Parser::*parseOperand)()) {
+    SmallVector<OperandT, N> operands;
+    for (auto i = 0u; i < N; ++i) {
+      auto operand = (this->*parseOperand)();
+      FAILURE_IF_FAILED(operand);
+      operands.push_back(*operand);
+    }
+    return operands;
+  }
+
+  template <typename OpT, std::size_t NumDst, std::size_t NumSrc>
+  FailureOr<Instruction> decodeOp(size_t beginOffset, uint32_t length,
+                                  uint32_t preciseMask, Location loc) {
+    auto dsts = parseOperands<NumDst>(&Parser::parseDstOperand);
+    FAILURE_IF_FAILED(dsts);
+    auto srcs = parseOperands<NumSrc>(&Parser::parseSrcOperand);
+    FAILURE_IF_FAILED(srcs);
     if (failed(verifyInstructionLength(beginOffset, length)))
       return failure();
-    return builder.buildUnaryOp<UnOpT>(*dst, *src, preciseMask, loc);
+    auto dstSeq = std::make_index_sequence<NumDst>{};
+    auto srcSeq = std::make_index_sequence<NumSrc>{};
+    return builder.buildOpWithPreciseMask<OpT>(preciseMask, loc, *dsts, *srcs,
+                                               dstSeq, srcSeq);
   }
 
-  template <typename UnOpT, typename UnOpSatT>
-  FailureOr<Instruction>
-  decodeSaturableUnaryOp(size_t beginOffset, uint32_t length, bool saturate,
-                         uint32_t preciseMask, Location loc) {
-    if (saturate)
-      return decodeUnaryOp<UnOpSatT>(beginOffset, length, preciseMask, loc);
-    return decodeUnaryOp<UnOpT>(beginOffset, length, preciseMask, loc);
-  }
-
-  template <typename BinOpT>
-  FailureOr<Instruction> decodeBinaryOp(size_t beginOffset, uint32_t length,
-                                        uint32_t preciseMask, Location loc) {
-    auto dst = parseDstOperand();
-    FAILURE_IF_FAILED(dst);
-    auto lhs = parseSrcOperand();
-    FAILURE_IF_FAILED(lhs);
-    auto rhs = parseSrcOperand();
-    FAILURE_IF_FAILED(rhs);
-    if (failed(verifyInstructionLength(beginOffset, length)))
-      return failure();
-    return builder.buildBinaryOp<BinOpT>(*dst, *lhs, *rhs, preciseMask, loc);
-  }
-
-  template <typename BinOpT, typename BinOpSatT>
-  FailureOr<Instruction>
-  decodeSaturableBinaryOp(size_t beginOffset, uint32_t length, bool saturate,
-                          uint32_t preciseMask, Location loc) {
-    if (saturate)
-      return decodeBinaryOp<BinOpSatT>(beginOffset, length, preciseMask, loc);
-    return decodeBinaryOp<BinOpT>(beginOffset, length, preciseMask, loc);
-  }
-
-  template <typename MulAddOpT, typename MulAddOpSatT>
-  FailureOr<Instruction>
-  decodeSaturableMultiplyAddOp(size_t beginOffset, uint32_t length,
-                               bool saturate, uint32_t preciseMask,
-                               Location loc) {
-    auto dst = parseDstOperand();
-    FAILURE_IF_FAILED(dst);
-    auto lhs = parseSrcOperand();
-    FAILURE_IF_FAILED(lhs);
-    auto rhs = parseSrcOperand();
-    FAILURE_IF_FAILED(rhs);
-    auto acc = parseSrcOperand();
-    FAILURE_IF_FAILED(acc);
-    if (failed(verifyInstructionLength(beginOffset, length)))
-      return failure();
-    if (saturate)
-      return builder.buildMultiplyAddOp<MulAddOpSatT>(*dst, *lhs, *rhs, *acc,
-                                                      preciseMask, loc);
-    return builder.buildMultiplyAddOp<MulAddOpT>(*dst, *lhs, *rhs, *acc,
-                                                 preciseMask, loc);
-  }
-
-  template <typename SincosOpT, typename SincosOpSatT>
-  FailureOr<Instruction>
-  decodeSaturableSincosOp(size_t beginOffset, uint32_t length, bool saturate,
-                          uint32_t preciseMask, Location loc) {
-    auto sin = parseDstOperand();
-    FAILURE_IF_FAILED(sin);
-    auto cos = parseDstOperand();
-    FAILURE_IF_FAILED(cos);
-    auto operand = parseSrcOperand();
-    FAILURE_IF_FAILED(operand);
-    if (failed(verifyInstructionLength(beginOffset, length)))
-      return failure();
-    if (saturate)
-      return builder.buildSincosOp<SincosOpSatT>(*sin, *cos, *operand,
-                                                 preciseMask, loc);
-    return builder.buildSincosOp<SincosOpT>(*sin, *cos, *operand, preciseMask,
-                                            loc);
+  template <typename OpT, typename OpSatT, std::size_t NumDst,
+            std::size_t NumSrc>
+  FailureOr<Instruction> decodeSaturableOp(size_t beginOffset, uint32_t length,
+                                           bool saturable, uint32_t preciseMask,
+                                           Location loc) {
+    if (saturable)
+      return decodeOp<OpSatT, NumDst, NumSrc>(beginOffset, length, preciseMask,
+                                              loc);
+    return decodeOp<OpT, NumDst, NumSrc>(beginOffset, length, preciseMask, loc);
   }
 
   FailureOr<Instruction> parseDclInput(Location loc) {
@@ -2354,116 +2282,106 @@ public:
 
     unsigned numOperands = instrInfo[opcode].numOperands;
 
-#define SATURABLE_UNARY_OP(OP)                                                 \
-  decodeSaturableUnaryOp<dxsa::OP, dxsa::OP##Sat>(                             \
-      beginOffset, instructionLengthInTokens, modifier.saturate,               \
-      modifier.preciseMask, getLocation())
-#define UNARY_OP(OP)                                                           \
-  decodeUnaryOp<dxsa::OP>(beginOffset, instructionLengthInTokens,              \
-                          modifier.preciseMask, getLocation())
-#define SATURABLE_BINARY_OP(OP)                                                \
-  decodeSaturableBinaryOp<dxsa::OP, dxsa::OP##Sat>(                            \
-      beginOffset, instructionLengthInTokens, modifier.saturate,               \
-      modifier.preciseMask, getLocation())
-#define BINARY_OP(OP)                                                          \
-  decodeBinaryOp<dxsa::OP>(beginOffset, instructionLengthInTokens,             \
-                           modifier.preciseMask, getLocation())
+#define SATURABLE_OP(OP, NUM_DST_OPERANDS, NUM_SRC_OPERANDS)                   \
+  decodeSaturableOp<dxsa::OP, dxsa::OP##Sat, NUM_DST_OPERANDS,                 \
+                    NUM_SRC_OPERANDS>(beginOffset, instructionLengthInTokens,  \
+                                      modifier.saturate, modifier.preciseMask, \
+                                      getLocation())
+#define PLAIN_OP(OP, NUM_DST_OPERANDS, NUM_SRC_OPERANDS)                       \
+  decodeOp<dxsa::OP, NUM_DST_OPERANDS, NUM_SRC_OPERANDS>(                      \
+      beginOffset, instructionLengthInTokens, modifier.preciseMask,           \
+      getLocation())
+
     switch (opcode) {
     case D3D10_SB_OPCODE_ADD:
-      return SATURABLE_BINARY_OP(Add);
+      return SATURABLE_OP(Add, 1, 2);
     case D3D10_SB_OPCODE_DIV:
-      return SATURABLE_BINARY_OP(Div);
+      return SATURABLE_OP(Div, 1, 2);
     case D3D10_SB_OPCODE_DP2:
-      return SATURABLE_BINARY_OP(Dp2);
+      return SATURABLE_OP(Dp2, 1, 2);
     case D3D10_SB_OPCODE_DP3:
-      return SATURABLE_BINARY_OP(Dp3);
+      return SATURABLE_OP(Dp3, 1, 2);
     case D3D10_SB_OPCODE_DP4:
-      return SATURABLE_BINARY_OP(Dp4);
+      return SATURABLE_OP(Dp4, 1, 2);
     case D3D10_SB_OPCODE_EXP:
-      return SATURABLE_UNARY_OP(Exp);
+      return SATURABLE_OP(Exp, 1, 1);
     case D3D10_SB_OPCODE_FRC:
-      return SATURABLE_UNARY_OP(Frc);
+      return SATURABLE_OP(Frc, 1, 1);
     case D3D10_SB_OPCODE_LOG:
-      return SATURABLE_UNARY_OP(Log);
+      return SATURABLE_OP(Log, 1, 1);
     case D3D10_SB_OPCODE_MAD:
-      return decodeSaturableMultiplyAddOp<dxsa::Mad, dxsa::MadSat>(
-          beginOffset, instructionLengthInTokens, modifier.saturate,
-          modifier.preciseMask, getLocation());
+      return SATURABLE_OP(Mad, 1, 3);
     case D3D10_SB_OPCODE_MAX:
-      return SATURABLE_BINARY_OP(Max);
+      return SATURABLE_OP(Max, 1, 2);
     case D3D10_SB_OPCODE_MIN:
-      return SATURABLE_BINARY_OP(Min);
+      return SATURABLE_OP(Min, 1, 2);
     case D3D10_SB_OPCODE_MUL:
-      return SATURABLE_BINARY_OP(Mul);
+      return SATURABLE_OP(Mul, 1, 2);
     case D3D11_SB_OPCODE_RCP:
-      return SATURABLE_UNARY_OP(Rcp);
+      return SATURABLE_OP(Rcp, 1, 1);
     case D3D10_SB_OPCODE_ROUND_NE:
-      return SATURABLE_UNARY_OP(RoundNe);
+      return SATURABLE_OP(RoundNe, 1, 1);
     case D3D10_SB_OPCODE_ROUND_NI:
-      return SATURABLE_UNARY_OP(RoundNi);
+      return SATURABLE_OP(RoundNi, 1, 1);
     case D3D10_SB_OPCODE_ROUND_PI:
-      return SATURABLE_UNARY_OP(RoundPi);
+      return SATURABLE_OP(RoundPi, 1, 1);
     case D3D10_SB_OPCODE_ROUND_Z:
-      return SATURABLE_UNARY_OP(RoundZ);
+      return SATURABLE_OP(RoundZ, 1, 1);
     case D3D10_SB_OPCODE_RSQ:
-      return SATURABLE_UNARY_OP(Rsq);
+      return SATURABLE_OP(Rsq, 1, 1);
     case D3D10_SB_OPCODE_SINCOS:
-      return decodeSaturableSincosOp<dxsa::Sincos, dxsa::SincosSat>(
-          beginOffset, instructionLengthInTokens, modifier.saturate,
-          modifier.preciseMask, getLocation());
+      return SATURABLE_OP(Sincos, 2, 1);
     case D3D10_SB_OPCODE_SQRT:
-      return SATURABLE_UNARY_OP(Sqrt);
+      return SATURABLE_OP(Sqrt, 1, 1);
     case D3D11_SB_OPCODE_F16TOF32:
-      return UNARY_OP(F16ToF32);
+      return PLAIN_OP(F16ToF32, 1, 1);
     case D3D11_SB_OPCODE_F32TOF16:
-      return UNARY_OP(F32ToF16);
+      return PLAIN_OP(F32ToF16, 1, 1);
     case D3D10_SB_OPCODE_FTOI:
-      return UNARY_OP(FToI);
+      return PLAIN_OP(FToI, 1, 1);
     case D3D10_SB_OPCODE_FTOU:
-      return UNARY_OP(FToU);
+      return PLAIN_OP(FToU, 1, 1);
     case D3D10_SB_OPCODE_ITOF:
-      return UNARY_OP(IToF);
+      return PLAIN_OP(IToF, 1, 1);
     case D3D10_SB_OPCODE_UTOF:
-      return UNARY_OP(UToF);
+      return PLAIN_OP(UToF, 1, 1);
     case D3D10_SB_OPCODE_EQ:
-      return BINARY_OP(Eq);
+      return PLAIN_OP(Eq, 1, 2);
     case D3D10_SB_OPCODE_GE:
-      return BINARY_OP(Ge);
+      return PLAIN_OP(Ge, 1, 2);
     case D3D10_SB_OPCODE_LT:
-      return BINARY_OP(Lt);
+      return PLAIN_OP(Lt, 1, 2);
     case D3D10_SB_OPCODE_NE:
-      return BINARY_OP(Ne);
+      return PLAIN_OP(Ne, 1, 2);
     case D3D10_SB_OPCODE_IEQ:
-      return BINARY_OP(Ieq);
+      return PLAIN_OP(Ieq, 1, 2);
     case D3D10_SB_OPCODE_IGE:
-      return BINARY_OP(Ige);
+      return PLAIN_OP(Ige, 1, 2);
     case D3D10_SB_OPCODE_ILT:
-      return BINARY_OP(Ilt);
+      return PLAIN_OP(Ilt, 1, 2);
     case D3D10_SB_OPCODE_INE:
-      return BINARY_OP(Ine);
+      return PLAIN_OP(Ine, 1, 2);
     case D3D10_SB_OPCODE_UGE:
-      return BINARY_OP(Uge);
+      return PLAIN_OP(Uge, 1, 2);
     case D3D10_SB_OPCODE_ULT:
-      return BINARY_OP(Ult);
+      return PLAIN_OP(Ult, 1, 2);
     case D3D10_SB_OPCODE_AND:
-      return BINARY_OP(And);
+      return PLAIN_OP(And, 1, 2);
     case D3D10_SB_OPCODE_ISHL:
-      return BINARY_OP(IShl);
+      return PLAIN_OP(IShl, 1, 2);
     case D3D10_SB_OPCODE_ISHR:
-      return BINARY_OP(IShr);
+      return PLAIN_OP(IShr, 1, 2);
     case D3D10_SB_OPCODE_NOT:
-      return UNARY_OP(Not);
+      return PLAIN_OP(Not, 1, 1);
     case D3D10_SB_OPCODE_OR:
-      return BINARY_OP(Or);
+      return PLAIN_OP(Or, 1, 2);
     case D3D10_SB_OPCODE_USHR:
-      return BINARY_OP(UShr);
+      return PLAIN_OP(UShr, 1, 2);
     case D3D10_SB_OPCODE_XOR:
-      return BINARY_OP(Xor);
+      return PLAIN_OP(Xor, 1, 2);
     }
-#undef SATURABLE_UNARY_OP
-#undef UNARY_OP
-#undef SATURABLE_BINARY_OP
-#undef BINARY_OP
+#undef SATURABLE_OP
+#undef PLAIN_OP
 
     SmallVector<Operand, 8> operands;
     for (unsigned i = 0; i < numOperands; ++i) {
