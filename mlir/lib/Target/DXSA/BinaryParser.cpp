@@ -2249,6 +2249,10 @@ public:
       return BINARY_OP(Ult);
     case D3D10_SB_OPCODE_AND:
       return BINARY_OP(And);
+    case D3D10_SB_OPCODE_OR:
+      return BINARY_OP(Or);
+    case D3D10_SB_OPCODE_XOR:
+      return BINARY_OP(Xor);
     }
 #undef SATURABLE_UNARY_OP
 #undef SATURABLE_BINARY_OP

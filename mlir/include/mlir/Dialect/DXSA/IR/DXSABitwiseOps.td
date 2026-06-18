@@ -34,4 +34,42 @@ def DXSA_And : DXSA_BinaryOp<"and"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.or
+//===----------------------------------------------------------------------===//
+
+def DXSA_Or : DXSA_BinaryOp<"or"> {
+  let summary = "component-wise logical OR";
+  let description = [{
+    The `dxsa.or` operation computes the component-wise logical OR of
+    each pair of 32-bit values, `$dst = $lhs | $rhs`.
+
+    Example:
+
+    ```mlir
+    dxsa.or r<0>, r<1>, r<2>
+    dxsa.or r<0, <x, y>>, r<1, <y, z, x, w>>, r<2, <z, z, z, z>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.xor
+//===----------------------------------------------------------------------===//
+
+def DXSA_Xor : DXSA_BinaryOp<"xor"> {
+  let summary = "component-wise logical XOR";
+  let description = [{
+    The `dxsa.xor` operation computes the component-wise logical XOR of
+    each pair of 32-bit values, `$dst = $lhs ^ $rhs`.
+
+    Example:
+
+    ```mlir
+    dxsa.xor r<0>, r<1>, r<2>
+    dxsa.xor r<0, <x, y>>, r<1, <y, z, x, w>>, r<2, <z, z, z, z>>
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSABITWISEOPS
