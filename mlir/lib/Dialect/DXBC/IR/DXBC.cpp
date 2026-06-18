@@ -122,10 +122,12 @@ LogicalResult ModuleOp::verify() {
 
 LogicalResult DclIndexRange::verify() {
   auto operandType = getOperand().getType();
-  if (operandType != InlineOperandType::input &&
-      operandType != InlineOperandType::output)
-    return emitOpError("operand must be an input or output register, got ")
-           << stringifyInlineOperandType(operandType);
+  if (operandType != OperandType::v && operandType != OperandType::o &&
+      operandType != OperandType::vpc)
+    return emitOpError(
+               "operand must be an input, output or patch-constant register, "
+               "got ")
+           << stringifyOperandType(operandType);
   return success();
 }
 
