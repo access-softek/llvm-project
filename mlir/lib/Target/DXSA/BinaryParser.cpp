@@ -773,6 +773,13 @@ public:
                                 relative);
   }
 
+  dxsa::ComponentMaskAttr buildPreciseAttr(uint32_t preciseMask) {
+    if (!preciseMask)
+      return dxsa::ComponentMaskAttr();
+    return dxsa::ComponentMaskAttr::get(
+        context, static_cast<dxsa::ComponentMask>(preciseMask));
+  }
+
   template <typename OpT>
   Instruction buildUnaryOp(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr src,
                            uint32_t preciseMask, Location loc) {
@@ -788,12 +795,25 @@ public:
   Instruction buildBinaryOp(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr lhs,
                             dxsa::SrcOperandAttr rhs, uint32_t preciseMask,
                             Location loc) {
-    auto preciseAttr =
-        preciseMask
-            ? dxsa::ComponentMaskAttr::get(
-                  context, static_cast<dxsa::ComponentMask>(preciseMask))
-            : dxsa::ComponentMaskAttr();
-    return OpT::create(builder, loc, dst, lhs, rhs, preciseAttr);
+    return OpT::create(builder, loc, dst, lhs, rhs,
+                       buildPreciseAttr(preciseMask));
+  }
+
+  template <typename OpT>
+  Instruction
+  buildMultiplyAddOp(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr lhs,
+                     dxsa::SrcOperandAttr rhs, dxsa::SrcOperandAttr acc,
+                     uint32_t preciseMask, Location loc) {
+    return OpT::create(builder, loc, dst, lhs, rhs, acc,
+                       buildPreciseAttr(preciseMask));
+  }
+
+  template <typename OpT>
+  Instruction buildSincosOp(dxsa::DstOperandAttr sin, dxsa::DstOperandAttr cos,
+                            dxsa::SrcOperandAttr operand, uint32_t preciseMask,
+                            Location loc) {
+    return OpT::create(builder, loc, sin, cos, operand,
+                       buildPreciseAttr(preciseMask));
   }
 
   Instruction buildDclInput(dxsa::DstOperandAttr operand, Location loc) {
@@ -1694,6 +1714,47 @@ public:
     return decodeBinaryOp<BinOpT>(beginOffset, length, preciseMask, loc);
   }
 
+  template <typename MulAddOpT, typename MulAddOpSatT>
+  FailureOr<Instruction>
+  decodeSaturableMultiplyAddOp(size_t beginOffset, uint32_t length,
+                               bool saturate, uint32_t preciseMask,
+                               Location loc) {
+    auto dst = parseDstOperand();
+    FAILURE_IF_FAILED(dst);
+    auto lhs = parseSrcOperand();
+    FAILURE_IF_FAILED(lhs);
+    auto rhs = parseSrcOperand();
+    FAILURE_IF_FAILED(rhs);
+    auto acc = parseSrcOperand();
+    FAILURE_IF_FAILED(acc);
+    if (failed(verifyInstructionLength(beginOffset, length)))
+      return failure();
+    if (saturate)
+      return builder.buildMultiplyAddOp<MulAddOpSatT>(*dst, *lhs, *rhs, *acc,
+                                                      preciseMask, loc);
+    return builder.buildMultiplyAddOp<MulAddOpT>(*dst, *lhs, *rhs, *acc,
+                                                 preciseMask, loc);
+  }
+
+  template <typename SincosOpT, typename SincosOpSatT>
+  FailureOr<Instruction>
+  decodeSaturableSincosOp(size_t beginOffset, uint32_t length, bool saturate,
+                          uint32_t preciseMask, Location loc) {
+    auto sin = parseDstOperand();
+    FAILURE_IF_FAILED(sin);
+    auto cos = parseDstOperand();
+    FAILURE_IF_FAILED(cos);
+    auto operand = parseSrcOperand();
+    FAILURE_IF_FAILED(operand);
+    if (failed(verifyInstructionLength(beginOffset, length)))
+      return failure();
+    if (saturate)
+      return builder.buildSincosOp<SincosOpSatT>(*sin, *cos, *operand,
+                                                 preciseMask, loc);
+    return builder.buildSincosOp<SincosOpT>(*sin, *cos, *operand, preciseMask,
+                                            loc);
+  }
+
   FailureOr<Instruction> parseDclInput(Location loc) {
     auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
@@ -2324,6 +2385,16 @@ public:
       return SATURABLE_UNARY_OP(Frc);
     case D3D10_SB_OPCODE_LOG:
       return SATURABLE_UNARY_OP(Log);
+    case D3D10_SB_OPCODE_MAD:
+      return decodeSaturableMultiplyAddOp<dxsa::Mad, dxsa::MadSat>(
+          beginOffset, instructionLengthInTokens, modifier.saturate,
+          modifier.preciseMask, getLocation());
+    case D3D10_SB_OPCODE_MAX:
+      return SATURABLE_BINARY_OP(Max);
+    case D3D10_SB_OPCODE_MIN:
+      return SATURABLE_BINARY_OP(Min);
+    case D3D10_SB_OPCODE_MUL:
+      return SATURABLE_BINARY_OP(Mul);
     case D3D11_SB_OPCODE_RCP:
       return SATURABLE_UNARY_OP(Rcp);
     case D3D10_SB_OPCODE_ROUND_NE:
@@ -2336,6 +2407,10 @@ public:
       return SATURABLE_UNARY_OP(RoundZ);
     case D3D10_SB_OPCODE_RSQ:
       return SATURABLE_UNARY_OP(Rsq);
+    case D3D10_SB_OPCODE_SINCOS:
+      return decodeSaturableSincosOp<dxsa::Sincos, dxsa::SincosSat>(
+          beginOffset, instructionLengthInTokens, modifier.saturate,
+          modifier.preciseMask, getLocation());
     case D3D10_SB_OPCODE_SQRT:
       return SATURABLE_UNARY_OP(Sqrt);
     case D3D11_SB_OPCODE_F16TOF32:
