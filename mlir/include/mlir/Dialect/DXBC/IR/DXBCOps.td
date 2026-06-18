@@ -12,6 +12,7 @@
 include "mlir/Dialect/DXBC/IR/DXBCOpBase.td"
 include "mlir/Dialect/DXBC/IR/DXBCTypes.td"
 include "mlir/Dialect/DXBC/IR/DXBCFPArithOps.td"
+include "mlir/Dialect/DXBC/IR/DXBCConditionOps.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
