@@ -350,6 +350,185 @@ def DXBC_LogSat : DXBC_UnaryOp<"log_sat"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxbc.mad
+//===----------------------------------------------------------------------===//
+
+// Shared base for the multiply-add family: `$dst = $lhs * $rhs + $acc`.
+class DXBC_MultiplyAddOp<string mnemonic> : DXBC_Op<mnemonic> {
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$lhs,
+      DXBC_SrcOperandAttr:$rhs,
+      DXBC_SrcOperandAttr:$acc,
+      OptionalAttr<DXBC_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
+}
+
+def DXBC_Mad : DXBC_MultiplyAddOp<"mad"> {
+  let summary = "component-wise floating-point multiply-add";
+  let description = [{
+    The `dxbc.mad` operation computes the component-wise floating-point
+    multiply-add `$dst = $lhs * $rhs + $acc`.
+
+    Example:
+
+    ```mlir
+    dxbc.mad r<0>, r<1>, r<2>, r<3>
+    dxbc.mad r<0>, -r<1>, |r<2>|, r<3>
+    dxbc.mad r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>, r<3>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.mad_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_MadSat : DXBC_MultiplyAddOp<"mad_sat"> {
+  let summary = "component-wise floating-point multiply-add, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.mad_sat` operation computes the component-wise floating-point
+    multiply-add of `$lhs`, `$rhs` and `$acc`, clamps each component of
+    the result to `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.mad_sat r<0>, r<1>, r<2>, r<3>
+    dxbc.mad_sat r<0>, -r<1>, |r<2>|, r<3>
+    dxbc.mad_sat r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>, r<3>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.max
+//===----------------------------------------------------------------------===//
+
+def DXBC_Max : DXBC_BinaryOp<"max"> {
+  let summary = "component-wise floating-point maximum";
+  let description = [{
+    The `dxbc.max` operation computes the component-wise floating-point
+    maximum of `$lhs` and `$rhs` and writes it to `$dst`. If one source
+    component is NaN, the other source component is returned.
+
+    Example:
+
+    ```mlir
+    dxbc.max r<0>, r<1>, r<2>
+    dxbc.max r<0>, -r<1>, -|r<2>|
+    dxbc.max r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.max_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_MaxSat : DXBC_BinaryOp<"max_sat"> {
+  let summary = "component-wise floating-point maximum, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.max_sat` operation computes the component-wise floating-point
+    maximum of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.max_sat r<0>, r<1>, r<2>
+    dxbc.max_sat r<0>, -r<1>, -|r<2>|
+    dxbc.max_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.min
+//===----------------------------------------------------------------------===//
+
+def DXBC_Min : DXBC_BinaryOp<"min"> {
+  let summary = "component-wise floating-point minimum";
+  let description = [{
+    The `dxbc.min` operation computes the component-wise floating-point
+    minimum of `$lhs` and `$rhs` and writes it to `$dst`. If one source
+    component is NaN, the other source component is returned.
+
+    Example:
+
+    ```mlir
+    dxbc.min r<0>, r<1>, r<2>
+    dxbc.min r<0>, -r<1>, -|r<2>|
+    dxbc.min r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.min_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_MinSat : DXBC_BinaryOp<"min_sat"> {
+  let summary = "component-wise floating-point minimum, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.min_sat` operation computes the component-wise floating-point
+    minimum of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.min_sat r<0>, r<1>, r<2>
+    dxbc.min_sat r<0>, -r<1>, -|r<2>|
+    dxbc.min_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.mul
+//===----------------------------------------------------------------------===//
+
+def DXBC_Mul : DXBC_BinaryOp<"mul"> {
+  let summary = "component-wise floating-point multiply";
+  let description = [{
+    The `dxbc.mul` operation computes the component-wise floating-point
+    product `$dst = $lhs * $rhs`.
+
+    Example:
+
+    ```mlir
+    dxbc.mul r<0>, r<1>, r<2>
+    dxbc.mul r<0>, -r<1>, -|r<2>|
+    dxbc.mul r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.mul_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_MulSat : DXBC_BinaryOp<"mul_sat"> {
+  let summary = "component-wise floating-point multiply, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.mul_sat` operation computes the component-wise floating-point
+    product of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.mul_sat r<0>, r<1>, r<2>
+    dxbc.mul_sat r<0>, -r<1>, -|r<2>|
+    dxbc.mul_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxbc.rcp
 //===----------------------------------------------------------------------===//
 
@@ -593,6 +772,63 @@ def DXBC_RsqSat : DXBC_UnaryOp<"rsq_sat"> {
     ```mlir
     dxbc.rsq_sat r<0>, r<1>
     dxbc.rsq_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.sincos
+//===----------------------------------------------------------------------===//
+
+// Shared base for sine/cosine: sin of `$operand` into `$sin`, cosine into
+// `$cos`. Either destination may be `null` when that result is not needed.
+class DXBC_SincosOp<string mnemonic> : DXBC_Op<mnemonic> {
+  let arguments = (ins
+      DXBC_DstOperandAttr:$sin,
+      DXBC_DstOperandAttr:$cos,
+      DXBC_SrcOperandAttr:$operand,
+      OptionalAttr<DXBC_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $sin `,` $cos `,` $operand attr-dict";
+}
+
+def DXBC_Sincos : DXBC_SincosOp<"sincos"> {
+  let summary = "component-wise floating-point sine and cosine";
+  let description = [{
+    The `dxbc.sincos` operation computes the component-wise sine of
+    `$operand` into `$sin` and the cosine of `$operand` into `$cos`, with the
+    angle expressed in radians. Either destination may be `null` when that
+    result is not needed.
+
+    Example:
+
+    ```mlir
+    dxbc.sincos r<0>, r<1>, r<2>
+    dxbc.sincos null, r<1>, r<2>
+    dxbc.sincos r<0>, null, -r<2>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.sincos_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_SincosSat : DXBC_SincosOp<"sincos_sat"> {
+  let summary = "component-wise floating-point sine and cosine, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.sincos_sat` operation computes the component-wise sine of
+    `$operand` into `$sin` and the cosine of `$operand` into `$cos`, clamps
+    each result component to `[0.0, 1.0]`, with the angle expressed in
+    radians. Either destination may be `null` when that result is not needed.
+
+    Example:
+
+    ```mlir
+    dxbc.sincos_sat r<0>, r<1>, r<2>
+    dxbc.sincos_sat null, r<1>, r<2>
+    dxbc.sincos_sat r<0>, null, -r<2>
     ```
   }];
 }
