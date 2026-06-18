@@ -2249,8 +2249,14 @@ public:
       return BINARY_OP(Ult);
     case D3D10_SB_OPCODE_AND:
       return BINARY_OP(And);
+    case D3D10_SB_OPCODE_ISHL:
+      return BINARY_OP(IShl);
+    case D3D10_SB_OPCODE_ISHR:
+      return BINARY_OP(IShr);
     case D3D10_SB_OPCODE_OR:
       return BINARY_OP(Or);
+    case D3D10_SB_OPCODE_USHR:
+      return BINARY_OP(UShr);
     case D3D10_SB_OPCODE_XOR:
       return BINARY_OP(Xor);
     }

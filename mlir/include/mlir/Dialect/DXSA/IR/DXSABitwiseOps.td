@@ -35,6 +35,45 @@ def DXSA_And : DXSA_BinaryOp<"and"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxsa.ishl
+//===----------------------------------------------------------------------===//
+
+def DXSA_IShl : DXSA_BinaryOp<"ishl"> {
+  let summary = "component-wise shift left";
+  let description = [{
+    The `dxsa.ishl` operation computes the component-wise shift of
+    each 32-bit value in $lhs left by $rhs, `$dst = $lhs << $rhs`.
+
+    Example:
+
+    ```mlir
+    dxsa.ishl r<0>, r<1>, r<2>
+    dxsa.ishl r<0, <x, y>>, r<1, <y, z, x, w>>, r<2, <z, z, z, z>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ishr
+//===----------------------------------------------------------------------===//
+
+def DXSA_IShr : DXSA_BinaryOp<"ishr"> {
+  let summary = "component-wise arithmetic shift right";
+  let description = [{
+    The `dxsa.ishr` operation computes the component-wise arithmetic
+    shift of each 32-bit value in $lhs right by $rhs,
+    `$dst = $lhs >> $rhs`.
+
+    Example:
+
+    ```mlir
+    dxsa.ishr r<0>, r<1>, r<2>
+    dxsa.ishr r<0, <x, y>>, r<1, <y, z, x, w>>, r<2, <z, z, z, z>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.or
 //===----------------------------------------------------------------------===//
 
@@ -49,6 +88,26 @@ def DXSA_Or : DXSA_BinaryOp<"or"> {
     ```mlir
     dxsa.or r<0>, r<1>, r<2>
     dxsa.or r<0, <x, y>>, r<1, <y, z, x, w>>, r<2, <z, z, z, z>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ushr
+//===----------------------------------------------------------------------===//
+
+def DXSA_UShr : DXSA_BinaryOp<"ushr"> {
+  let summary = "component-wise logical shift right";
+  let description = [{
+    The `dxsa.ushr` operation computes the component-wise logical shift
+    of each 32-bit value in $lhs right by $rhs,
+    `$dst = $lhs >> $rhs`.
+
+    Example:
+
+    ```mlir
+    dxsa.ushr r<0>, r<1>, r<2>
+    dxsa.ushr r<0, <x, y>>, r<1, <y, z, x, w>>, r<2, <z, z, z, z>>
     ```
   }];
 }
