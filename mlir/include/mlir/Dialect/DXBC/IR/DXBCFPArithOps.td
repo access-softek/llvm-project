@@ -231,6 +231,164 @@ def DXBC_Dp4Sat : DXBC_BinaryOp<"dp4_sat"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxbc.exp
+//===----------------------------------------------------------------------===//
+
+def DXBC_Exp : DXBC_UnaryOp<"exp"> {
+  let summary = "component-wise base-2 exponential";
+  let description = [{
+    The `dxbc.exp` operation computes the component-wise base-2 exponential
+    `$dst = 2 ^ $src`.
+
+    Example:
+
+    ```mlir
+    dxbc.exp r<0>, r<1>
+    dxbc.exp r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.exp_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_ExpSat : DXBC_UnaryOp<"exp_sat"> {
+  let summary = "component-wise base-2 exponential, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.exp_sat` operation computes the component-wise base-2
+    exponential of `$src`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.exp_sat r<0>, r<1>
+    dxbc.exp_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.frc
+//===----------------------------------------------------------------------===//
+
+def DXBC_Frc : DXBC_UnaryOp<"frc"> {
+  let summary = "component-wise fractional part";
+  let description = [{
+    The `dxbc.frc` operation extracts the component-wise fractional part of
+    `$src` and writes it to `$dst`. The fractional part is `$src` minus its
+    floor - `$dst` = `$rhs` - round_ni(`$lhs`), so every result component
+    lies in `[0.0, 1.0)`.
+
+    Example:
+
+    ```mlir
+    dxbc.frc r<0>, r<1>
+    dxbc.frc r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.frc_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_FrcSat : DXBC_UnaryOp<"frc_sat"> {
+  let summary = "component-wise fractional part, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.frc_sat` operation extracts the component-wise fractional part
+    of `$src`, clamps each component of the result to `[0.0, 1.0]`, and
+    writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.frc_sat r<0>, r<1>
+    dxbc.frc_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.log
+//===----------------------------------------------------------------------===//
+
+def DXBC_Log : DXBC_UnaryOp<"log"> {
+  let summary = "component-wise base-2 logarithm";
+  let description = [{
+    The `dxbc.log` operation computes the component-wise base-2 logarithm
+    `$dst = log2($src)`.
+
+    Example:
+
+    ```mlir
+    dxbc.log r<0>, r<1>
+    dxbc.log r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.log_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_LogSat : DXBC_UnaryOp<"log_sat"> {
+  let summary = "component-wise base-2 logarithm, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.log_sat` operation computes the component-wise base-2 logarithm
+    of `$src`, clamps each component of the result to `[0.0, 1.0]`, and
+    writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.log_sat r<0>, r<1>
+    dxbc.log_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.rcp
+//===----------------------------------------------------------------------===//
+
+def DXBC_Rcp : DXBC_UnaryOp<"rcp"> {
+  let summary = "component-wise reciprocal";
+  let description = [{
+    The `dxbc.rcp` operation computes the component-wise reciprocal
+    `$dst = 1.0 / $src`.
+
+    Example:
+
+    ```mlir
+    dxbc.rcp r<0>, r<1>
+    dxbc.rcp r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.rcp_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_RcpSat : DXBC_UnaryOp<"rcp_sat"> {
+  let summary = "component-wise reciprocal, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.rcp_sat` operation computes the component-wise reciprocal of
+    `$src`, clamps each component of the result to `[0.0, 1.0]`, and writes
+    it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.rcp_sat r<0>, r<1>
+    dxbc.rcp_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxbc.round_ne
 //===----------------------------------------------------------------------===//
 
@@ -396,6 +554,84 @@ def DXBC_RoundZSat : DXBC_UnaryOp<"round_z_sat"> {
     ```mlir
     dxbc.round_z_sat r<0>, r<1>
     dxbc.round_z_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.rsq
+//===----------------------------------------------------------------------===//
+
+def DXBC_Rsq : DXBC_UnaryOp<"rsq"> {
+  let summary = "component-wise reciprocal square root";
+  let description = [{
+    The `dxbc.rsq` operation computes the component-wise reciprocal square
+    root `$dst = 1.0 / sqrt($src)`.
+
+    Example:
+
+    ```mlir
+    dxbc.rsq r<0>, r<1>
+    dxbc.rsq r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.rsq_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_RsqSat : DXBC_UnaryOp<"rsq_sat"> {
+  let summary = "component-wise reciprocal square root, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.rsq_sat` operation computes the component-wise reciprocal
+    square root of `$src`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.rsq_sat r<0>, r<1>
+    dxbc.rsq_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.sqrt
+//===----------------------------------------------------------------------===//
+
+def DXBC_Sqrt : DXBC_UnaryOp<"sqrt"> {
+  let summary = "component-wise square root";
+  let description = [{
+    The `dxbc.sqrt` operation computes the component-wise square root
+    `$dst = sqrt($src)`.
+
+    Example:
+
+    ```mlir
+    dxbc.sqrt r<0>, r<1>
+    dxbc.sqrt r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.sqrt_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_SqrtSat : DXBC_UnaryOp<"sqrt_sat"> {
+  let summary = "component-wise square root, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.sqrt_sat` operation computes the component-wise square root of
+    `$src`, clamps each component of the result to `[0.0, 1.0]`, and writes
+    it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.sqrt_sat r<0>, r<1>
+    dxbc.sqrt_sat r<0>, -|r<1>|
     ```
   }];
 }
