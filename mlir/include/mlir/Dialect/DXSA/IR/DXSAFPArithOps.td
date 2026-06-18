@@ -231,6 +231,164 @@ def DXSA_Dp4Sat : DXSA_BinaryOp<"dp4_sat"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxsa.exp
+//===----------------------------------------------------------------------===//
+
+def DXSA_Exp : DXSA_UnaryOp<"exp"> {
+  let summary = "component-wise base-2 exponential";
+  let description = [{
+    The `dxsa.exp` operation computes the component-wise base-2 exponential
+    `$dst = 2 ^ $src`.
+
+    Example:
+
+    ```mlir
+    dxsa.exp r<0>, r<1>
+    dxsa.exp r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.exp_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_ExpSat : DXSA_UnaryOp<"exp_sat"> {
+  let summary = "component-wise base-2 exponential, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.exp_sat` operation computes the component-wise base-2
+    exponential of `$src`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.exp_sat r<0>, r<1>
+    dxsa.exp_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.frc
+//===----------------------------------------------------------------------===//
+
+def DXSA_Frc : DXSA_UnaryOp<"frc"> {
+  let summary = "component-wise fractional part";
+  let description = [{
+    The `dxsa.frc` operation extracts the component-wise fractional part of
+    `$src` and writes it to `$dst`. The fractional part is `$src` minus its
+    floor - `$dst` = `$rhs` - round_ni(`$lhs`), so every result component
+    lies in `[0.0, 1.0)`.
+
+    Example:
+
+    ```mlir
+    dxsa.frc r<0>, r<1>
+    dxsa.frc r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.frc_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_FrcSat : DXSA_UnaryOp<"frc_sat"> {
+  let summary = "component-wise fractional part, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.frc_sat` operation extracts the component-wise fractional part
+    of `$src`, clamps each component of the result to `[0.0, 1.0]`, and
+    writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.frc_sat r<0>, r<1>
+    dxsa.frc_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.log
+//===----------------------------------------------------------------------===//
+
+def DXSA_Log : DXSA_UnaryOp<"log"> {
+  let summary = "component-wise base-2 logarithm";
+  let description = [{
+    The `dxsa.log` operation computes the component-wise base-2 logarithm
+    `$dst = log2($src)`.
+
+    Example:
+
+    ```mlir
+    dxsa.log r<0>, r<1>
+    dxsa.log r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.log_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_LogSat : DXSA_UnaryOp<"log_sat"> {
+  let summary = "component-wise base-2 logarithm, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.log_sat` operation computes the component-wise base-2 logarithm
+    of `$src`, clamps each component of the result to `[0.0, 1.0]`, and
+    writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.log_sat r<0>, r<1>
+    dxsa.log_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.rcp
+//===----------------------------------------------------------------------===//
+
+def DXSA_Rcp : DXSA_UnaryOp<"rcp"> {
+  let summary = "component-wise reciprocal";
+  let description = [{
+    The `dxsa.rcp` operation computes the component-wise reciprocal
+    `$dst = 1.0 / $src`.
+
+    Example:
+
+    ```mlir
+    dxsa.rcp r<0>, r<1>
+    dxsa.rcp r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.rcp_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_RcpSat : DXSA_UnaryOp<"rcp_sat"> {
+  let summary = "component-wise reciprocal, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.rcp_sat` operation computes the component-wise reciprocal of
+    `$src`, clamps each component of the result to `[0.0, 1.0]`, and writes
+    it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.rcp_sat r<0>, r<1>
+    dxsa.rcp_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.round_ne
 //===----------------------------------------------------------------------===//
 
@@ -396,6 +554,84 @@ def DXSA_RoundZSat : DXSA_UnaryOp<"round_z_sat"> {
     ```mlir
     dxsa.round_z_sat r<0>, r<1>
     dxsa.round_z_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.rsq
+//===----------------------------------------------------------------------===//
+
+def DXSA_Rsq : DXSA_UnaryOp<"rsq"> {
+  let summary = "component-wise reciprocal square root";
+  let description = [{
+    The `dxsa.rsq` operation computes the component-wise reciprocal square
+    root `$dst = 1.0 / sqrt($src)`.
+
+    Example:
+
+    ```mlir
+    dxsa.rsq r<0>, r<1>
+    dxsa.rsq r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.rsq_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_RsqSat : DXSA_UnaryOp<"rsq_sat"> {
+  let summary = "component-wise reciprocal square root, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.rsq_sat` operation computes the component-wise reciprocal
+    square root of `$src`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.rsq_sat r<0>, r<1>
+    dxsa.rsq_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.sqrt
+//===----------------------------------------------------------------------===//
+
+def DXSA_Sqrt : DXSA_UnaryOp<"sqrt"> {
+  let summary = "component-wise square root";
+  let description = [{
+    The `dxsa.sqrt` operation computes the component-wise square root
+    `$dst = sqrt($src)`.
+
+    Example:
+
+    ```mlir
+    dxsa.sqrt r<0>, r<1>
+    dxsa.sqrt r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.sqrt_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_SqrtSat : DXSA_UnaryOp<"sqrt_sat"> {
+  let summary = "component-wise square root, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.sqrt_sat` operation computes the component-wise square root of
+    `$src`, clamps each component of the result to `[0.0, 1.0]`, and writes
+    it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.sqrt_sat r<0>, r<1>
+    dxsa.sqrt_sat r<0>, -|r<1>|
     ```
   }];
 }

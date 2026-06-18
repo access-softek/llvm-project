@@ -2205,6 +2205,14 @@ public:
       return SATURABLE_BINARY_OP(Dp3);
     case D3D10_SB_OPCODE_DP4:
       return SATURABLE_BINARY_OP(Dp4);
+    case D3D10_SB_OPCODE_EXP:
+      return SATURABLE_UNARY_OP(Exp);
+    case D3D10_SB_OPCODE_FRC:
+      return SATURABLE_UNARY_OP(Frc);
+    case D3D10_SB_OPCODE_LOG:
+      return SATURABLE_UNARY_OP(Log);
+    case D3D11_SB_OPCODE_RCP:
+      return SATURABLE_UNARY_OP(Rcp);
     case D3D10_SB_OPCODE_ROUND_NE:
       return SATURABLE_UNARY_OP(RoundNe);
     case D3D10_SB_OPCODE_ROUND_NI:
@@ -2213,6 +2221,10 @@ public:
       return SATURABLE_UNARY_OP(RoundPi);
     case D3D10_SB_OPCODE_ROUND_Z:
       return SATURABLE_UNARY_OP(RoundZ);
+    case D3D10_SB_OPCODE_RSQ:
+      return SATURABLE_UNARY_OP(Rsq);
+    case D3D10_SB_OPCODE_SQRT:
+      return SATURABLE_UNARY_OP(Sqrt);
     case D3D10_SB_OPCODE_EQ:
       return BINARY_OP(Eq);
     case D3D10_SB_OPCODE_GE:
