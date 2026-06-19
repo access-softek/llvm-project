@@ -1660,6 +1660,18 @@ public:
                                        fields->values, fields->values64);
   }
 
+  template <typename UnOpT>
+  FailureOr<Instruction> decodeUnaryOp(size_t beginOffset, uint32_t length,
+                                       uint32_t preciseMask, Location loc) {
+    auto dst = parseDstOperand();
+    FAILURE_IF_FAILED(dst);
+    auto src = parseSrcOperand();
+    FAILURE_IF_FAILED(src);
+    if (failed(verifyInstructionLength(beginOffset, length)))
+      return failure();
+    return builder.buildUnaryOp<UnOpT>(*dst, *src, preciseMask, loc);
+  }
+
   template <typename UnOpT, typename UnOpSatT>
   FailureOr<Instruction>
   decodeSaturableUnaryOp(size_t beginOffset, uint32_t length, bool saturate,
@@ -2189,6 +2201,9 @@ public:
   decodeSaturableUnaryOp<dxbc::OP, dxbc::OP##Sat>(                             \
       beginOffset, instructionLengthInTokens, modifier.saturate,               \
       modifier.preciseMask, getLocation())
+#define UNARY_OP(OP)                                                           \
+  decodeUnaryOp<dxbc::OP>(beginOffset, instructionLengthInTokens,              \
+                          modifier.preciseMask, getLocation())
 #define SATURABLE_BINARY_OP(OP)                                                \
   decodeSaturableBinaryOp<dxbc::OP, dxbc::OP##Sat>(                            \
       beginOffset, instructionLengthInTokens, modifier.saturate,               \
@@ -2249,8 +2264,21 @@ public:
       return BINARY_OP(Ult);
     case D3D10_SB_OPCODE_AND:
       return BINARY_OP(And);
+    case D3D10_SB_OPCODE_ISHL:
+      return BINARY_OP(IShl);
+    case D3D10_SB_OPCODE_ISHR:
+      return BINARY_OP(IShr);
+    case D3D10_SB_OPCODE_NOT:
+      return UNARY_OP(Not);
+    case D3D10_SB_OPCODE_OR:
+      return BINARY_OP(Or);
+    case D3D10_SB_OPCODE_USHR:
+      return BINARY_OP(UShr);
+    case D3D10_SB_OPCODE_XOR:
+      return BINARY_OP(Xor);
     }
 #undef SATURABLE_UNARY_OP
+#undef UNARY_OP
 #undef SATURABLE_BINARY_OP
 #undef BINARY_OP
 
