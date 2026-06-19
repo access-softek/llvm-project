@@ -47,7 +47,7 @@ def DXSA_BFRev : DXSA_UnaryOp<"bfrev"> {
     Example:
 
     ```mlir
-    dxsa.bitreverse o<0>, v<0, <y, x, x, x>>
+    dxsa.bfrev o<0>, v<0, <y, x, x, x>>
     ```
   }];
 }
@@ -113,7 +113,7 @@ def DXSA_FirstBitLo : DXSA_UnaryOp<"firstbit_lo"> {
 def DXSA_FirstBitSHi : DXSA_UnaryOp<"firstbit_shi"> {
   let summary = "find the first different bit in a number from the MSB";
   let description = [{
-    The `dxsa.firstbit_hi` operation finds the first bit in each 32-bit
+    The `dxsa.firstbit_shi` operation finds the first bit in each 32-bit
     value in $src from the MSB that differs from the MSB,
     `$dst = 31 - ctlz($src ^ ($src >> 31))`.
 
