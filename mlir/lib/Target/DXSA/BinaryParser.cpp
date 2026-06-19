@@ -21,8 +21,9 @@
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <array>
 #include <optional>
-#include <utility>
+#include <tuple>
 
 // d3d12TokenizedProgramFormat.hpp references the `UINT` type in some DECODE_*
 // macros. Mirror the Windows SDK alias (`typedef unsigned int UINT`) to use the
@@ -781,14 +782,18 @@ public:
         context, static_cast<dxsa::ComponentMask>(preciseMask));
   }
 
-  template <typename OpT, std::size_t... DstIdx, std::size_t... SrcIdx>
-  Instruction buildOpWithPreciseMask(uint32_t preciseMask, Location loc,
-                                     ArrayRef<dxsa::DstOperandAttr> dsts,
-                                     ArrayRef<dxsa::SrcOperandAttr> srcs,
-                                     std::index_sequence<DstIdx...>,
-                                     std::index_sequence<SrcIdx...>) {
-    return OpT::create(builder, loc, dsts[DstIdx]..., srcs[SrcIdx]...,
-                       buildPreciseAttr(preciseMask));
+  template <typename OpT, std::size_t NumDstOperands,
+            std::size_t NumSrcOperands>
+  Instruction buildOpWithPreciseMask(
+      uint32_t preciseMask, Location loc,
+      const std::array<dxsa::DstOperandAttr, NumDstOperands> &dsts,
+      const std::array<dxsa::SrcOperandAttr, NumSrcOperands> &srcs) {
+    return std::apply(
+        [&](auto... operands) {
+          return OpT::create(builder, loc, operands...,
+                             buildPreciseAttr(preciseMask));
+        },
+        std::tuple_cat(dsts, srcs));
   }
 
   Instruction buildDclInput(dxsa::DstOperandAttr operand, Location loc) {
@@ -1646,41 +1651,40 @@ public:
   }
 
   template <std::size_t N, typename OperandT>
-  FailureOr<SmallVector<OperandT, N>>
+  FailureOr<std::array<OperandT, N>>
   parseOperands(FailureOr<OperandT> (Parser::*parseOperand)()) {
-    SmallVector<OperandT, N> operands;
-    for (auto i = 0u; i < N; ++i) {
-      auto operand = (this->*parseOperand)();
-      FAILURE_IF_FAILED(operand);
-      operands.push_back(*operand);
+    std::array<OperandT, N> operands;
+    for (auto &operand : operands) {
+      auto parsed = (this->*parseOperand)();
+      FAILURE_IF_FAILED(parsed);
+      operand = *parsed;
     }
     return operands;
   }
 
-  template <typename OpT, std::size_t NumDst, std::size_t NumSrc>
+  template <typename OpT, std::size_t NumDstOperands,
+            std::size_t NumSrcOperands>
   FailureOr<Instruction> decodeOp(size_t beginOffset, uint32_t length,
                                   uint32_t preciseMask, Location loc) {
-    auto dsts = parseOperands<NumDst>(&Parser::parseDstOperand);
+    auto dsts = parseOperands<NumDstOperands>(&Parser::parseDstOperand);
     FAILURE_IF_FAILED(dsts);
-    auto srcs = parseOperands<NumSrc>(&Parser::parseSrcOperand);
+    auto srcs = parseOperands<NumSrcOperands>(&Parser::parseSrcOperand);
     FAILURE_IF_FAILED(srcs);
     if (failed(verifyInstructionLength(beginOffset, length)))
       return failure();
-    auto dstSeq = std::make_index_sequence<NumDst>{};
-    auto srcSeq = std::make_index_sequence<NumSrc>{};
-    return builder.buildOpWithPreciseMask<OpT>(preciseMask, loc, *dsts, *srcs,
-                                               dstSeq, srcSeq);
+    return builder.buildOpWithPreciseMask<OpT>(preciseMask, loc, *dsts, *srcs);
   }
 
-  template <typename OpT, typename OpSatT, std::size_t NumDst,
-            std::size_t NumSrc>
+  template <typename OpT, typename OpSatT, std::size_t NumDstOperands,
+            std::size_t NumSrcOperands>
   FailureOr<Instruction> decodeSaturableOp(size_t beginOffset, uint32_t length,
                                            bool saturable, uint32_t preciseMask,
                                            Location loc) {
     if (saturable)
-      return decodeOp<OpSatT, NumDst, NumSrc>(beginOffset, length, preciseMask,
-                                              loc);
-    return decodeOp<OpT, NumDst, NumSrc>(beginOffset, length, preciseMask, loc);
+      return decodeOp<OpSatT, NumDstOperands, NumSrcOperands>(
+          beginOffset, length, preciseMask, loc);
+    return decodeOp<OpT, NumDstOperands, NumSrcOperands>(beginOffset, length,
+                                                         preciseMask, loc);
   }
 
   FailureOr<Instruction> parseDclInput(Location loc) {
@@ -2289,7 +2293,7 @@ public:
                                       getLocation())
 #define PLAIN_OP(OP, NUM_DST_OPERANDS, NUM_SRC_OPERANDS)                       \
   decodeOp<dxsa::OP, NUM_DST_OPERANDS, NUM_SRC_OPERANDS>(                      \
-      beginOffset, instructionLengthInTokens, modifier.preciseMask,           \
+      beginOffset, instructionLengthInTokens, modifier.preciseMask,            \
       getLocation())
 
     switch (opcode) {
