@@ -1676,15 +1676,9 @@ public:
   FailureOr<Instruction>
   decodeSaturableUnaryOp(size_t beginOffset, uint32_t length, bool saturate,
                          uint32_t preciseMask, Location loc) {
-    auto dst = parseDstOperand();
-    FAILURE_IF_FAILED(dst);
-    auto src = parseSrcOperand();
-    FAILURE_IF_FAILED(src);
-    if (failed(verifyInstructionLength(beginOffset, length)))
-      return failure();
     if (saturate)
-      return builder.buildUnaryOp<UnOpSatT>(*dst, *src, preciseMask, loc);
-    return builder.buildUnaryOp<UnOpT>(*dst, *src, preciseMask, loc);
+      return decodeUnaryOp<UnOpSatT>(beginOffset, length, preciseMask, loc);
+    return decodeUnaryOp<UnOpT>(beginOffset, length, preciseMask, loc);
   }
 
   template <typename BinOpT>
@@ -2242,6 +2236,18 @@ public:
       return SATURABLE_UNARY_OP(Rsq);
     case D3D10_SB_OPCODE_SQRT:
       return SATURABLE_UNARY_OP(Sqrt);
+    case D3D11_SB_OPCODE_F16TOF32:
+      return UNARY_OP(F16ToF32);
+    case D3D11_SB_OPCODE_F32TOF16:
+      return UNARY_OP(F32ToF16);
+    case D3D10_SB_OPCODE_FTOI:
+      return UNARY_OP(FToI);
+    case D3D10_SB_OPCODE_FTOU:
+      return UNARY_OP(FToU);
+    case D3D10_SB_OPCODE_ITOF:
+      return UNARY_OP(IToF);
+    case D3D10_SB_OPCODE_UTOF:
+      return UNARY_OP(UToF);
     case D3D10_SB_OPCODE_EQ:
       return BINARY_OP(Eq);
     case D3D10_SB_OPCODE_GE:
