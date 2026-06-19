@@ -2264,6 +2264,16 @@ public:
       return BINARY_OP(Ult);
     case D3D10_SB_OPCODE_AND:
       return BINARY_OP(And);
+    case D3D11_SB_OPCODE_BFREV:
+      return UNARY_OP(BFRev);
+    case D3D11_SB_OPCODE_COUNTBITS:
+      return UNARY_OP(CountBits);
+    case D3D11_SB_OPCODE_FIRSTBIT_LO:
+      return UNARY_OP(FirstBitLo);
+    case D3D11_SB_OPCODE_FIRSTBIT_HI:
+      return UNARY_OP(FirstBitHi);
+    case D3D11_SB_OPCODE_FIRSTBIT_SHI:
+      return UNARY_OP(FirstBitSHi);
     case D3D10_SB_OPCODE_ISHL:
       return BINARY_OP(IShl);
     case D3D10_SB_OPCODE_ISHR:
