@@ -74,6 +74,24 @@ def DXSA_IShr : DXSA_BinaryOp<"ishr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxsa.not
+//===----------------------------------------------------------------------===//
+
+def DXSA_Not : DXSA_UnaryOp<"not"> {
+  let summary = "component-wise one's complement";
+  let description = [{
+    The `dxsa.not` operation performs a component-wise one's complement of
+    each 32-bit value in $src, `$dst = ~$src`.
+
+    Example:
+
+    ```mlir
+    dxsa.not o<0>, v<0, <y, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.or
 //===----------------------------------------------------------------------===//
 
