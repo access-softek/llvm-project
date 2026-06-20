@@ -1,0 +1,84 @@
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dadd r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070000bf, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dadd_sat r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070020bf, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dmax r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070000c0, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dmax_sat r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070020c0, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dmin r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070000c1, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dmin_sat r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070020c1, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dmul r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070000c2, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.dmul_sat r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070020c2, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.ddiv r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070000d2, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.ddiv_sat r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x070020d2, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.drcp r<0>, r<1>
+// CHECK-NEXT: }
+0x050000d4, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.drcp_sat r<0>, r<1>
+// CHECK-NEXT: }
+0x050020d4, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001

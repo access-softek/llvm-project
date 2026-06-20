@@ -2561,6 +2561,19 @@ public:
       return PLAIN_OP(EvalSampleIndex, 1, 2, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_EVAL_SNAPPED:
       return PLAIN_OP(EvalSnapped, 1, 2, HasPreciseAttr::Yes);
+    // Double-precision arithmetic instructions
+    case D3D11_SB_OPCODE_DADD:
+      return SATURABLE_OP(DAdd, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DMAX:
+      return SATURABLE_OP(DMax, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DMIN:
+      return SATURABLE_OP(DMin, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DMUL:
+      return SATURABLE_OP(DMul, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_DDIV:
+      return SATURABLE_OP(DDiv, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_DRCP:
+      return SATURABLE_OP(DRcp, 1, 1, HasPreciseAttr::Yes);
     // Other instructions
     case D3D11_SB_OPCODE_SYNC:
       return parseSync(*opcodeToken0, beginOffset, instructionLengthInTokens,
