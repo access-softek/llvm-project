@@ -1,7 +1,12 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_constant_buffer.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_constant_buffer.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      dxsa.module {
+
 // CHECK-NEXT:   dxsa.dcl_constant_buffer <id = 0, size = 1>, <immediateIndexed>
+0x04000059, 0x00208e46, 0x00000000, 0x00000001
+
 // CHECK-NEXT:   dxsa.dcl_constant_buffer <id = 0, size = 4, lbound = 0, ubound = 3, space = 1>, <dynamicIndexed>
+0x07000859, 0x00308e46, 0x00000000, 0x00000000, 0x00000003, 0x00000004, 0x00000001
+
 // CHECK-NEXT: }

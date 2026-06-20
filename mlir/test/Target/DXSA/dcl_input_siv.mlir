@@ -1,9 +1,18 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_input_siv.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_input_siv.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      module {
-// CHECK-NEXT:   dxsa.dcl_input_siv <type = input, components = 4, mask = <x, y, z, w>, index = [0]>, <position>
-// CHECK-NEXT:   dxsa.dcl_input_siv <type = input, components = 4, mask = <x, y, z>, index = [1]>, <clipDistance>
-// CHECK-NEXT:   dxsa.dcl_input_siv <type = input, components = 4, mask = <x, y>, index = [2]>, <cullDistance>
-// CHECK-NEXT:   dxsa.dcl_input_siv <type = input, components = 4, mask = <x>, index = [3]>, <finalQuadUInsideTessFactor>
+
+// CHECK-NEXT:   dxsa.dcl_input_siv v<0>, <position>
+0x04000061, 0x001010f2, 0x00000000, 0x00000001
+
+// CHECK-NEXT:   dxsa.dcl_input_siv v<1, <x, y, z>>, <clipDistance>
+0x04000061, 0x00101072, 0x00000001, 0x00000002
+
+// CHECK-NEXT:   dxsa.dcl_input_siv v<2, <x, y>>, <cullDistance>
+0x04000061, 0x00101032, 0x00000002, 0x00000003
+
+// CHECK-NEXT:   dxsa.dcl_input_siv v<3, <x>>, <finalQuadUInsideTessFactor>
+0x04000061, 0x00101012, 0x00000003, 0x0000000f
+
 // CHECK-NEXT: }

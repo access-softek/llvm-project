@@ -630,7 +630,7 @@ public:
   }
 
   Instruction buildDclInputPs(dxsa::InterpolationMode interpolationMode,
-                              Operand operand, Location loc) {
+                              dxsa::DstOperandAttr operand, Location loc) {
     auto interpolationModeAttr = dxsa::InterpolationModeAttr::get(
         builder.getContext(), interpolationMode);
     return dxsa::DclInputPs::create(builder, loc, interpolationModeAttr,
@@ -638,7 +638,7 @@ public:
   }
 
   Instruction buildDclInputPsSiv(dxsa::InterpolationMode interpolationMode,
-                                 Operand operand,
+                                 dxsa::DstOperandAttr operand,
                                  dxsa::SystemValueName systemValueName,
                                  Location loc) {
     auto interpolationModeAttr = dxsa::InterpolationModeAttr::get(
@@ -649,26 +649,13 @@ public:
                                        operand, systemValueNameAttr);
   }
 
-  Instruction buildDclInputPsSgv(Operand operand,
+  Instruction buildDclInputPsSgv(dxsa::DstOperandAttr operand,
                                  dxsa::SystemValueName systemValueName,
                                  Location loc) {
     auto systemValueNameAttr =
         dxsa::SystemValueNameAttr::get(builder.getContext(), systemValueName);
     return dxsa::DclInputPsSgv::create(builder, loc, operand,
                                        systemValueNameAttr);
-  }
-
-  dxsa::InlineOperandAttr buildInlineOperandAttr(
-      dxsa::InlineOperandType operandType, uint32_t components,
-      std::optional<dxsa::ComponentMask> mask, ArrayRef<int64_t> indexArray) {
-    auto *ctx = builder.getContext();
-    auto maskAttr = mask ? dxsa::ComponentMaskAttr::get(ctx, *mask)
-                         : dxsa::ComponentMaskAttr();
-    auto indexAttr = indexArray.empty()
-                         ? DenseI64ArrayAttr()
-                         : DenseI64ArrayAttr::get(ctx, indexArray);
-    return dxsa::InlineOperandAttr::get(ctx, operandType, components, maskAttr,
-                                        indexAttr);
   }
 
   dxsa::DstOperandAttr
@@ -809,11 +796,11 @@ public:
     return OpT::create(builder, loc, dst, lhs, rhs, preciseAttr);
   }
 
-  Instruction buildDclInput(dxsa::InlineOperandAttr operand, Location loc) {
+  Instruction buildDclInput(dxsa::DstOperandAttr operand, Location loc) {
     return dxsa::DclInput::create(builder, loc, operand);
   }
 
-  Instruction buildDclOutput(dxsa::InlineOperandAttr operand, Location loc) {
+  Instruction buildDclOutput(dxsa::DstOperandAttr operand, Location loc) {
     return dxsa::DclOutput::create(builder, loc, operand);
   }
 
@@ -823,25 +810,25 @@ public:
                                        builder.getI32IntegerAttr(count));
   }
 
-  Instruction buildDclInputSgv(dxsa::InlineOperandAttr operand,
+  Instruction buildDclInputSgv(dxsa::DstOperandAttr operand,
                                dxsa::SystemValueName name, Location loc) {
     auto nameAttr = dxsa::SystemValueNameAttr::get(builder.getContext(), name);
     return dxsa::DclInputSgv::create(builder, loc, operand, nameAttr);
   }
 
-  Instruction buildDclInputSiv(dxsa::InlineOperandAttr operand,
+  Instruction buildDclInputSiv(dxsa::DstOperandAttr operand,
                                dxsa::SystemValueName name, Location loc) {
     auto nameAttr = dxsa::SystemValueNameAttr::get(builder.getContext(), name);
     return dxsa::DclInputSiv::create(builder, loc, operand, nameAttr);
   }
 
-  Instruction buildDclOutputSgv(dxsa::InlineOperandAttr operand,
+  Instruction buildDclOutputSgv(dxsa::DstOperandAttr operand,
                                 dxsa::SystemValueName name, Location loc) {
     auto nameAttr = dxsa::SystemValueNameAttr::get(builder.getContext(), name);
     return dxsa::DclOutputSgv::create(builder, loc, operand, nameAttr);
   }
 
-  Instruction buildDclOutputSiv(dxsa::InlineOperandAttr operand,
+  Instruction buildDclOutputSiv(dxsa::DstOperandAttr operand,
                                 dxsa::SystemValueName name, Location loc) {
     auto nameAttr = dxsa::SystemValueNameAttr::get(builder.getContext(), name);
     return dxsa::DclOutputSiv::create(builder, loc, operand, nameAttr);
@@ -862,13 +849,13 @@ public:
         builder, loc, builder.getUI32IntegerAttr(count));
   }
 
-  Instruction buildDclTgsmRaw(dxsa::InlineOperandAttr operand,
-                              uint32_t byteCount, Location loc) {
+  Instruction buildDclTgsmRaw(dxsa::DstOperandAttr operand, uint32_t byteCount,
+                              Location loc) {
     return dxsa::DclTgsmRaw::create(builder, loc, operand,
                                     builder.getI32IntegerAttr(byteCount));
   }
 
-  Instruction buildDclTgsmStructured(dxsa::InlineOperandAttr operand,
+  Instruction buildDclTgsmStructured(dxsa::DstOperandAttr operand,
                                      uint32_t structByteStride,
                                      uint32_t structCount, Location loc) {
     return dxsa::DclTgsmStructured::create(
@@ -1450,19 +1437,20 @@ public:
   }
 
   FailureOr<Instruction> parseDclStream(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
-    if (operand->getType() != dxsa::InlineOperandType::stream)
+    if (operand->getType() != dxsa::OperandType::m)
       return emitError(loc, "unexpected operand type: ")
-             << dxsa::stringifyInlineOperandType(operand->getType());
-    if (operand->getComponents() != 0)
-      return emitError(loc, "unexpected number of components: ")
-             << operand->getComponents();
-    auto indexArray = operand->getIndex();
-    if (!indexArray || indexArray.size() != 1)
-      return emitError(loc, "unsupported index dimension: ")
-             << (indexArray ? indexArray.size() : 0);
-    return builder.buildDclStream(static_cast<uint32_t>(indexArray[0]), loc);
+             << dxsa::stringifyOperandType(operand->getType());
+    if (operand->getComponents().getValue() != dxsa::OperandComponents::none)
+      return emitError(loc, "unexpected operand components: ")
+             << dxsa::stringifyOperandComponents(
+                    operand->getComponents().getValue());
+    auto indices = getRequiredImmIndices(*operand, loc);
+    FAILURE_IF_FAILED(indices);
+    if (indices->size() != 1)
+      return emitError(loc, "unsupported index dimension: ") << indices->size();
+    return builder.buildDclStream((*indices)[0], loc);
   }
 
   FailureOr<dxsa::InterpolationMode>
@@ -1490,93 +1478,31 @@ public:
   }
 
   FailureOr<Instruction> parseDclInputPs(uint32_t opcodeToken, Location loc) {
-    FailureOr<dxsa::InterpolationMode> interpolationMode =
-        parseInterpolationMode(opcodeToken, loc);
-    if (failed(interpolationMode))
-      return failure();
-    FailureOr<Operand> operand = parseOperand();
-    if (failed(operand))
-      return failure();
+    auto interpolationMode = parseInterpolationMode(opcodeToken, loc);
+    FAILURE_IF_FAILED(interpolationMode);
+    auto operand = parseDstOperand();
+    FAILURE_IF_FAILED(operand);
     return builder.buildDclInputPs(*interpolationMode, *operand, loc);
   }
 
   FailureOr<Instruction> parseDclInputPsSiv(uint32_t opcodeToken,
                                             Location loc) {
-    FailureOr<dxsa::InterpolationMode> interpolationMode =
-        parseInterpolationMode(opcodeToken, loc);
-    if (failed(interpolationMode))
-      return failure();
-    FailureOr<Operand> operand = parseOperand();
-    if (failed(operand))
-      return failure();
-    FailureOr<dxsa::SystemValueName> systemValueName =
-        parseSystemValueName(getLocation());
-    if (failed(systemValueName))
-      return failure();
+    auto interpolationMode = parseInterpolationMode(opcodeToken, loc);
+    FAILURE_IF_FAILED(interpolationMode);
+    auto operand = parseDstOperand();
+    FAILURE_IF_FAILED(operand);
+    auto systemValueName = parseSystemValueName(getLocation());
+    FAILURE_IF_FAILED(systemValueName);
     return builder.buildDclInputPsSiv(*interpolationMode, *operand,
                                       *systemValueName, loc);
   }
 
   FailureOr<Instruction> parseDclInputPsSgv(Location loc) {
-    FailureOr<Operand> operand = parseOperand();
-    if (failed(operand))
-      return failure();
-    FailureOr<dxsa::SystemValueName> systemValueName =
-        parseSystemValueName(getLocation());
-    if (failed(systemValueName))
-      return failure();
+    auto operand = parseDstOperand();
+    FAILURE_IF_FAILED(operand);
+    auto systemValueName = parseSystemValueName(getLocation());
+    FAILURE_IF_FAILED(systemValueName);
     return builder.buildDclInputPsSgv(*operand, *systemValueName, loc);
-  }
-
-  FailureOr<dxsa::InlineOperandAttr> parseInlineOperand() {
-    auto token = parseToken();
-    FAILURE_IF_FAILED(token);
-
-    auto rawOperandType = DECODE_D3D10_SB_OPERAND_TYPE(*token);
-    auto isExtended = DECODE_IS_D3D10_SB_OPERAND_EXTENDED(*token);
-    auto loc = getLocation();
-
-    if (isImmOperand(*token))
-      return emitError(loc, "immediate operand is not supported yet");
-
-    auto type = dxsa::symbolizeInlineOperandType(rawOperandType);
-    if (!type)
-      return emitError(loc, "unknown operand type: ")
-             // Streaming the raw enum would print the value as a byte, use cast
-             // to prevent it.
-             << static_cast<unsigned>(rawOperandType);
-
-    auto components = parseOperandComponents(*token);
-    FAILURE_IF_FAILED(components);
-
-    auto indexTypes = parseOperandIndexTypes(*token);
-    FAILURE_IF_FAILED(indexTypes);
-
-    if (isExtended)
-      return emitError(loc, "extended operand tokens are not yet supported in "
-                            "inline operand attribute");
-
-    if (components->kind == OperandComponentsKind::Swizzle ||
-        components->kind == OperandComponentsKind::One)
-      return emitError(loc, "swizzled / single-component operand selection is "
-                            "not supported in inline operand attribute");
-
-    std::optional<dxsa::ComponentMask> mask;
-    if (components->kind == OperandComponentsKind::Mask)
-      mask = decodeComponentMask(components->mask);
-
-    SmallVector<int64_t, 3> indices;
-    for (auto indexType : *indexTypes) {
-      if (indexType != D3D10_SB_OPERAND_INDEX_IMMEDIATE32)
-        return emitError(getLocation(), "unsupported index representation: ")
-               << indexType;
-      auto value = parseToken();
-      FAILURE_IF_FAILED(value);
-      indices.push_back(static_cast<int32_t>(*value));
-    }
-
-    return builder.buildInlineOperandAttr(*type, components->num, mask,
-                                          indices);
   }
 
   struct OperandFields {
@@ -1711,6 +1637,19 @@ public:
                                        fields->values, fields->values64);
   }
 
+  // Get plain immediates with no relative indices.
+  FailureOr<SmallVector<uint32_t, 3>>
+  getRequiredImmIndices(dxsa::DstOperandAttr operand, Location loc) {
+    SmallVector<uint32_t, 3> indices;
+    if (auto index = operand.getIndex())
+      for (dxsa::IndexAttr entry : index) {
+        if (entry.getRelative() || !entry.getImm())
+          return emitError(loc, "operand index must be immediate");
+        indices.push_back(static_cast<uint32_t>(entry.getImm().getInt()));
+      }
+    return indices;
+  }
+
   template <typename UnOpT>
   FailureOr<Instruction> decodeUnaryOp(size_t beginOffset, uint32_t length,
                                        uint32_t preciseMask, Location loc) {
@@ -1756,13 +1695,13 @@ public:
   }
 
   FailureOr<Instruction> parseDclInput(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     return builder.buildDclInput(*operand, loc);
   }
 
   FailureOr<Instruction> parseDclOutput(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     return builder.buildDclOutput(*operand, loc);
   }
@@ -1776,7 +1715,7 @@ public:
   }
 
   FailureOr<Instruction> parseDclInputSiv(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     auto name = parseSystemValueName(getLocation());
     FAILURE_IF_FAILED(name);
@@ -1784,7 +1723,7 @@ public:
   }
 
   FailureOr<Instruction> parseDclOutputSgv(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     auto name = parseSystemValueName(getLocation());
     FAILURE_IF_FAILED(name);
@@ -1792,7 +1731,7 @@ public:
   }
 
   FailureOr<Instruction> parseDclOutputSiv(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     auto name = parseSystemValueName(getLocation());
     FAILURE_IF_FAILED(name);
@@ -1800,7 +1739,7 @@ public:
   }
 
   FailureOr<Instruction> parseDclInputSgv(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     auto name = parseSystemValueName(getLocation());
     FAILURE_IF_FAILED(name);
@@ -1827,7 +1766,7 @@ public:
   }
 
   FailureOr<Instruction> parseDclTgsmRaw(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     auto byteCount = parseToken();
     FAILURE_IF_FAILED(byteCount);
@@ -1835,7 +1774,7 @@ public:
   }
 
   FailureOr<Instruction> parseDclTgsmStructured(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
     auto structByteStride = parseToken();
     FAILURE_IF_FAILED(structByteStride);
@@ -1908,21 +1847,22 @@ public:
     if (!mode)
       return emitError(loc, "unknown sampler mode: ") << rawMode;
 
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
-    if (operand->getType() != dxsa::InlineOperandType::sampler)
+    if (operand->getType() != dxsa::OperandType::s)
       return emitError(loc, "operand must be a sampler register, got ")
-             << dxsa::stringifyInlineOperandType(operand->getType());
-    auto indexArray = operand->getIndex();
-    auto indexDim = indexArray ? indexArray.size() : 0;
+             << dxsa::stringifyOperandType(operand->getType());
+    auto indices = getRequiredImmIndices(*operand, loc);
+    FAILURE_IF_FAILED(indices);
+    auto indexDim = indices->size();
     if (indexDim != 1 && indexDim != 3)
       return emitError(loc, "operand must have a 1D or 3D index, got ")
              << indexDim;
-    auto id = indexArray[0];
+    auto id = (*indices)[0];
     std::optional<uint32_t> lbound, ubound, space;
     if (indexDim == 3) {
-      lbound = indexArray[1];
-      ubound = indexArray[2];
+      lbound = (*indices)[1];
+      ubound = (*indices)[2];
       auto spaceToken = parseToken();
       FAILURE_IF_FAILED(spaceToken);
       space = *spaceToken;
@@ -1959,21 +1899,22 @@ public:
       sampleCount = rawSampleCount;
     }
 
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
-    if (operand->getType() != dxsa::InlineOperandType::resource)
+    if (operand->getType() != dxsa::OperandType::t)
       return emitError(loc, "operand must be a resource register, got ")
-             << dxsa::stringifyInlineOperandType(operand->getType());
-    auto indexArray = operand->getIndex();
-    auto indexDim = indexArray ? indexArray.size() : 0;
+             << dxsa::stringifyOperandType(operand->getType());
+    auto indices = getRequiredImmIndices(*operand, loc);
+    FAILURE_IF_FAILED(indices);
+    auto indexDim = indices->size();
     if (indexDim != 1 && indexDim != 3)
       return emitError(loc, "operand must have a 1D or 3D index, got ")
              << indexDim;
-    auto id = indexArray[0];
+    auto id = (*indices)[0];
     std::optional<uint32_t> lbound, ubound;
     if (indexDim == 3) {
-      lbound = indexArray[1];
-      ubound = indexArray[2];
+      lbound = (*indices)[1];
+      ubound = (*indices)[2];
     }
 
     auto returnTypeToken = parseToken();
@@ -1999,21 +1940,22 @@ public:
   }
 
   FailureOr<Instruction> parseDclResourceStructured(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
-    if (operand->getType() != dxsa::InlineOperandType::resource)
+    if (operand->getType() != dxsa::OperandType::t)
       return emitError(loc, "operand must be a resource register, got ")
-             << dxsa::stringifyInlineOperandType(operand->getType());
-    auto indexArray = operand->getIndex();
-    auto indexDim = indexArray ? indexArray.size() : 0;
+             << dxsa::stringifyOperandType(operand->getType());
+    auto indices = getRequiredImmIndices(*operand, loc);
+    FAILURE_IF_FAILED(indices);
+    auto indexDim = indices->size();
     if (indexDim != 1 && indexDim != 3)
       return emitError(loc, "operand must have a 1D or 3D index, got ")
              << indexDim;
-    auto id = indexArray[0];
+    auto id = (*indices)[0];
     std::optional<uint32_t> lbound, ubound;
     if (indexDim == 3) {
-      lbound = indexArray[1];
-      ubound = indexArray[2];
+      lbound = (*indices)[1];
+      ubound = (*indices)[2];
     }
 
     auto strideToken = parseToken();
@@ -2031,21 +1973,22 @@ public:
   }
 
   FailureOr<Instruction> parseDclResourceRaw(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
-    if (operand->getType() != dxsa::InlineOperandType::resource)
+    if (operand->getType() != dxsa::OperandType::t)
       return emitError(loc, "operand must be a resource register, got ")
-             << dxsa::stringifyInlineOperandType(operand->getType());
-    auto indexArray = operand->getIndex();
-    auto indexDim = indexArray ? indexArray.size() : 0;
+             << dxsa::stringifyOperandType(operand->getType());
+    auto indices = getRequiredImmIndices(*operand, loc);
+    FAILURE_IF_FAILED(indices);
+    auto indexDim = indices->size();
     if (indexDim != 1 && indexDim != 3)
       return emitError(loc, "operand must have a 1D or 3D index, got ")
              << indexDim;
-    auto id = indexArray[0];
+    auto id = (*indices)[0];
     std::optional<uint32_t> lbound, ubound, space;
     if (indexDim == 3) {
-      lbound = indexArray[1];
-      ubound = indexArray[2];
+      lbound = (*indices)[1];
+      ubound = (*indices)[2];
       auto spaceToken = parseToken();
       FAILURE_IF_FAILED(spaceToken);
       space = *spaceToken;
@@ -2074,21 +2017,21 @@ public:
   };
 
   FailureOr<UavOperand> parseUavOperand(Location loc) {
-    auto operand = parseInlineOperand();
+    auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
-    if (operand->getType() != dxsa::InlineOperandType::uav)
+    if (operand->getType() != dxsa::OperandType::u)
       return emitError(loc, "operand must be a uav register, got ")
-             << dxsa::stringifyInlineOperandType(operand->getType());
-    auto indexArray = operand->getIndex();
-    auto indexDim = indexArray ? indexArray.size() : 0;
+             << dxsa::stringifyOperandType(operand->getType());
+    auto indices = getRequiredImmIndices(*operand, loc);
+    FAILURE_IF_FAILED(indices);
+    auto indexDim = indices->size();
     if (indexDim != 1 && indexDim != 3)
       return emitError(loc, "operand must have a 1D or 3D index, got ")
              << indexDim;
-    UavOperand uav{static_cast<uint32_t>(indexArray[0]), std::nullopt,
-                   std::nullopt};
+    UavOperand uav{(*indices)[0], std::nullopt, std::nullopt};
     if (indexDim == 3) {
-      uav.lbound = static_cast<uint32_t>(indexArray[1]);
-      uav.ubound = static_cast<uint32_t>(indexArray[2]);
+      uav.lbound = (*indices)[1];
+      uav.ubound = (*indices)[2];
     }
     return uav;
   }

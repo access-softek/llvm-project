@@ -1,7 +1,12 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_output_siv.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_output_siv.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      dxsa.module {
-// CHECK-NEXT:   dxsa.dcl_output_siv <type = output, components = 4, mask = <x, y, z, w>, index = [0]>, <position>
-// CHECK-NEXT:   dxsa.dcl_output_siv <type = output, components = 4, mask = <x>, index = [1]>, <clipDistance>
+
+// CHECK-NEXT:   dxsa.dcl_output_siv o<0>, <position>
+0x04000067, 0x001020f2, 0x00000000, 0x00000001
+
+// CHECK-NEXT:   dxsa.dcl_output_siv o<1, <x>>, <clipDistance>
+0x04000067, 0x00102012, 0x00000001, 0x00000002
+
 // CHECK-NEXT: }

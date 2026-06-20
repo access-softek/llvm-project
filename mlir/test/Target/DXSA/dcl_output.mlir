@@ -1,11 +1,12 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_output.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_output.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK-LABEL: module
-module {
-  // dcl_output o0.xyzw
-  // CHECK:      dxsa.dcl_output <type = output, components = 4, mask = <x, y, z, w>, index = [0]>
 
-  // dcl_output oDepth
-  // CHECK-NEXT: dxsa.dcl_output <type = output_depth, components = 1>
-}
+// dcl_output o0.xyzw
+// CHECK:      dxsa.dcl_output o<0>
+0x03000065, 0x001020f2, 0x00000000
+
+// dcl_output oDepth
+// CHECK-NEXT: dxsa.dcl_output oDepth
+0x02000065, 0x0000c001

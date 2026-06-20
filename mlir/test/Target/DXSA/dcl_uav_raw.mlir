@@ -1,8 +1,18 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_uav_raw.bin | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      module {
+
 // CHECK-NEXT:   dxsa.dcl_uav_raw <id = 0>
+0x0300009d, 0x0011e000, 0x00000000
+
 // CHECK-NEXT:   dxsa.dcl_uav_raw <id = 1>, <flags =  globallyCoherent>
+0x0301009d, 0x0011e000, 0x00000001
+
 // CHECK-NEXT:   dxsa.dcl_uav_raw <id = 2>, <flags =  globallyCoherent|rasterizerOrdered>
+0x0303009d, 0x0011e000, 0x00000002
+
 // CHECK-NEXT:   dxsa.dcl_uav_raw <id = 0, lbound = 0, ubound = 3, space = 1>
+0x0600009d, 0x0031e000, 0x00000000, 0x00000000, 0x00000003, 0x00000001
+
 // CHECK-NEXT: }
