@@ -505,4 +505,65 @@ def DXBC_ImmAtomicCmpExch : DXBC_Op<"imm_atomic_cmp_exch"> {
       "$dst0 `,` $dst1 `,` $dst_address `,` $src0 `,` $src1 attr-dict";
 }
 
+//===----------------------------------------------------------------------===//
+// DXBC shared base for UnorderedAccessView (UAV) counter atomics
+//===----------------------------------------------------------------------===//
+
+class DXBC_ImmAtomicCounterOp<string mnemonic> : DXBC_Op<mnemonic> {
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$uav);
+  let results = (outs);
+  let assemblyFormat = "$dst `,` $uav attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.imm_atomic_alloc
+//===----------------------------------------------------------------------===//
+
+def DXBC_ImmAtomicAlloc : DXBC_ImmAtomicCounterOp<"imm_atomic_alloc"> {
+  let summary =
+      "atomic increment of an UnorderedAccessView (UAV) counter, returning the "
+      "prior value";
+  let description = [{
+    The `dxbc.imm_atomic_alloc` operation atomically increments the hidden
+    32-bit counter of the append or count UnorderedAccessView (UAV)
+    `$uav` and writes the value the counter held before the increment
+    into `$dst`.
+
+    `$uav` must be a structured buffer UAV declared with a counter. The
+    counter wraps on overflow.
+
+    Example:
+
+    ```mlir
+    dxbc.imm_atomic_alloc r<0, <x>>, u<0>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.imm_atomic_consume
+//===----------------------------------------------------------------------===//
+
+def DXBC_ImmAtomicConsume : DXBC_ImmAtomicCounterOp<"imm_atomic_consume"> {
+  let summary =
+      "atomic decrement of an UnorderedAccessView (UAV) counter, returning the "
+      "new value";
+  let description = [{
+    The `dxbc.imm_atomic_consume` operation atomically decrements the hidden
+    32-bit counter of the append or count UnorderedAccessView (UAV)
+    `$uav` and writes the new (post-decrement) value into `$dst`.
+
+    `$uav` must be a structured buffer UAV declared with a counter. The
+    counter wraps on underflow.
+
+    Example:
+
+    ```mlir
+    dxbc.imm_atomic_consume r<0, <x>>, u<0>
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCATOMICOPS
