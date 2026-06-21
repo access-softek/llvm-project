@@ -2576,6 +2576,40 @@ public:
       return SATURABLE_OP(DFma, 1, 3, HasPreciseAttr::Yes);
     case D3D11_1_SB_OPCODE_DRCP:
       return SATURABLE_OP(DRcp, 1, 1, HasPreciseAttr::Yes);
+    // Control flow instructions
+    case D3D11_SB_OPCODE_ABORT:
+      return PLAIN_OP(Abort, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_BREAK:
+      return PLAIN_OP(Break, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_CALL:
+      return PLAIN_OP(Call, 0, 1, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_CALLC:
+      if (DECODE_D3D10_SB_INSTRUCTION_TEST_BOOLEAN(*opcodeToken0) ==
+          D3D10_SB_INSTRUCTION_TEST_NONZERO)
+        return PLAIN_OP(CallcNz, 0, 2, HasPreciseAttr::No);
+      return PLAIN_OP(CallcZ, 0, 2, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_CASE:
+      return PLAIN_OP(Case, 0, 1, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_CONTINUE:
+      return PLAIN_OP(Continue, 0, 0, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_DEBUG_BREAK:
+      return PLAIN_OP(DebugBreak, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_DEFAULT:
+      return PLAIN_OP(Default, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_ELSE:
+      return PLAIN_OP(Else, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_ENDIF:
+      return PLAIN_OP(Endif, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_ENDLOOP:
+      return PLAIN_OP(Endloop, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_ENDSWITCH:
+      return PLAIN_OP(Endswitch, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_LABEL:
+      return PLAIN_OP(Label, 1, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_LOOP:
+      return PLAIN_OP(Loop, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_RET:
+      return PLAIN_OP(Ret, 0, 0, HasPreciseAttr::No);
     // Other instructions
     case D3D11_SB_OPCODE_SYNC:
       return parseSync(*opcodeToken0, beginOffset, instructionLengthInTokens,

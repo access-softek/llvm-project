@@ -1,0 +1,112 @@
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.abort
+// CHECK-NEXT: }
+0x010000cf
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.break
+// CHECK-NEXT: }
+0x01000002
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.call label<3>
+// CHECK-NEXT: }
+0x03000004, 0x0010a000, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.callc_z r<0, <x>>, label<3>
+// CHECK-NEXT: }
+0x05000005, 0x0010000a, 0x00000000, 0x0010a000, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.callc_nz r<0, <x>>, label<3>
+// CHECK-NEXT: }
+0x05040005, 0x0010000a, 0x00000000, 0x0010a000, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.case l(0x2A)
+// CHECK-NEXT: }
+0x03000006, 0x00004001, 0x0000002a
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.continue
+// CHECK-NEXT: }
+0x01000007
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.debug_break
+// CHECK-NEXT: }
+0x010000d0
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.default
+// CHECK-NEXT: }
+0x0100000a
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.else
+// CHECK-NEXT: }
+0x01000012
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.endif
+// CHECK-NEXT: }
+0x01000015
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.endloop
+// CHECK-NEXT: }
+0x01000016
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.endswitch
+// CHECK-NEXT: }
+0x01000017
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.label label<3>
+// CHECK-NEXT: }
+0x0300002c, 0x0010a000, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.loop
+// CHECK-NEXT: }
+0x01000030
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.ret
+// CHECK-NEXT: }
+0x0100003e
