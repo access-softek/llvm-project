@@ -2451,6 +2451,28 @@ public:
       return PLAIN_OP(AtomicUMax, 1, 2, HasPreciseAttr::No);
     case D3D11_SB_OPCODE_ATOMIC_UMIN:
       return PLAIN_OP(AtomicUMin, 1, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_ATOMIC_CMP_STORE:
+      return PLAIN_OP(AtomicCmpStore, 1, 3, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_IADD:
+      return PLAIN_OP(ImmAtomicIAdd, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_AND:
+      return PLAIN_OP(ImmAtomicAnd, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_OR:
+      return PLAIN_OP(ImmAtomicOr, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_XOR:
+      return PLAIN_OP(ImmAtomicXor, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_EXCH:
+      return PLAIN_OP(ImmAtomicExch, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_CMP_EXCH:
+      return PLAIN_OP(ImmAtomicCmpExch, 2, 3, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_IMAX:
+      return PLAIN_OP(ImmAtomicIMax, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_IMIN:
+      return PLAIN_OP(ImmAtomicIMin, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_UMAX:
+      return PLAIN_OP(ImmAtomicUMax, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_UMIN:
+      return PLAIN_OP(ImmAtomicUMin, 2, 2, HasPreciseAttr::No);
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP
