@@ -2473,6 +2473,10 @@ public:
       return PLAIN_OP(ImmAtomicUMax, 2, 2, HasPreciseAttr::No);
     case D3D11_SB_OPCODE_IMM_ATOMIC_UMIN:
       return PLAIN_OP(ImmAtomicUMin, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_ALLOC:
+      return PLAIN_OP(ImmAtomicAlloc, 1, 1, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_CONSUME:
+      return PLAIN_OP(ImmAtomicConsume, 1, 1, HasPreciseAttr::No);
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP
