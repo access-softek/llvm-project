@@ -28,6 +28,12 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
 // DXSA shared bases for ops with inline operands
 //===----------------------------------------------------------------------===//
 
+class DXSA_NullaryOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+}
+
 class DXSA_UnaryOp<string mnemonic> : DXSA_Op<mnemonic> {
   let arguments = (ins
       DXSA_DstOperandAttr:$dst,
