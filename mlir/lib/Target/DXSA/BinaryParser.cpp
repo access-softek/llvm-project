@@ -1652,10 +1652,10 @@ public:
 
   template <std::size_t N, typename OperandT>
   FailureOr<std::array<OperandT, N>>
-  parseNOperands(FailureOr<OperandT> (Parser::*parseOperand)()) {
+  parseNOperands(llvm::function_ref<FailureOr<OperandT>()> parseOperand) {
     std::array<OperandT, N> operands;
     for (auto &operand : operands) {
-      auto parsed = (this->*parseOperand)();
+      auto parsed = parseOperand();
       FAILURE_IF_FAILED(parsed);
       operand = *parsed;
     }
@@ -1666,9 +1666,11 @@ public:
             std::size_t NumSrcOperands>
   FailureOr<Instruction> decodeOp(size_t beginOffset, uint32_t length,
                                   uint32_t preciseMask, Location loc) {
-    auto dsts = parseNOperands<NumDstOperands>(&Parser::parseDstOperand);
+    auto dsts = parseNOperands<NumDstOperands, dxsa::DstOperandAttr>(
+        [this] { return parseDstOperand(); });
     FAILURE_IF_FAILED(dsts);
-    auto srcs = parseNOperands<NumSrcOperands>(&Parser::parseSrcOperand);
+    auto srcs = parseNOperands<NumSrcOperands, dxsa::SrcOperandAttr>(
+        [this] { return parseSrcOperand(); });
     FAILURE_IF_FAILED(srcs);
     if (failed(verifyInstructionLength(beginOffset, length)))
       return failure();
