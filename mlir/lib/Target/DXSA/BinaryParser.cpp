@@ -789,11 +789,15 @@ public:
       const std::array<dxsa::DstOperandAttr, NumDstOperands> &dsts,
       const std::array<dxsa::SrcOperandAttr, NumSrcOperands> &srcs) {
     return std::apply(
-        [&](auto... operands) {
-          return OpT::create(builder, loc, operands...,
-                             buildPreciseAttr(preciseMask));
+        [&](auto... dstOperands) {
+          return std::apply(
+              [&](auto... srcOperands) {
+                return OpT::create(builder, loc, dstOperands..., srcOperands...,
+                                   buildPreciseAttr(preciseMask));
+              },
+              srcs);
         },
-        std::tuple_cat(dsts, srcs));
+        dsts);
   }
 
   Instruction buildDclInput(dxsa::DstOperandAttr operand, Location loc) {
