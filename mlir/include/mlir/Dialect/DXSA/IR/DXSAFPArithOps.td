@@ -350,6 +350,185 @@ def DXSA_LogSat : DXSA_UnaryOp<"log_sat"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxsa.mad
+//===----------------------------------------------------------------------===//
+
+// Shared base for the multiply-add family: `$dst = $lhs * $rhs + $acc`.
+class DXSA_MultiplyAddOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$lhs,
+      DXSA_SrcOperandAttr:$rhs,
+      DXSA_SrcOperandAttr:$acc,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
+}
+
+def DXSA_Mad : DXSA_MultiplyAddOp<"mad"> {
+  let summary = "component-wise floating-point multiply-add";
+  let description = [{
+    The `dxsa.mad` operation computes the component-wise floating-point
+    multiply-add `$dst = $lhs * $rhs + $acc`.
+
+    Example:
+
+    ```mlir
+    dxsa.mad r<0>, r<1>, r<2>, r<3>
+    dxsa.mad r<0>, -r<1>, |r<2>|, r<3>
+    dxsa.mad r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>, r<3>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.mad_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_MadSat : DXSA_MultiplyAddOp<"mad_sat"> {
+  let summary = "component-wise floating-point multiply-add, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.mad_sat` operation computes the component-wise floating-point
+    multiply-add of `$lhs`, `$rhs` and `$acc`, clamps each component of
+    the result to `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.mad_sat r<0>, r<1>, r<2>, r<3>
+    dxsa.mad_sat r<0>, -r<1>, |r<2>|, r<3>
+    dxsa.mad_sat r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>, r<3>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.max
+//===----------------------------------------------------------------------===//
+
+def DXSA_Max : DXSA_BinaryOp<"max"> {
+  let summary = "component-wise floating-point maximum";
+  let description = [{
+    The `dxsa.max` operation computes the component-wise floating-point
+    maximum of `$lhs` and `$rhs` and writes it to `$dst`. If one source
+    component is NaN, the other source component is returned.
+
+    Example:
+
+    ```mlir
+    dxsa.max r<0>, r<1>, r<2>
+    dxsa.max r<0>, -r<1>, -|r<2>|
+    dxsa.max r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.max_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_MaxSat : DXSA_BinaryOp<"max_sat"> {
+  let summary = "component-wise floating-point maximum, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.max_sat` operation computes the component-wise floating-point
+    maximum of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.max_sat r<0>, r<1>, r<2>
+    dxsa.max_sat r<0>, -r<1>, -|r<2>|
+    dxsa.max_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.min
+//===----------------------------------------------------------------------===//
+
+def DXSA_Min : DXSA_BinaryOp<"min"> {
+  let summary = "component-wise floating-point minimum";
+  let description = [{
+    The `dxsa.min` operation computes the component-wise floating-point
+    minimum of `$lhs` and `$rhs` and writes it to `$dst`. If one source
+    component is NaN, the other source component is returned.
+
+    Example:
+
+    ```mlir
+    dxsa.min r<0>, r<1>, r<2>
+    dxsa.min r<0>, -r<1>, -|r<2>|
+    dxsa.min r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.min_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_MinSat : DXSA_BinaryOp<"min_sat"> {
+  let summary = "component-wise floating-point minimum, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.min_sat` operation computes the component-wise floating-point
+    minimum of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.min_sat r<0>, r<1>, r<2>
+    dxsa.min_sat r<0>, -r<1>, -|r<2>|
+    dxsa.min_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.mul
+//===----------------------------------------------------------------------===//
+
+def DXSA_Mul : DXSA_BinaryOp<"mul"> {
+  let summary = "component-wise floating-point multiply";
+  let description = [{
+    The `dxsa.mul` operation computes the component-wise floating-point
+    product `$dst = $lhs * $rhs`.
+
+    Example:
+
+    ```mlir
+    dxsa.mul r<0>, r<1>, r<2>
+    dxsa.mul r<0>, -r<1>, -|r<2>|
+    dxsa.mul r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.mul_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_MulSat : DXSA_BinaryOp<"mul_sat"> {
+  let summary = "component-wise floating-point multiply, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.mul_sat` operation computes the component-wise floating-point
+    product of `$lhs` and `$rhs`, clamps each component of the result to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.mul_sat r<0>, r<1>, r<2>
+    dxsa.mul_sat r<0>, -r<1>, -|r<2>|
+    dxsa.mul_sat r<0, <x, y>>, r<1, <y, z, x, w>>, |r<2, <z, z, z, z>>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.rcp
 //===----------------------------------------------------------------------===//
 
@@ -593,6 +772,63 @@ def DXSA_RsqSat : DXSA_UnaryOp<"rsq_sat"> {
     ```mlir
     dxsa.rsq_sat r<0>, r<1>
     dxsa.rsq_sat r<0>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.sincos
+//===----------------------------------------------------------------------===//
+
+// Shared base for sine/cosine: sin of `$operand` into `$sin`, cosine into
+// `$cos`. Either destination may be `null` when that result is not needed.
+class DXSA_SincosOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins
+      DXSA_DstOperandAttr:$sin,
+      DXSA_DstOperandAttr:$cos,
+      DXSA_SrcOperandAttr:$operand,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $sin `,` $cos `,` $operand attr-dict";
+}
+
+def DXSA_Sincos : DXSA_SincosOp<"sincos"> {
+  let summary = "component-wise floating-point sine and cosine";
+  let description = [{
+    The `dxsa.sincos` operation computes the component-wise sine of
+    `$operand` into `$sin` and the cosine of `$operand` into `$cos`, with the
+    angle expressed in radians. Either destination may be `null` when that
+    result is not needed.
+
+    Example:
+
+    ```mlir
+    dxsa.sincos r<0>, r<1>, r<2>
+    dxsa.sincos null, r<1>, r<2>
+    dxsa.sincos r<0>, null, -r<2>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.sincos_sat
+//===----------------------------------------------------------------------===//
+
+def DXSA_SincosSat : DXSA_SincosOp<"sincos_sat"> {
+  let summary = "component-wise floating-point sine and cosine, saturated to [0, 1]";
+  let description = [{
+    The `dxsa.sincos_sat` operation computes the component-wise sine of
+    `$operand` into `$sin` and the cosine of `$operand` into `$cos`, clamps
+    each result component to `[0.0, 1.0]`, with the angle expressed in
+    radians. Either destination may be `null` when that result is not needed.
+
+    Example:
+
+    ```mlir
+    dxsa.sincos_sat r<0>, r<1>, r<2>
+    dxsa.sincos_sat null, r<1>, r<2>
+    dxsa.sincos_sat r<0>, null, -r<2>
     ```
   }];
 }
