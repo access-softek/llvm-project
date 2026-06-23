@@ -1,0 +1,24 @@
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
+
+// CHECK:      dxsa.module {
+
+// CHECK-NEXT:   dxsa.ftou r<0>, r<1>
+0x0500001c, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001
+
+// CHECK-NEXT:   dxsa.ftou r<0>, -r<1>
+0x0600001c, 0x001000f2, 0x00000000, 0x80100e46, 0x00000041, 0x00000001
+
+// CHECK-NEXT:   dxsa.ftou r<0>, |r<1>|
+0x0600001c, 0x001000f2, 0x00000000, 0x80100e46, 0x00000081, 0x00000001
+
+// CHECK-NEXT:   dxsa.ftou r<0>, -|r<1>|
+0x0600001c, 0x001000f2, 0x00000000, 0x80100e46, 0x000000c1, 0x00000001
+
+// CHECK-NEXT:   dxsa.ftou r<0, <x>>, r<1, <y, z, w, y>>
+0x0500001c, 0x00100012, 0x00000000, 0x00100796, 0x00000001
+
+// CHECK-NEXT:   dxsa.ftou precise <x, y> r<0>, r<1>
+0x0518001c, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001
+
+// CHECK-NEXT: }

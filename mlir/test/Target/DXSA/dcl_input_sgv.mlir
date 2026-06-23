@@ -1,9 +1,18 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_input_sgv.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_input_sgv.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      module {
-// CHECK-NEXT:   dxsa.dcl_input_sgv <type = input, components = 4, mask = <x>, index = [0]>, <vertexID>
-// CHECK-NEXT:   dxsa.dcl_input_sgv <type = input, components = 4, mask = <y>, index = [0]>, <instanceID>
-// CHECK-NEXT:   dxsa.dcl_input_sgv <type = input, components = 4, mask = <z>, index = [1]>, <vertexID>
-// CHECK-NEXT:   dxsa.dcl_input_sgv <type = input, components = 4, mask = <w>, index = [1]>, <instanceID>
+
+// CHECK-NEXT:   dxsa.dcl_input_sgv v<0, <x>>, <vertexID>
+0x04000060, 0x00101012, 0x00000000, 0x00000006
+
+// CHECK-NEXT:   dxsa.dcl_input_sgv v<0, <y>>, <instanceID>
+0x04000060, 0x00101022, 0x00000000, 0x00000008
+
+// CHECK-NEXT:   dxsa.dcl_input_sgv v<1, <z>>, <vertexID>
+0x04000060, 0x00101042, 0x00000001, 0x00000006
+
+// CHECK-NEXT:   dxsa.dcl_input_sgv v<1, <w>>, <instanceID>
+0x04000060, 0x00101082, 0x00000001, 0x00000008
+
 // CHECK-NEXT: }

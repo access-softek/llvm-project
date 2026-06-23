@@ -1,6 +1,9 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_tgsm_raw.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_tgsm_raw.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      dxsa.module {
-// CHECK-NEXT:   dxsa.dcl_tgsm_raw <type = thread_group_shared_memory, components = 0, index = [0]>, 40
+
+// CHECK-NEXT:   dxsa.dcl_tgsm_raw g<0>, 40
+0x0400009f, 0x0011f000, 0x00000000, 0x00000028
+
 // CHECK-NEXT: }

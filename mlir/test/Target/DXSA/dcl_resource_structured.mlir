@@ -1,7 +1,12 @@
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_resource_structured.bin | FileCheck %s
-// RUN: mlir-translate --import-dxsa-bin %S/inputs/dcl_resource_structured.bin | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
 
 // CHECK:      module {
+
 // CHECK-NEXT:   dxsa.dcl_resource_structured <id = 3, struct_byte_stride = 16>
+0x040000a2, 0x00107000, 0x00000003, 0x00000010
+
 // CHECK-NEXT:   dxsa.dcl_resource_structured <id = 0, struct_byte_stride = 32, lbound = 0, ubound = 3, space = 1>
+0x070000a2, 0x00307000, 0x00000000, 0x00000000, 0x00000003, 0x00000020, 0x00000001
+
 // CHECK-NEXT: }
