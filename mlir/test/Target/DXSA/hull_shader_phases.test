@@ -1,0 +1,18 @@
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
+
+// CHECK:      dxsa.module {
+
+// CHECK-NEXT:   dxsa.hs_decls
+0x01000071
+
+// CHECK-NEXT:   dxsa.hs_control_point_phase
+0x01000072
+
+// CHECK-NEXT:   dxsa.hs_fork_phase
+0x01000073
+
+// CHECK-NEXT:   dxsa.hs_join_phase
+0x01000074
+
+// CHECK-NEXT: }
