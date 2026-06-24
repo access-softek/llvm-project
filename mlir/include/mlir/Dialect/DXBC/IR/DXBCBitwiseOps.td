@@ -35,6 +35,97 @@ def DXBC_And : DXBC_BinaryOp<"and"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxbc.bfrev
+//===----------------------------------------------------------------------===//
+
+def DXBC_BFRev : DXBC_UnaryOp<"bfrev"> {
+  let summary = "reverse the bits in a number";
+  let description = [{
+    The `dxbc.bfrev` operation reverses the bits in each 32-bit value in
+    $src, `$dst = bitreverse($src)`.
+
+    Example:
+
+    ```mlir
+    dxbc.bfrev o<0>, v<0, <y, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.countbits
+//===----------------------------------------------------------------------===//
+
+def DXBC_CountBits : DXBC_UnaryOp<"countbits"> {
+  let summary = "count the number of bits set in a number";
+  let description = [{
+    The `dxbc.countbits` operation counts the number of bits set in
+    each 32-bit value in $src, `$dst = ctpop($src)`.
+
+    Example:
+
+    ```mlir
+    dxbc.countbits o<0>, v<0, <y, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.firstbit_hi
+//===----------------------------------------------------------------------===//
+
+def DXBC_FirstBitHi : DXBC_UnaryOp<"firstbit_hi"> {
+  let summary = "find the first bit set in a number from the MSB";
+  let description = [{
+    The `dxbc.firstbit_hi` operation finds the first bit set in each 32-bit
+    value in $src from the MSB, `$dst = 31 - ctlz($src)`.
+
+    Example:
+
+    ```mlir
+    dxbc.firstbit_hi o<0>, v<0, <y, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.firstbit_lo
+//===----------------------------------------------------------------------===//
+
+def DXBC_FirstBitLo : DXBC_UnaryOp<"firstbit_lo"> {
+  let summary = "find the first bit set in a number from the LSB";
+  let description = [{
+    The `dxbc.firstbit_lo` operation finds the first bit set in each 32-bit
+    value in $src from the LSB, `$dst = $src ? cttz($src) : -1`.
+
+    Example:
+
+    ```mlir
+    dxbc.firstbit_lo o<0>, v<0, <y, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.firstbit_shi
+//===----------------------------------------------------------------------===//
+
+def DXBC_FirstBitSHi : DXBC_UnaryOp<"firstbit_shi"> {
+  let summary = "find the first different bit in a number from the MSB";
+  let description = [{
+    The `dxbc.firstbit_shi` operation finds the first bit in each 32-bit
+    value in $src from the MSB that differs from the MSB,
+    `$dst = 31 - ctlz($src ^ ($src >> 31))`.
+
+    Example:
+
+    ```mlir
+    dxbc.firstbit_shi o<0>, v<0, <y, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxbc.ishl
 //===----------------------------------------------------------------------===//
 

@@ -2377,6 +2377,16 @@ public:
       return PLAIN_OP(Ult, 1, 2);
     case D3D10_SB_OPCODE_AND:
       return PLAIN_OP(And, 1, 2);
+    case D3D11_SB_OPCODE_BFREV:
+      return PLAIN_OP(BFRev, 1, 1);
+    case D3D11_SB_OPCODE_COUNTBITS:
+      return PLAIN_OP(CountBits, 1, 1);
+    case D3D11_SB_OPCODE_FIRSTBIT_LO:
+      return PLAIN_OP(FirstBitLo, 1, 1);
+    case D3D11_SB_OPCODE_FIRSTBIT_HI:
+      return PLAIN_OP(FirstBitHi, 1, 1);
+    case D3D11_SB_OPCODE_FIRSTBIT_SHI:
+      return PLAIN_OP(FirstBitSHi, 1, 1);
     case D3D10_SB_OPCODE_ISHL:
       return PLAIN_OP(IShl, 1, 2);
     case D3D10_SB_OPCODE_ISHR:
