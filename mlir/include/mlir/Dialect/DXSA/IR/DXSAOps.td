@@ -15,6 +15,7 @@ include "mlir/Dialect/DXSA/IR/DXSAFPArithOps.td"
 include "mlir/Dialect/DXSA/IR/DXSAIntArithOps.td"
 include "mlir/Dialect/DXSA/IR/DXSAConditionOps.td"
 include "mlir/Dialect/DXSA/IR/DXSABitwiseOps.td"
+include "mlir/Dialect/DXSA/IR/DXSATopologyOps.td"
 include "mlir/Dialect/DXSA/IR/DXSATypeConversionOps.td"
 include "mlir/Dialect/DXSA/IR/DXSAAtomicOps.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -1097,7 +1098,7 @@ def DXSA_DclSampler : DXSA_Op<"dcl_sampler"> {
   let hasVerifier = 1;
 }
 
-def DXSA_DclStream : DXSA_Op<"dcl_stream"> {
+def DXSA_DclStream : DXSA_GsStreamIndexOp<"dcl_stream"> {
   let summary = "declares a geometry shader (GS) output stream";
   let description = [{
     The `dxsa.dcl_stream` operation declares a geometry shader (GS) output stream.
@@ -1110,9 +1111,6 @@ def DXSA_DclStream : DXSA_Op<"dcl_stream"> {
     dxsa.dcl_stream 0
     ```
   }];
-  let arguments = (ins ConfinedAttr<I32Attr,
-      [IntNonNegative, IntMaxValue<3>]>:$index);
-  let assemblyFormat = [{ $index attr-dict }];
 }
 
 def DXSA_DclResource : DXSA_Op<"dcl_resource"> {

@@ -28,6 +28,12 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
 // DXSA shared bases for ops with inline operands
 //===----------------------------------------------------------------------===//
 
+class DXSA_NoOperandOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+}
+
 class DXSA_UnaryOp<string mnemonic> : DXSA_Op<mnemonic> {
   let arguments = (ins
       DXSA_DstOperandAttr:$dst,
@@ -72,6 +78,12 @@ class DXSA_MultiplyAddOp<string mnemonic> : DXSA_Op<mnemonic> {
   let results = (outs);
   let assemblyFormat =
       "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
+}
+
+class DXSA_GsStreamIndexOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins ConfinedAttr<I32Attr,
+      [IntNonNegative, IntMaxValue<3>]>:$index);
+  let assemblyFormat = [{ $index attr-dict }];
 }
 
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE
