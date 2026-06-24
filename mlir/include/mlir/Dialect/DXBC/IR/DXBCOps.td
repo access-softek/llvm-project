@@ -15,6 +15,7 @@ include "mlir/Dialect/DXBC/IR/DXBCFPArithOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCIntArithOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCConditionOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCBitwiseOps.td"
+include "mlir/Dialect/DXBC/IR/DXBCTopologyOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCTypeConversionOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCAtomicOps.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -1097,7 +1098,7 @@ def DXBC_DclSampler : DXBC_Op<"dcl_sampler"> {
   let hasVerifier = 1;
 }
 
-def DXBC_DclStream : DXBC_Op<"dcl_stream"> {
+def DXBC_DclStream : DXBC_GsStreamIndexOp<"dcl_stream"> {
   let summary = "declares a geometry shader (GS) output stream";
   let description = [{
     The `dxbc.dcl_stream` operation declares a geometry shader (GS) output stream.
@@ -1110,9 +1111,6 @@ def DXBC_DclStream : DXBC_Op<"dcl_stream"> {
     dxbc.dcl_stream 0
     ```
   }];
-  let arguments = (ins ConfinedAttr<I32Attr,
-      [IntNonNegative, IntMaxValue<3>]>:$index);
-  let assemblyFormat = [{ $index attr-dict }];
 }
 
 def DXBC_DclResource : DXBC_Op<"dcl_resource"> {

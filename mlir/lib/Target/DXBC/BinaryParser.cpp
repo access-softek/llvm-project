@@ -629,9 +629,9 @@ public:
     return dxbc::DclMaxOutputVertexCount::create(builder, loc, count);
   }
 
-  Instruction buildDclStream(uint32_t index, Location loc) {
-    return dxbc::DclStream::create(builder, loc,
-                                   builder.getI32IntegerAttr(index));
+  template <typename OpT>
+  Instruction buildGsStreamIndexOp(uint32_t index, Location loc) {
+    return OpT::create(builder, loc, builder.getI32IntegerAttr(index));
   }
 
   Instruction buildDclInputPs(dxbc::InterpolationMode interpolationMode,
@@ -1448,21 +1448,29 @@ public:
     return builder.buildDclMaxOutputVertexCount(count, loc);
   }
 
-  FailureOr<Instruction> parseDclStream(Location loc) {
-    auto operand = parseDstOperand();
-    FAILURE_IF_FAILED(operand);
-    if (operand->getType() != dxbc::OperandType::m)
+  template <typename SrcOrDstOperand>
+  FailureOr<uint32_t> parseGsStreamIndex(SrcOrDstOperand operand,
+                                         Location loc) {
+    if (operand.getType() != dxbc::OperandType::m)
       return emitError(loc, "unexpected operand type: ")
-             << dxbc::stringifyOperandType(operand->getType());
-    if (operand->getComponents().getValue() != dxbc::OperandComponents::none)
+             << dxbc::stringifyOperandType(operand.getType());
+    if (operand.getComponents().getValue() != dxbc::OperandComponents::none)
       return emitError(loc, "unexpected operand components: ")
              << dxbc::stringifyOperandComponents(
-                    operand->getComponents().getValue());
-    auto indices = getRequiredImmIndices(*operand, loc);
+                    operand.getComponents().getValue());
+    auto indices = getRequiredImmIndices(operand, loc);
     FAILURE_IF_FAILED(indices);
     if (indices->size() != 1)
       return emitError(loc, "unsupported index dimension: ") << indices->size();
-    return builder.buildDclStream((*indices)[0], loc);
+    return (*indices)[0];
+  }
+
+  FailureOr<Instruction> parseDclStream(Location loc) {
+    auto operand = parseDstOperand();
+    FAILURE_IF_FAILED(operand);
+    auto index = parseGsStreamIndex(*operand, loc);
+    FAILURE_IF_FAILED(index);
+    return builder.buildGsStreamIndexOp<dxbc::DclStream>(*index, loc);
   }
 
   FailureOr<dxbc::InterpolationMode>
@@ -1650,8 +1658,9 @@ public:
   }
 
   // Get plain immediates with no relative indices.
+  template <typename SrcOrDstOperand>
   FailureOr<SmallVector<uint32_t, 3>>
-  getRequiredImmIndices(dxbc::DstOperandAttr operand, Location loc) {
+  getRequiredImmIndices(SrcOrDstOperand operand, Location loc) {
     SmallVector<uint32_t, 3> indices;
     if (auto index = operand.getIndex())
       for (dxbc::IndexAttr entry : index) {
@@ -1693,6 +1702,18 @@ public:
                                                    *dsts, *srcs);
     return builder.buildOp<OpT, HasPrecise>(modifier.preciseMask, loc, *dsts,
                                             *srcs);
+  }
+
+  template <typename OpT>
+  FailureOr<Instruction> decodeStreamIndexOp(size_t beginOffset,
+                                             uint32_t length, Location loc) {
+    auto operand = parseSrcOperand();
+    FAILURE_IF_FAILED(operand);
+    auto index = parseGsStreamIndex(*operand, loc);
+    FAILURE_IF_FAILED(index);
+    if (failed(verifyInstructionLength(beginOffset, length)))
+      return failure();
+    return builder.buildGsStreamIndexOp<OpT>(*index, loc);
   }
 
   FailureOr<Instruction> parseDclInput(Location loc) {
@@ -2303,6 +2324,9 @@ public:
   decodeOp<dxbc::MNEMONIC, dxbc::MNEMONIC, HAS_PRECISE, NUM_DST_OPERANDS,      \
            NUM_SRC_OPERANDS>(beginOffset, instructionLengthInTokens, modifier, \
                              getLocation())
+#define STREAM_INDEX_OP(OP)                                                    \
+  decodeStreamIndexOp<dxbc::OP>(beginOffset, instructionLengthInTokens,        \
+                                getLocation())
 
     switch (opcode) {
     // Floating-point arithmetic instructions
@@ -2483,9 +2507,23 @@ public:
       return PLAIN_OP(ImmAtomicAlloc, 1, 1, HasPreciseAttr::No);
     case D3D11_SB_OPCODE_IMM_ATOMIC_CONSUME:
       return PLAIN_OP(ImmAtomicConsume, 1, 1, HasPreciseAttr::No);
+    // Topology instructions
+    case D3D10_SB_OPCODE_EMIT:
+      return PLAIN_OP(Emit, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_EMITTHENCUT:
+      return PLAIN_OP(EmitThenCut, 0, 0, HasPreciseAttr::No);
+    case D3D10_SB_OPCODE_CUT:
+      return PLAIN_OP(Cut, 0, 0, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_EMIT_STREAM:
+      return STREAM_INDEX_OP(EmitStream);
+    case D3D11_SB_OPCODE_CUT_STREAM:
+      return STREAM_INDEX_OP(CutStream);
+    case D3D11_SB_OPCODE_EMITTHENCUT_STREAM:
+      return STREAM_INDEX_OP(EmitThenCutStream);
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP
+#undef STREAM_INDEX_OP
 
     SmallVector<Operand, 8> operands;
     for (unsigned i = 0; i < numOperands; ++i) {

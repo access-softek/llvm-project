@@ -28,6 +28,12 @@ class DXBC_Op<string mnemonic, list<Trait> traits = []> :
 // DXBC shared bases for ops with inline operands
 //===----------------------------------------------------------------------===//
 
+class DXBC_NoOperandOp<string mnemonic> : DXBC_Op<mnemonic> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+}
+
 class DXBC_UnaryOp<string mnemonic> : DXBC_Op<mnemonic> {
   let arguments = (ins
       DXBC_DstOperandAttr:$dst,
@@ -72,6 +78,12 @@ class DXBC_MultiplyAddOp<string mnemonic> : DXBC_Op<mnemonic> {
   let results = (outs);
   let assemblyFormat =
       "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
+}
+
+class DXBC_GsStreamIndexOp<string mnemonic> : DXBC_Op<mnemonic> {
+  let arguments = (ins ConfinedAttr<I32Attr,
+      [IntNonNegative, IntMaxValue<3>]>:$index);
+  let assemblyFormat = [{ $index attr-dict }];
 }
 
 #endif // MLIR_DIALECT_DXBC_IR_DXBCOPBASE
