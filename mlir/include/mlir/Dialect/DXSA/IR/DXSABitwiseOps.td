@@ -126,6 +126,25 @@ def DXSA_FirstBitSHi : DXSA_UnaryOp<"firstbit_shi"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxsa.ibfe
+//===----------------------------------------------------------------------===//
+
+def DXSA_IBFE : DXSA_TernaryOp<"ibfe"> {
+  let summary = "signed bit field extract";
+  let description = [{
+    The `dxsa.ibfe` operation takes a range of bits of a number, shifts
+    those bits to the LSB, and fills the remaining bits with the MSB of
+    the range.
+
+    Example:
+
+    ```mlir
+    dxsa.ibfe r<0, min16i, <x>>, l(0x1B), l(0x5), cb<[0, 0], vector, min16i, <x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.ishl
 //===----------------------------------------------------------------------===//
 
@@ -197,6 +216,24 @@ def DXSA_Or : DXSA_BinaryOp<"or"> {
     ```mlir
     dxsa.or r<0>, r<1>, r<2>
     dxsa.or r<0, <x, y>>, r<1, <y, z, x, w>>, r<2, <z, z, z, z>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ubfe
+//===----------------------------------------------------------------------===//
+
+def DXSA_UBFE : DXSA_TernaryOp<"ubfe"> {
+  let summary = "unsigned bit field extract";
+  let description = [{
+    The `dxsa.ubfe` operation takes a range of bits of a number, shifts
+    those bits to the LSB, and sets the remaining bits to 0.
+
+    Example:
+
+    ```mlir
+    dxsa.ubfe r<0, min16u, <x>>, l(0x1B), l(0x5), cb<[0, 0], vector, min16u, <x>>
     ```
   }];
 }

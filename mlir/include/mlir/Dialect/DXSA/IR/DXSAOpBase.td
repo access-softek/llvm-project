@@ -49,4 +49,16 @@ class DXSA_BinaryOp<string mnemonic> : DXSA_Op<mnemonic> {
       "(`precise` $precise^)? $dst `,` $lhs `,` $rhs attr-dict";
 }
 
+class DXSA_TernaryOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src0,
+      DXSA_SrcOperandAttr:$src1,
+      DXSA_SrcOperandAttr:$src2,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $src0 `,` $src1 `,` $src2 attr-dict";
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE
