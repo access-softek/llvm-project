@@ -1425,4 +1425,17 @@ def DXSA_DclThreadGroup : DXSA_Op<"dcl_thread_group"> {
   let hasVerifier = 1;
 }
 
+def DXSA_Nop : DXSA_NullaryOp<"nop"> {
+  let summary = "no operation";
+  let description = [{
+    The `dxsa.nop` operation has no effect.
+
+    Example:
+
+    ```mlir
+    dxsa.nop
+    ```
+  }];
+}
+
 #endif // DXSA_OPS
