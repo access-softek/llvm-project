@@ -2392,6 +2392,19 @@ public:
       return PLAIN_OP(Uge, 1, 2, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ULT:
       return PLAIN_OP(Ult, 1, 2, HasPreciseAttr::Yes);
+    // Integer arithmetic instructions
+    case D3D10_SB_OPCODE_IADD:
+      return PLAIN_OP(IAdd, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_IMAX:
+      return PLAIN_OP(IMax, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_IMIN:
+      return PLAIN_OP(IMin, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_INEG:
+      return PLAIN_OP(INeg, 1, 1, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_UMAX:
+      return PLAIN_OP(UMax, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_UMIN:
+      return PLAIN_OP(UMin, 1, 2, HasPreciseAttr::Yes);
     // Bitwise instructions
     case D3D10_SB_OPCODE_AND:
       return PLAIN_OP(And, 1, 2, HasPreciseAttr::Yes);
