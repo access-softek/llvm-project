@@ -1,0 +1,63 @@
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.break
+// CHECK-NEXT: }
+0x01000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.continue
+// CHECK-NEXT: }
+0x01000007
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.default
+// CHECK-NEXT: }
+0x0100000a
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.else
+// CHECK-NEXT: }
+0x01000012
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.endif
+// CHECK-NEXT: }
+0x01000015
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.endloop
+// CHECK-NEXT: }
+0x01000016
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.endswitch
+// CHECK-NEXT: }
+0x01000017
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.loop
+// CHECK-NEXT: }
+0x01000030
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.ret
+// CHECK-NEXT: }
+0x0100003e
