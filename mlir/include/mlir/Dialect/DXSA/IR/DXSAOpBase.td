@@ -39,10 +39,10 @@ class DXSA_PlainOp<string mnemonic, int dsts, int srcs, bit hasprecise = 1> : DX
 
   defvar args = !foldl(!dag(ins, ?, argnames),
       !range(!add(dsts, srcs, hasprecise)),
-      acc, n,
-      !cond(!lt(n, dsts): !setdagarg(acc, n, DXSA_DstOperandAttr),
-            !lt(n, !add(dsts, srcs)): !setdagarg(acc, n, DXSA_SrcOperandAttr),
-            true: !setdagarg(acc, n, OptionalAttr<DXSA_ComponentMaskAttr>)));
+      acc, n, !setdagarg(acc, n, !cond(
+          !lt(n, dsts): DXSA_DstOperandAttr,
+          !lt(n, !add(dsts, srcs)): DXSA_SrcOperandAttr,
+          true: OptionalAttr<DXSA_ComponentMaskAttr>)));
   let arguments = args;
   let results = (outs);
   let assemblyFormat = !interleave(!listconcat(
