@@ -2347,16 +2347,28 @@ public:
     case D3D10_SB_OPCODE_SQRT:
       return SATURABLE_OP(Sqrt, 1, 1, HasPreciseAttr::Yes);
     // Type conversion instructions
+    case D3D11_SB_OPCODE_DTOF:
+      return PLAIN_OP(DToF, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_DTOI:
+      return PLAIN_OP(DToI, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_DTOU:
+      return PLAIN_OP(DToU, 1, 1, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_F16TOF32:
       return PLAIN_OP(F16ToF32, 1, 1, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_F32TOF16:
       return PLAIN_OP(F32ToF16, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_FTOD:
+      return PLAIN_OP(FToD, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_FTOI:
       return PLAIN_OP(FToI, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_FTOU:
       return PLAIN_OP(FToU, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_ITOD:
+      return PLAIN_OP(IToD, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ITOF:
       return PLAIN_OP(IToF, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_UTOD:
+      return PLAIN_OP(UToD, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_UTOF:
       return PLAIN_OP(UToF, 1, 1, HasPreciseAttr::Yes);
     // Comparison instructions
