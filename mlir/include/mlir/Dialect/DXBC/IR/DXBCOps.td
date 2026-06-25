@@ -12,6 +12,7 @@
 include "mlir/Dialect/DXBC/IR/DXBCOpBase.td"
 include "mlir/Dialect/DXBC/IR/DXBCTypes.td"
 include "mlir/Dialect/DXBC/IR/DXBCFPArithOps.td"
+include "mlir/Dialect/DXBC/IR/DXBCIntArithOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCConditionOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCBitwiseOps.td"
 include "mlir/Dialect/DXBC/IR/DXBCTypeConversionOps.td"
