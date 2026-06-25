@@ -28,23 +28,27 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
 // DXSA shared base for ops with inline operands
 //===----------------------------------------------------------------------===//
 
-class DXSA_PlainOp<string mnemonic, int dsts, int srcs> : DXSA_Op<mnemonic> {
-  defvar args = !foldl(!dag(ins, !listsplat(0, !add(dsts, srcs, 1)), ?),
-      !range(!add(dsts, srcs, 1)),
+class DXSA_PlainOp<string mnemonic, int dsts, int srcs, bit hasprecise = 1> : DXSA_Op<mnemonic> {
+  defvar dstnames = !cond(!eq(dsts, 1): ["dst"],
+                          true: !foreach(n, !range(dsts), !strconcat("dst", !cast<string>(n))));
+  defvar srcnames = !cond(!eq(srcs, 1): ["src"],
+                          !eq(srcs, 2): ["lhs", "rhs"],
+                          true: !foreach(n, !range(srcs), !strconcat("src", !cast<string>(n))));
+  defvar precisename = !listsplat("precise", !cast<int>(hasprecise));
+  defvar argnames = !listconcat(dstnames, srcnames, precisename);
+
+  defvar args = !foldl(!dag(ins, ?, argnames),
+      !range(!add(dsts, srcs, hasprecise)),
       acc, n,
-      !cond(!lt(n, dsts):
-              !setdagname(!setdagarg(acc, n, DXSA_DstOperandAttr), n, !cond(!eq(dsts, 1): "dst", true: !strconcat("dst", !cast<string>(n)))),
-            !lt(n, !add(dsts, srcs)):
-              !setdagname(!setdagarg(acc, n, DXSA_SrcOperandAttr), n, !cond(!eq(srcs, 1): "src",
-                                                                            !and(!eq(srcs, 2), !eq(n, dsts)): "lhs",
-                                                                            !eq(srcs, 2): "rhs",
-                                                                            true: !strconcat("src", !cast<string>(!sub(n, dsts))))),
-            true:
-              !setdagname(!setdagarg(acc, n, OptionalAttr<DXSA_ComponentMaskAttr>), n, "precise")));
+      !cond(!lt(n, dsts): !setdagarg(acc, n, DXSA_DstOperandAttr),
+            !lt(n, !add(dsts, srcs)): !setdagarg(acc, n, DXSA_SrcOperandAttr),
+            true: !setdagarg(acc, n, OptionalAttr<DXSA_ComponentMaskAttr>)));
   let arguments = args;
   let results = (outs);
-  let assemblyFormat =
-      !strconcat(!foldl("(`precise` $precise^)?", !range(!add(dsts, srcs)), acc, n, !strconcat(acc, !cond(!eq(n, 0): " $", true: " `,` $"), !getdagname(args, n))), " attr-dict");
+  let assemblyFormat = !interleave(!listconcat(
+      !cond(hasprecise: ["(`precise` $precise^)?"], true: []<string>),
+      !tail(!cond(!eq(!add(dsts, srcs), 0): [""], true: !listflatten(!foreach(n, !listconcat(dstnames, srcnames), ["`,`", !strconcat("$", n)])))),
+      ["attr-dict"]), " ");
 }
 
 class DXSA_UnaryOp<string mnemonic> : DXSA_PlainOp<mnemonic, 1, 1>;
