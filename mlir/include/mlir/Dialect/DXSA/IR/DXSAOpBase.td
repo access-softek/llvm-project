@@ -25,40 +25,30 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
     Op<DXSADialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
-// DXSA shared bases for ops with inline operands
+// DXSA shared base for ops with inline operands
 //===----------------------------------------------------------------------===//
 
-class DXSA_UnaryOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$src,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+class DXSA_PlainOp<string mnemonic, int dsts, int srcs> : DXSA_Op<mnemonic> {
+  defvar args = !foldl(!dag(ins, !listsplat(0, !add(dsts, srcs, 1)), ?),
+      !range(!add(dsts, srcs, 1)),
+      acc, n,
+      !cond(!lt(n, dsts):
+              !setdagname(!setdagarg(acc, n, DXSA_DstOperandAttr), n, !cond(!eq(dsts, 1): "dst", true: !strconcat("dst", !cast<string>(n)))),
+            !lt(n, !add(dsts, srcs)):
+              !setdagname(!setdagarg(acc, n, DXSA_SrcOperandAttr), n, !cond(!eq(srcs, 1): "src",
+                                                                            !and(!eq(srcs, 2), !eq(n, dsts)): "lhs",
+                                                                            !eq(srcs, 2): "rhs",
+                                                                            true: !strconcat("src", !cast<string>(!sub(n, dsts))))),
+            true:
+              !setdagname(!setdagarg(acc, n, OptionalAttr<DXSA_ComponentMaskAttr>), n, "precise")));
+  let arguments = args;
   let results = (outs);
   let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $src attr-dict";
+      !strconcat(!foldl("(`precise` $precise^)?", !range(!add(dsts, srcs)), acc, n, !strconcat(acc, !cond(!eq(n, 0): " $", true: " `,` $"), !getdagname(args, n))), " attr-dict");
 }
 
-class DXSA_BinaryOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$lhs,
-      DXSA_SrcOperandAttr:$rhs,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs attr-dict";
-}
-
-class DXSA_TernaryOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$src0,
-      DXSA_SrcOperandAttr:$src1,
-      DXSA_SrcOperandAttr:$src2,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $src0 `,` $src1 `,` $src2 attr-dict";
-}
+class DXSA_UnaryOp<string mnemonic> : DXSA_PlainOp<mnemonic, 1, 1>;
+class DXSA_BinaryOp<string mnemonic> : DXSA_PlainOp<mnemonic, 1, 2>;
+class DXSA_TernaryOp<string mnemonic> : DXSA_PlainOp<mnemonic, 1, 3>;
 
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE

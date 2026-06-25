@@ -1,0 +1,8 @@
+// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
+
+// CHECK:      dxsa.module {
+
+// CHECK-NEXT:   dxsa.bfi r<0, <y>>, l(0x1E), l(0x2), v<0, <x>>, l(0x1)
+0x0B00008C, 0x00100022, 0x00000000, 0x00004001, 0x0000001E, 0x00004001, 0x00000002, 0x0010100A, 0x00000000, 0x00004001, 0x00000001
+// CHECK-NEXT: }

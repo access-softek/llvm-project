@@ -2383,6 +2383,8 @@ public:
     // Bitwise instructions
     case D3D10_SB_OPCODE_AND:
       return PLAIN_OP(And, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_BFI:
+      return PLAIN_OP(BFI, 1, 4, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_BFREV:
       return PLAIN_OP(BFRev, 1, 1, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_COUNTBITS:

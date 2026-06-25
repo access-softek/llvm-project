@@ -35,6 +35,27 @@ def DXSA_And : DXSA_BinaryOp<"and"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxsa.bfi
+//===----------------------------------------------------------------------===//
+
+def DXSA_BFI : DXSA_PlainOp<"bfi", 1, 4> {
+  let summary = "bit field insert";
+  let description = [{
+    The `dxsa.bfi` operation takes a bit range from the LSB of a number
+    and places that number of bits in another number at any offset.
+
+    `$src0` specifies the bitfield width to take from `$src2`. `$src1`
+    specifies the offset at which to insert the bitfield in `$src3`.
+
+    Example:
+
+    ```mlir
+    dxsa.bfi r<0, <y>>, l(0x1E), l(0x2), v<0, <x>>, l(0x1)
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.bfrev
 //===----------------------------------------------------------------------===//
 
