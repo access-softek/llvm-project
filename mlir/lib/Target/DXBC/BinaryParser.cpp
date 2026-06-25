@@ -2515,6 +2515,21 @@ public:
       return PLAIN_OP(UShr, 1, 2, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_XOR:
       return PLAIN_OP(Xor, 1, 2, HasPreciseAttr::Yes);
+    // Raster instructions
+    case D3D10_SB_OPCODE_DERIV_RTX:
+      return SATURABLE_OP(DerivRtx, 1, 1, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_DERIV_RTY:
+      return SATURABLE_OP(DerivRty, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DERIV_RTX_COARSE:
+      return SATURABLE_OP(DerivRtxCoarse, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DERIV_RTY_COARSE:
+      return SATURABLE_OP(DerivRtyCoarse, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DERIV_RTX_FINE:
+      return SATURABLE_OP(DerivRtxFine, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DERIV_RTY_FINE:
+      return SATURABLE_OP(DerivRtyFine, 1, 1, HasPreciseAttr::Yes);
+    case D3D10_1_SB_OPCODE_LOD:
+      return PLAIN_OP(LOD, 1, 3, HasPreciseAttr::Yes);
     // Atomic instructions
     case D3D11_SB_OPCODE_ATOMIC_AND:
       return PLAIN_OP(AtomicAnd, 1, 2, HasPreciseAttr::No);
