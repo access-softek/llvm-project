@@ -16,6 +16,81 @@
 include "mlir/Dialect/DXSA/IR/DXSAOpBase.td"
 
 //===----------------------------------------------------------------------===//
+// dxsa.dtof
+//===----------------------------------------------------------------------===//
+
+def DXSA_DToF : DXSA_UnaryOp<"dtof"> {
+  let summary = "component-wise double-precision to single-precision float conversion";
+  let description = [{
+    The `dxsa.dtof` operation converts each double-precision component of
+    `$src` to a single-precision float using round-to-nearest-even rounding
+    and writes the result to `$dst`.
+
+    The source encodes double values as component pairs: (x,y) holds the
+    first double (x = low 32 bits, y = high 32 bits) and (z,w) holds the
+    second. Valid source swizzles are .xyzw, .xyxy, .zwxy, and .zwzw.
+    Valid destination write masks are any one or two components.
+
+    Example:
+
+    ```mlir
+    dxsa.dtof r<0, <x, y>>, r<1>
+    dxsa.dtof r<0, <x, y>>, -r<1>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dtoi
+//===----------------------------------------------------------------------===//
+
+def DXSA_DToI : DXSA_UnaryOp<"dtoi"> {
+  let summary = "component-wise double-precision float to signed int32 conversion";
+  let description = [{
+    The `dxsa.dtoi` operation converts each double-precision component of
+    `$src` to a signed 32-bit integer, rounding toward zero, and writes it
+    to `$dst`.
+
+    The source encodes double values as component pairs: (x,y) holds the
+    first double (x = low 32 bits, y = high 32 bits) and (z,w) holds the
+    second. Valid source swizzles are .xyzw, .xyxy, .zwxy, and .zwzw.
+    Valid destination write masks are any one or two components.
+
+    Example:
+
+    ```mlir
+    dxsa.dtoi r<0, <x, y>>, r<1>
+    dxsa.dtoi r<0, <x, y>>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dtou
+//===----------------------------------------------------------------------===//
+
+def DXSA_DToU : DXSA_UnaryOp<"dtou"> {
+  let summary = "component-wise double-precision float to unsigned int32 conversion";
+  let description = [{
+    The `dxsa.dtou` operation converts each double-precision component of
+    `$src` to an unsigned 32-bit integer, rounding toward zero, and writes
+    it to `$dst`.
+
+    The source encodes double values as component pairs: (x,y) holds the
+    first double (x = low 32 bits, y = high 32 bits) and (z,w) holds the
+    second. Valid source swizzles are .xyzw, .xyxy, .zwxy, and .zwzw.
+    Valid destination write masks are any one or two components.
+
+    Example:
+
+    ```mlir
+    dxsa.dtou r<0, <x, y>>, r<1>
+    dxsa.dtou r<0, <x, y>>, -|r<1>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.f16tof32
 //===----------------------------------------------------------------------===//
 
@@ -50,6 +125,31 @@ def DXSA_F32ToF16 : DXSA_UnaryOp<"f32tof16"> {
     ```mlir
     dxsa.f32tof16 r<0>, r<1>
     dxsa.f32tof16 r<0>, -r<1>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ftod
+//===----------------------------------------------------------------------===//
+
+def DXSA_FToD : DXSA_UnaryOp<"ftod"> {
+  let summary = "component-wise single-precision float to double-precision conversion";
+  let description = [{
+    The `dxsa.ftod` operation converts each single-precision float component
+    of `$src` to a double-precision float and writes the result to `$dst`.
+
+    The destination encodes double values as component pairs: .xy receives
+    the first conversion result (x = low 32 bits, y = high 32 bits) and .zw
+    receives the second. Valid destination write masks are .xy, .zw, and
+    .xyzw. The source provides two float32 components via x and y (z and w
+    are ignored after swizzle).
+
+    Example:
+
+    ```mlir
+    dxsa.ftod r<0>, r<1>
+    dxsa.ftod r<0>, -r<1>
     ```
   }];
 }
@@ -94,6 +194,30 @@ def DXSA_FToU : DXSA_UnaryOp<"ftou"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxsa.itod
+//===----------------------------------------------------------------------===//
+
+def DXSA_IToD : DXSA_UnaryOp<"itod"> {
+  let summary = "component-wise signed int32 to double-precision float conversion";
+  let description = [{
+    The `dxsa.itod` operation converts each signed 32-bit integer component
+    of `$src` to a double-precision float and writes the result to `$dst`.
+
+    The destination encodes double values as component pairs: .xy receives
+    the first conversion result (x = low 32 bits, y = high 32 bits) and .zw
+    receives the second. Valid destination write masks are .xy, .zw, and
+    .xyzw. The source provides two int32 components via x and y (z and w
+    are ignored after swizzle).
+
+    Example:
+
+    ```mlir
+    dxsa.itod r<0>, r<1>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.itof
 //===----------------------------------------------------------------------===//
 
@@ -108,6 +232,30 @@ def DXSA_IToF : DXSA_UnaryOp<"itof"> {
     ```mlir
     dxsa.itof r<0>, r<1>
     dxsa.itof r<0>, -r<1>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.utod
+//===----------------------------------------------------------------------===//
+
+def DXSA_UToD : DXSA_UnaryOp<"utod"> {
+  let summary = "component-wise unsigned int32 to double-precision float conversion";
+  let description = [{
+    The `dxsa.utod` operation converts each unsigned 32-bit integer component
+    of `$src` to a double-precision float and writes the result to `$dst`.
+
+    The destination encodes double values as component pairs: .xy receives
+    the first conversion result (x = low 32 bits, y = high 32 bits) and .zw
+    receives the second. Valid destination write masks are .xy, .zw, and
+    .xyzw. The source provides two uint32 components via x and y (z and w
+    are ignored after swizzle).
+
+    Example:
+
+    ```mlir
+    dxsa.utod r<0>, r<1>
     ```
   }];
 }
