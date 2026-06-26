@@ -28,17 +28,17 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
 // DXSA shared base for ops with inline operands
 //===----------------------------------------------------------------------===//
 
-class DXSA_PlainOp<string mnemonic, int dsts, int srcs, bit hasprecise = 1> : DXSA_Op<mnemonic> {
+class DXSA_PlainOp<string mnemonic, int dsts, int srcs> : DXSA_Op<mnemonic> {
   defvar dstnames = !cond(!eq(dsts, 1): ["dst"],
                           true: !foreach(n, !range(dsts), !strconcat("dst", !cast<string>(n))));
   defvar srcnames = !cond(!eq(srcs, 1): ["src"],
                           !eq(srcs, 2): ["lhs", "rhs"],
                           true: !foreach(n, !range(srcs), !strconcat("src", !cast<string>(n))));
-  defvar precisename = !listsplat("precise", !cast<int>(hasprecise));
+  defvar precisename = ["precise"];
   defvar argnames = !listconcat(dstnames, srcnames, precisename);
 
   defvar args = !foldl(!dag(ins, ?, argnames),
-      !range(!add(dsts, srcs, hasprecise)),
+      !range(!add(dsts, srcs, 1)),
       acc, n, !setdagarg(acc, n, !cond(
           !lt(n, dsts): DXSA_DstOperandAttr,
           !lt(n, !add(dsts, srcs)): DXSA_SrcOperandAttr,
@@ -46,13 +46,14 @@ class DXSA_PlainOp<string mnemonic, int dsts, int srcs, bit hasprecise = 1> : DX
   let arguments = args;
   let results = (outs);
   let assemblyFormat = !interleave(!listconcat(
-      !cond(hasprecise: ["(`precise` $precise^)?"], true: []<string>),
+      ["(`precise` $precise^)?"],
       !tail(!cond(!eq(!add(dsts, srcs), 0): [""], true: !listflatten(!foreach(n, !listconcat(dstnames, srcnames), ["`,`", !strconcat("$", n)])))),
       ["attr-dict"]), " ");
 }
 
-class DXSA_UnaryOp<string mnemonic> : DXSA_PlainOp<mnemonic, 1, 1>;
-class DXSA_BinaryOp<string mnemonic> : DXSA_PlainOp<mnemonic, 1, 2>;
-class DXSA_TernaryOp<string mnemonic> : DXSA_PlainOp<mnemonic, 1, 3>;
+class DXSA_NullaryOp <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 0>;
+class DXSA_UnaryOp   <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 1>;
+class DXSA_BinaryOp  <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 2>;
+class DXSA_TernaryOp <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 3>;
 
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE
