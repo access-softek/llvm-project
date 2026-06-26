@@ -2428,23 +2428,23 @@ public:
       return PLAIN_OP(AtomicUMin, 1, 2, HasPreciseAttr::No);
     // Control flow instructions
     case D3D10_SB_OPCODE_BREAK:
-      return PLAIN_OP(Break, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Break, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_CONTINUE:
-      return PLAIN_OP(Continue, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Continue, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_DEFAULT:
-      return PLAIN_OP(Default, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Default, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ELSE:
-      return PLAIN_OP(Else, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Else, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ENDIF:
-      return PLAIN_OP(Endif, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Endif, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ENDLOOP:
-      return PLAIN_OP(Endloop, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Endloop, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ENDSWITCH:
-      return PLAIN_OP(Endswitch, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Endswitch, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_LOOP:
-      return PLAIN_OP(Loop, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Loop, 0, 0, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_RET:
-      return PLAIN_OP(Ret, 0, 0, HasPreciseAttr::No);
+      return PLAIN_OP(Ret, 0, 0, HasPreciseAttr::Yes);
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP

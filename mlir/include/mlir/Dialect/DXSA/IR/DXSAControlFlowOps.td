@@ -21,7 +21,7 @@ include "mlir/Dialect/DXSA/IR/DXSAOpBase.td"
 // dxsa.break
 //===----------------------------------------------------------------------===//
 
-def DXSA_Break : DXSA_NullaryOp<"break"> {
+def DXSA_Break : DXSA_NullaryOp<"break", 0> {
   let summary = "exits the enclosing loop or switch";
   let description = [{
     The `dxsa.break` operation transfers execution to the instruction that
@@ -40,7 +40,7 @@ def DXSA_Break : DXSA_NullaryOp<"break"> {
 // dxsa.continue
 //===----------------------------------------------------------------------===//
 
-def DXSA_Continue : DXSA_NullaryOp<"continue"> {
+def DXSA_Continue : DXSA_NullaryOp<"continue", 0> {
   let summary = "restarts the enclosing loop";
   let description = [{
     The `dxsa.continue` operation transfers execution back to the start of
@@ -59,7 +59,7 @@ def DXSA_Continue : DXSA_NullaryOp<"continue"> {
 // dxsa.default
 //===----------------------------------------------------------------------===//
 
-def DXSA_Default : DXSA_NullaryOp<"default"> {
+def DXSA_Default : DXSA_NullaryOp<"default", 0> {
   let summary = "begins the default block of a switch";
   let description = [{
     The `dxsa.default` operation begins the block of the enclosing switch
@@ -78,7 +78,7 @@ def DXSA_Default : DXSA_NullaryOp<"default"> {
 // dxsa.else
 //===----------------------------------------------------------------------===//
 
-def DXSA_Else : DXSA_NullaryOp<"else"> {
+def DXSA_Else : DXSA_NullaryOp<"else", 0> {
   let summary = "begins the else block of an if construct";
   let description = [{
     The `dxsa.else` operation begins the optional block of the enclosing if
@@ -97,7 +97,7 @@ def DXSA_Else : DXSA_NullaryOp<"else"> {
 // dxsa.endif
 //===----------------------------------------------------------------------===//
 
-def DXSA_Endif : DXSA_NullaryOp<"endif"> {
+def DXSA_Endif : DXSA_NullaryOp<"endif", 0> {
   let summary = "closes an if construct";
   let description = [{
     The `dxsa.endif` operation closes the innermost enclosing if construct,
@@ -115,7 +115,7 @@ def DXSA_Endif : DXSA_NullaryOp<"endif"> {
 // dxsa.endloop
 //===----------------------------------------------------------------------===//
 
-def DXSA_Endloop : DXSA_NullaryOp<"endloop"> {
+def DXSA_Endloop : DXSA_NullaryOp<"endloop", 0> {
   let summary = "closes a loop construct";
   let description = [{
     The `dxsa.endloop` operation closes the innermost enclosing loop
@@ -134,7 +134,7 @@ def DXSA_Endloop : DXSA_NullaryOp<"endloop"> {
 // dxsa.endswitch
 //===----------------------------------------------------------------------===//
 
-def DXSA_Endswitch : DXSA_NullaryOp<"endswitch"> {
+def DXSA_Endswitch : DXSA_NullaryOp<"endswitch", 0> {
   let summary = "closes a switch construct";
   let description = [{
     The `dxsa.endswitch` operation closes the innermost enclosing switch
@@ -152,7 +152,7 @@ def DXSA_Endswitch : DXSA_NullaryOp<"endswitch"> {
 // dxsa.loop
 //===----------------------------------------------------------------------===//
 
-def DXSA_Loop : DXSA_NullaryOp<"loop"> {
+def DXSA_Loop : DXSA_NullaryOp<"loop", 0> {
   let summary = "begins a loop construct";
   let description = [{
     The `dxsa.loop` operation begins a loop construct whose body repeats
@@ -171,7 +171,7 @@ def DXSA_Loop : DXSA_NullaryOp<"loop"> {
 // dxsa.ret
 //===----------------------------------------------------------------------===//
 
-def DXSA_Ret : DXSA_NullaryOp<"ret"> {
+def DXSA_Ret : DXSA_NullaryOp<"ret", 0> {
   let summary = "returns from a subroutine or terminates the shader";
   let description = [{
     The `dxsa.ret` operation returns to the instruction after the call when
