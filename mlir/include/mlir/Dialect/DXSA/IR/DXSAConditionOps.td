@@ -217,4 +217,84 @@ def DXSA_Ult : DXSA_BinaryOp<"ult"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.deq
+//===----------------------------------------------------------------------===//
+
+def DXSA_Deq : DXSA_BinaryOp<"deq"> {
+  let summary = "component-wise double-precision equality comparison";
+  let description = [{
+    The `dxsa.deq` operation computes the component-wise double-precision
+    floating-point comparison `$lhs == $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxsa.deq r<0>, r<1>, r<2>
+    dxsa.deq r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dge
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dge : DXSA_BinaryOp<"dge"> {
+  let summary = "component-wise double-precision greater-equal comparison";
+  let description = [{
+    The `dxsa.dge` operation computes the component-wise double-precision
+    floating-point comparison `$lhs >= $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxsa.dge r<0>, r<1>, r<2>
+    dxsa.dge r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dlt
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dlt : DXSA_BinaryOp<"dlt"> {
+  let summary = "component-wise double-precision less-than comparison";
+  let description = [{
+    The `dxsa.dlt` operation computes the component-wise double-precision
+    floating-point comparison `$lhs < $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxsa.dlt r<0>, r<1>, r<2>
+    dxsa.dlt r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.dne
+//===----------------------------------------------------------------------===//
+
+def DXSA_Dne : DXSA_BinaryOp<"dne"> {
+  let summary = "component-wise double-precision not-equal comparison";
+  let description = [{
+    The `dxsa.dne` operation computes the component-wise double-precision
+    floating-point comparison `$lhs != $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxsa.dne r<0>, r<1>, r<2>
+    dxsa.dne r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSACONDITIONOPS

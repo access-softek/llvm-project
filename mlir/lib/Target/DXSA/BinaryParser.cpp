@@ -2440,6 +2440,14 @@ public:
       return PLAIN_OP(Uge, 1, 2, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ULT:
       return PLAIN_OP(Ult, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DEQ:
+      return PLAIN_OP(Deq, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DGE:
+      return PLAIN_OP(Dge, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DLT:
+      return PLAIN_OP(Dlt, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DNE:
+      return PLAIN_OP(Dne, 1, 2, HasPreciseAttr::Yes);
     // Integer arithmetic instructions
     case D3D10_SB_OPCODE_IADD:
       return PLAIN_OP(IAdd, 1, 2, HasPreciseAttr::Yes);

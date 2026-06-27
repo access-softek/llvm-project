@@ -1,0 +1,56 @@
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.deq r<0, <x, y>>, -r<1, <z, w, x, y>>, -|r<2, <x, y, x, y>>|
+// CHECK-NEXT: }
+0x090000c3, 0x00100032, 0x00000000, 0x801004e6, 0x00000041, 0x00000001, 0x80100446, 0x000000c1, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.deq precise <x, y> r<0, <x, y>>, r<1>, |r<2>|
+// CHECK-NEXT: }
+0x081800c3, 0x00100032, 0x00000000, 0x00100e46, 0x00000001, 0x80100e46, 0x00000081, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dge r<0, <x, y>>, -r<1, <z, w, x, y>>, -|r<2, <x, y, x, y>>|
+// CHECK-NEXT: }
+0x090000c4, 0x00100032, 0x00000000, 0x801004e6, 0x00000041, 0x00000001, 0x80100446, 0x000000c1, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dge precise <x, y> r<0, <x, y>>, r<1>, |r<2>|
+// CHECK-NEXT: }
+0x081800c4, 0x00100032, 0x00000000, 0x00100e46, 0x00000001, 0x80100e46, 0x00000081, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dlt r<0, <x, y>>, -r<1, <z, w, x, y>>, -|r<2, <x, y, x, y>>|
+// CHECK-NEXT: }
+0x090000c5, 0x00100032, 0x00000000, 0x801004e6, 0x00000041, 0x00000001, 0x80100446, 0x000000c1, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dlt precise <x, y> r<0, <x, y>>, r<1>, |r<2>|
+// CHECK-NEXT: }
+0x081800c5, 0x00100032, 0x00000000, 0x00100e46, 0x00000001, 0x80100e46, 0x00000081, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dne r<0, <x, y>>, -r<1, <z, w, x, y>>, -|r<2, <x, y, x, y>>|
+// CHECK-NEXT: }
+0x090000c6, 0x00100032, 0x00000000, 0x801004e6, 0x00000041, 0x00000001, 0x80100446, 0x000000c1, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dne precise <x, y> r<0, <x, y>>, r<1>, |r<2>|
+// CHECK-NEXT: }
+0x081800c6, 0x00100032, 0x00000000, 0x00100e46, 0x00000001, 0x80100e46, 0x00000081, 0x00000002
