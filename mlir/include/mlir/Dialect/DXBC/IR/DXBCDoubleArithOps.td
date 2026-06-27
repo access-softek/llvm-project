@@ -305,4 +305,52 @@ def DXBC_DRcpSat : DXBC_UnaryOp<"drcp_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxbc.dfma
+//===----------------------------------------------------------------------===//
+
+def DXBC_DFma : DXBC_MultiplyAddOp<"dfma"> {
+  let summary = "component-wise double-precision multiply-add";
+  let description = [{
+    The `dxbc.dfma` operation computes the component-wise double-precision
+    multiply-add `$dst = $lhs * $rhs + $acc`. Each operand holds a vector of
+    doubles, one double per `xy` and `zw` component pair.
+
+    Because each double spans a component pair, the destination write mask must
+    be `<x, y>`, `<z, w>`, or `<x, y, z, w>`, and each source swizzle must be
+    one of `<x, y, z, w>`, `<x, y, x, y>`, `<z, w, x, y>`, or `<z, w, z, w>`.
+
+    Example:
+
+    ```mlir
+    dxbc.dfma r<0>, r<1>, r<2>, r<3>
+    dxbc.dfma r<1, <x, y>>, r<1, <x, y, x, y>>, r<1, <z, w, z, w>>, r<2, <x, y, x, y>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dfma_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_DFmaSat : DXBC_MultiplyAddOp<"dfma_sat"> {
+  let summary = "component-wise double-precision multiply-add, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.dfma_sat` operation computes the component-wise double-precision
+    multiply-add of `$lhs`, `$rhs` and `$acc`, clamps each result component to
+    `[0.0, 1.0]`, and writes it to `$dst`.
+
+    Because each double spans a component pair, the destination write mask must
+    be `<x, y>`, `<z, w>`, or `<x, y, z, w>`, and each source swizzle must be
+    one of `<x, y, z, w>`, `<x, y, x, y>`, `<z, w, x, y>`, or `<z, w, z, w>`.
+
+    Example:
+
+    ```mlir
+    dxbc.dfma_sat r<0>, r<1>, r<2>, r<3>
+    dxbc.dfma_sat r<1, <x, y>>, r<1, <x, y, x, y>>, r<1, <z, w, z, w>>, r<2, <x, y, x, y>>
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCDOUBLEARITHOPS

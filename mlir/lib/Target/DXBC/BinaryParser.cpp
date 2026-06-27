@@ -2572,6 +2572,8 @@ public:
       return SATURABLE_OP(DMul, 1, 2, HasPreciseAttr::Yes);
     case D3D11_1_SB_OPCODE_DDIV:
       return SATURABLE_OP(DDiv, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_DFMA:
+      return SATURABLE_OP(DFma, 1, 3, HasPreciseAttr::Yes);
     case D3D11_1_SB_OPCODE_DRCP:
       return SATURABLE_OP(DRcp, 1, 1, HasPreciseAttr::Yes);
     // Other instructions
