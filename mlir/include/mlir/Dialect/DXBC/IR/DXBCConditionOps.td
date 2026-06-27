@@ -217,4 +217,84 @@ def DXBC_Ult : DXBC_BinaryOp<"ult"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxbc.deq
+//===----------------------------------------------------------------------===//
+
+def DXBC_Deq : DXBC_BinaryOp<"deq"> {
+  let summary = "component-wise double-precision equality comparison";
+  let description = [{
+    The `dxbc.deq` operation computes the component-wise double-precision
+    floating-point comparison `$lhs == $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxbc.deq r<0>, r<1>, r<2>
+    dxbc.deq r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dge
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dge : DXBC_BinaryOp<"dge"> {
+  let summary = "component-wise double-precision greater-equal comparison";
+  let description = [{
+    The `dxbc.dge` operation computes the component-wise double-precision
+    floating-point comparison `$lhs >= $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxbc.dge r<0>, r<1>, r<2>
+    dxbc.dge r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dlt
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dlt : DXBC_BinaryOp<"dlt"> {
+  let summary = "component-wise double-precision less-than comparison";
+  let description = [{
+    The `dxbc.dlt` operation computes the component-wise double-precision
+    floating-point comparison `$lhs < $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxbc.dlt r<0>, r<1>, r<2>
+    dxbc.dlt r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dne
+//===----------------------------------------------------------------------===//
+
+def DXBC_Dne : DXBC_BinaryOp<"dne"> {
+  let summary = "component-wise double-precision not-equal comparison";
+  let description = [{
+    The `dxbc.dne` operation computes the component-wise double-precision
+    floating-point comparison `$lhs != $rhs`, writing 0xFFFFFFFF to a
+    component of `$dst` when the result is true and 0 when it is false.
+
+    Example:
+
+    ```mlir
+    dxbc.dne r<0>, r<1>, r<2>
+    dxbc.dne r<0>, -r<1>, |r<2>|
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCCONDITIONOPS
