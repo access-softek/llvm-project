@@ -2394,6 +2394,11 @@ public:
       return SATURABLE_OP(Sincos, 2, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_SQRT:
       return SATURABLE_OP(Sqrt, 1, 1, HasPreciseAttr::Yes);
+    // Move instructions
+    case D3D10_SB_OPCODE_MOV:
+      return SATURABLE_OP(Mov, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_DMOV:
+      return SATURABLE_OP(DMov, 1, 1, HasPreciseAttr::Yes);
     // Type conversion instructions
     case D3D11_SB_OPCODE_DTOF:
       return PLAIN_OP(DToF, 1, 1, HasPreciseAttr::Yes);
