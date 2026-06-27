@@ -1,0 +1,56 @@
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.mov r<0, <x>>, -|r<1, <y, z, w, y>>|
+// CHECK-NEXT: }
+0x06000036, 0x00100012, 0x00000000, 0x80100796, 0x000000c1, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.mov precise <x, y> r<0>, r<1>
+// CHECK-NEXT: }
+0x05180036, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.mov_sat r<0, <x>>, -|r<1, <y, z, w, y>>|
+// CHECK-NEXT: }
+0x06002036, 0x00100012, 0x00000000, 0x80100796, 0x000000c1, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.mov_sat precise <x, y> r<0>, r<1>
+// CHECK-NEXT: }
+0x05182036, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dmov r<0, <x, y>>, -|r<1, <z, w, x, y>>|
+// CHECK-NEXT: }
+0x060000c7, 0x00100032, 0x00000000, 0x801004e6, 0x000000c1, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dmov precise <x, y> r<0, <x, y>>, r<1>
+// CHECK-NEXT: }
+0x051800c7, 0x00100032, 0x00000000, 0x00100e46, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dmov_sat r<0, <x, y>>, -|r<1, <z, w, x, y>>|
+// CHECK-NEXT: }
+0x060020c7, 0x00100032, 0x00000000, 0x801004e6, 0x000000c1, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.dmov_sat precise <x, y> r<0, <x, y>>, r<1>
+// CHECK-NEXT: }
+0x051820c7, 0x00100032, 0x00000000, 0x00100e46, 0x00000001
