@@ -1,18 +1,28 @@
-// RUN: mlir-translate --import-dxsa-hex %s | FileCheck %s
-// RUN: mlir-translate --import-dxsa-hex %s | mlir-opt --verify-roundtrip
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | mlir-opt --split-input-file --verify-roundtrip
 
-// CHECK:      dxsa.module {
-
+// CHECK-LABEL: dxsa.module {
 // CHECK-NEXT:   dxsa.hs_decls
+// CHECK-NEXT: }
 0x01000071
 
+// -----
+
+// CHECK-LABEL: dxsa.module {
 // CHECK-NEXT:   dxsa.hs_control_point_phase
+// CHECK-NEXT: }
 0x01000072
 
+// -----
+
+// CHECK-LABEL: dxsa.module {
 // CHECK-NEXT:   dxsa.hs_fork_phase
+// CHECK-NEXT: }
 0x01000073
 
-// CHECK-NEXT:   dxsa.hs_join_phase
-0x01000074
+// -----
 
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.hs_join_phase
 // CHECK-NEXT: }
+0x01000074
