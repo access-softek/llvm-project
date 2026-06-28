@@ -208,4 +208,151 @@ def DXSA_Msad : DXSA_TernaryOp<"msad"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.udiv
+//===----------------------------------------------------------------------===//
+
+def DXSA_UDiv : DXSA_Op<"udiv"> {
+  let summary = "component-wise unsigned integer divide";
+  let description = [{
+    The `dxsa.udiv` operation computes the component-wise unsigned integer
+    quotient `$dst_quotient = $lhs / $rhs` and remainder
+    `$dst_remainder = $lhs % $rhs` of two 32-bit unsigned integers. Division
+    by zero produces `0xffffffff` for both quotient and remainder. Either
+    destination may be `null` when that result is not needed.
+
+    Example:
+
+    ```mlir
+    dxsa.udiv r<0>, r<1>, r<2>, r<3>
+    dxsa.udiv null, r<1>, r<2>, r<3>
+    dxsa.udiv r<0>, null, r<2>, r<3>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst_quotient,
+      DXSA_DstOperandAttr:$dst_remainder,
+      DXSA_SrcOperandAttr:$lhs,
+      DXSA_SrcOperandAttr:$rhs,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst_quotient `,` $dst_remainder `,` $lhs `,` $rhs attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.umul
+//===----------------------------------------------------------------------===//
+
+def DXSA_UMul : DXSA_Op<"umul"> {
+  let summary = "component-wise unsigned integer multiply";
+  let description = [{
+    The `dxsa.umul` operation computes the component-wise unsigned product
+    `$lhs * $rhs` as a 64-bit integer and writes the high 32 bits to
+    `$dst_hi` and the low 32 bits to `$dst_lo`. Either destination may be
+    `null` when that half of the result is not needed.
+
+    Example:
+
+    ```mlir
+    dxsa.umul r<0>, r<1>, r<2>, r<3>
+    dxsa.umul null, r<1>, r<2>, r<3>
+    dxsa.umul r<0>, null, r<2>, r<3>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst_hi,
+      DXSA_DstOperandAttr:$dst_lo,
+      DXSA_SrcOperandAttr:$lhs,
+      DXSA_SrcOperandAttr:$rhs,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst_hi `,` $dst_lo `,` $lhs `,` $rhs attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.umad
+//===----------------------------------------------------------------------===//
+
+def DXSA_UMad : DXSA_MultiplyAddOp<"umad"> {
+  let summary = "component-wise unsigned integer multiply-add";
+  let description = [{
+    The `dxsa.umad` operation computes the component-wise unsigned integer
+    multiply-add `$dst = $lhs * $rhs + $acc`, keeping only the low 32 bits
+    of the multiply before adding `$acc`.
+
+    Example:
+
+    ```mlir
+    dxsa.umad r<0>, r<1>, r<2>, r<3>
+    dxsa.umad r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>, r<3>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.uaddc
+//===----------------------------------------------------------------------===//
+
+def DXSA_UAddc : DXSA_Op<"uaddc"> {
+  let summary = "component-wise unsigned integer add with carry";
+  let description = [{
+    The `dxsa.uaddc` operation computes the component-wise unsigned integer
+    sum `$dst = $lhs + $rhs` of two 32-bit operands and writes the carry
+    (1 if the addition overflowed, 0 otherwise) to `$dst_carry`. The
+    `$dst_carry` destination may be `null` when the carry is not needed.
+
+    Example:
+
+    ```mlir
+    dxsa.uaddc r<0>, r<1>, r<2>, r<3>
+    dxsa.uaddc r<0>, null, r<2>, r<3>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_DstOperandAttr:$dst_carry,
+      DXSA_SrcOperandAttr:$lhs,
+      DXSA_SrcOperandAttr:$rhs,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $dst_carry `,` $lhs `,` $rhs attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.usubb
+//===----------------------------------------------------------------------===//
+
+def DXSA_USubb : DXSA_Op<"usubb"> {
+  let summary = "component-wise unsigned integer subtract with borrow";
+  let description = [{
+    The `dxsa.usubb` operation computes the component-wise unsigned integer
+    difference `$dst = $lhs - $rhs` of two 32-bit operands and writes the
+    borrow (1 if the subtraction underflowed, 0 otherwise) to `$dst_borrow`.
+    The `$dst_borrow` destination may be `null` when the borrow is not needed.
+
+    Example:
+
+    ```mlir
+    dxsa.usubb r<0>, r<1>, r<2>, r<3>
+    dxsa.usubb r<0>, null, r<2>, r<3>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_DstOperandAttr:$dst_borrow,
+      DXSA_SrcOperandAttr:$lhs,
+      DXSA_SrcOperandAttr:$rhs,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $dst_borrow `,` $lhs `,` $rhs attr-dict";
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAINTARITHOPS
