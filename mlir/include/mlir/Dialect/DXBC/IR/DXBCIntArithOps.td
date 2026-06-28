@@ -134,4 +134,78 @@ def DXBC_UMin : DXBC_BinaryOp<"umin"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxbc.imad
+//===----------------------------------------------------------------------===//
+
+def DXBC_Imad : DXBC_MultiplyAddOp<"imad"> {
+  let summary = "component-wise integer multiply-add";
+  let description = [{
+    The `dxbc.imad` operation computes the component-wise integer
+    multiply-add `$dst = $lhs * $rhs + $acc`. No carry or borrow beyond the
+    32-bit value of each component is performed, so the result is not
+    sensitive to the signedness of its operands.
+
+    Example:
+
+    ```mlir
+    dxbc.imad r<0>, r<1>, r<2>, r<3>
+    dxbc.imad r<0>, -r<1>, r<2>, r<3>
+    dxbc.imad r<0, <x>>, r<1, <y>>, r<2, <x>>, r<3, <z>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.imul
+//===----------------------------------------------------------------------===//
+
+def DXBC_Imul : DXBC_Op<"imul"> {
+  let summary = "component-wise integer multiply";
+  let description = [{
+    The `dxbc.imul` operation computes the component-wise product
+    `$lhs * $rhs` as a 64-bit integer and writes the high 32 bits to
+    `$dstHi` and the low 32 bits to `$dstLo`. Either destination may be
+    `null` when that half of the result is not needed.
+
+    Example:
+
+    ```mlir
+    dxbc.imul r<0>, r<1>, r<2>, r<3>
+    dxbc.imul null, r<0, <z>>, r<0, <y>>, -r<0, <x>>
+    dxbc.imul r<7, <x, y, z>>, r<3, <x, y, z>>, r<3, <x, y, z, x>>, r<4, <x, y, z, x>>
+    ```
+  }];
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dstHi,
+      DXBC_DstOperandAttr:$dstLo,
+      DXBC_SrcOperandAttr:$lhs,
+      DXBC_SrcOperandAttr:$rhs,
+      OptionalAttr<DXBC_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dstHi `,` $dstLo `,` $lhs `,` $rhs attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.msad
+//===----------------------------------------------------------------------===//
+
+def DXBC_Msad : DXBC_TernaryOp<"msad"> {
+  let summary = "component-wise masked sum of absolute differences";
+  let description = [{
+    The `dxbc.msad` operation computes the component-wise masked sum of
+    absolute differences. For each 32-bit component, `$src0` and `$src1`
+    each hold four packed 8-bit unsigned integers, and `$src2` supplies a
+    32-bit unsigned accumulation value. The result is written to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxbc.msad r<0>, r<0>, r<1>, r<2>
+    dxbc.msad r<1, <x>>, r<1, <x>>, r<1, <y>>, r<1, <z>>
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCINTARITHOPS
