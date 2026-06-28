@@ -2544,6 +2544,14 @@ public:
       return STREAM_INDEX_OP(CutStream);
     case D3D11_SB_OPCODE_EMITTHENCUT_STREAM:
       return STREAM_INDEX_OP(EmitThenCutStream);
+    // Resource instructions
+    case D3D11_SB_OPCODE_EVAL_CENTROID:
+      return PLAIN_OP(EvalCentroid, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_EVAL_SAMPLE_INDEX:
+      return PLAIN_OP(EvalSampleIndex, 1, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_EVAL_SNAPPED:
+      return PLAIN_OP(EvalSnapped, 1, 2, HasPreciseAttr::Yes);
+    // Other instructions
     case D3D11_SB_OPCODE_SYNC:
       return parseSync(*opcodeToken0, beginOffset, instructionLengthInTokens,
                        getLocation());
