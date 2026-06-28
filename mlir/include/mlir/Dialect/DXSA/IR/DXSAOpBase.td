@@ -61,4 +61,17 @@ class DXSA_TernaryOp<string mnemonic> : DXSA_Op<mnemonic> {
       "(`precise` $precise^)? $dst `,` $src0 `,` $src1 `,` $src2 attr-dict";
 }
 
+// Shared base for the multiply-add family: `$dst = $lhs * $rhs + $acc`.
+class DXSA_MultiplyAddOp<string mnemonic> : DXSA_Op<mnemonic> {
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$lhs,
+      DXSA_SrcOperandAttr:$rhs,
+      DXSA_SrcOperandAttr:$acc,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE

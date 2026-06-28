@@ -353,19 +353,6 @@ def DXSA_LogSat : DXSA_UnaryOp<"log_sat"> {
 // dxsa.mad
 //===----------------------------------------------------------------------===//
 
-// Shared base for the multiply-add family: `$dst = $lhs * $rhs + $acc`.
-class DXSA_MultiplyAddOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$lhs,
-      DXSA_SrcOperandAttr:$rhs,
-      DXSA_SrcOperandAttr:$acc,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
-}
-
 def DXSA_Mad : DXSA_MultiplyAddOp<"mad"> {
   let summary = "component-wise floating-point multiply-add";
   let description = [{
