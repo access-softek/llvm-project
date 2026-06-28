@@ -98,4 +98,44 @@ def DXSA_DMovSat : DXSA_UnaryOp<"dmov_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.swapc
+//===----------------------------------------------------------------------===//
+
+def DXSA_SwapC : DXSA_Op<"swapc"> {
+  let summary = "component-wise conditional swap of two values";
+  let description = [{
+    The `dxsa.swapc` operation performs a component-wise conditional swap of
+    the values in `$src1` and `$src2`:
+
+    ```
+    $dst0 = ($condition != 0) ? $src2 : $src1
+    $dst1 = ($condition != 0) ? $src1 : $src2
+    ```
+
+    Both destinations are updated atomically with respect to the source
+    values, so reading and writing the same register is well-defined.
+
+    Example:
+
+    ```mlir
+    dxsa.swapc r<0>, r<1>, r<2>, r<3>, r<4>
+    dxsa.swapc r<0, <x, y>>, r<1, <z, w>>, r<2>, r<3>, r<4>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst0,
+      DXSA_DstOperandAttr:$dst1,
+      DXSA_SrcOperandAttr:$condition,
+      DXSA_SrcOperandAttr:$src1,
+      DXSA_SrcOperandAttr:$src2,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat = [{
+    (`precise` $precise^)? $dst0 `,` $dst1 `,` $condition `,` $src1 `,` $src2
+    attr-dict
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAMOVEOPS

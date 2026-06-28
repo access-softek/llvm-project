@@ -54,3 +54,24 @@
 // CHECK-NEXT:   dxsa.dmov_sat precise <x, y> r<0, <x, y>>, r<1>
 // CHECK-NEXT: }
 0x051820c7, 0x00100032, 0x00000000, 0x00100e46, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.swapc r<0>, r<1>, r<2>, r<3>, r<4>
+// CHECK-NEXT: }
+0x0b00008e, 0x001000f2, 0x00000000, 0x001000f2, 0x00000001, 0x00100e46, 0x00000002, 0x00100e46, 0x00000003, 0x00100e46, 0x00000004
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.swapc r<0, <x, y>>, r<1, <z, w>>, r<2>, -r<3>, |r<4>|
+// CHECK-NEXT: }
+0x0d00008e, 0x00100032, 0x00000000, 0x001000c2, 0x00000001, 0x00100e46, 0x00000002, 0x80100e46, 0x00000041, 0x00000003, 0x80100e46, 0x00000081, 0x00000004
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.swapc precise <x, y, z, w> r<0>, r<1>, r<2>, r<3>, r<4>
+// CHECK-NEXT: }
+0x0b78008e, 0x001000f2, 0x00000000, 0x001000f2, 0x00000001, 0x00100e46, 0x00000002, 0x00100e46, 0x00000003, 0x00100e46, 0x00000004

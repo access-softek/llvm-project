@@ -2399,6 +2399,8 @@ public:
       return SATURABLE_OP(Mov, 1, 1, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_DMOV:
       return SATURABLE_OP(DMov, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_SWAPC:
+      return PLAIN_OP(SwapC, 2, 3, HasPreciseAttr::Yes);
     // Type conversion instructions
     case D3D11_SB_OPCODE_DTOF:
       return PLAIN_OP(DToF, 1, 1, HasPreciseAttr::Yes);
