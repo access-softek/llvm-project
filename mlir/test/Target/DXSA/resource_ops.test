@@ -1,0 +1,42 @@
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.eval_centroid r<0>, r<1>
+// CHECK-NEXT: }
+0x050000cd, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.eval_centroid precise <x, y> r<0, <x>>, r<1, <y, z, w, y>>
+// CHECK-NEXT: }
+0x051800cd, 0x00100012, 0x00000000, 0x00100796, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.eval_sample_index r<0>, r<1>, l(0x2)
+// CHECK-NEXT: }
+0x070000cc, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00004001, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.eval_sample_index precise <x, y> r<0, <x>>, r<1, <y, z, w, y>>, l(0x3)
+// CHECK-NEXT: }
+0x071800cc, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00004001, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.eval_snapped r<0>, r<1>, l(0x2, 0xFFFFFFFE, 0x0, 0x0)
+// CHECK-NEXT: }
+0x0a0000cb, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00004002, 0x00000002, 0xfffffffe, 0x00000000, 0x00000000
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.eval_snapped precise <x, y> r<0, <x>>, r<1, <y, z, w, y>>, l(0x1, 0x1, 0x0, 0x0)
+// CHECK-NEXT: }
+0x0a1800cb, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00004002, 0x00000001, 0x00000001, 0x00000000, 0x00000000
