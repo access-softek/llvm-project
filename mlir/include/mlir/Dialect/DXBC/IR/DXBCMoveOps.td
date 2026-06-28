@@ -98,4 +98,44 @@ def DXBC_DMovSat : DXBC_UnaryOp<"dmov_sat"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxbc.swapc
+//===----------------------------------------------------------------------===//
+
+def DXBC_SwapC : DXBC_Op<"swapc"> {
+  let summary = "component-wise conditional swap of two values";
+  let description = [{
+    The `dxbc.swapc` operation performs a component-wise conditional swap of
+    the values in `$src1` and `$src2`:
+
+    ```
+    $dst0 = ($condition != 0) ? $src2 : $src1
+    $dst1 = ($condition != 0) ? $src1 : $src2
+    ```
+
+    Both destinations are updated atomically with respect to the source
+    values, so reading and writing the same register is well-defined.
+
+    Example:
+
+    ```mlir
+    dxbc.swapc r<0>, r<1>, r<2>, r<3>, r<4>
+    dxbc.swapc r<0, <x, y>>, r<1, <z, w>>, r<2>, r<3>, r<4>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst0,
+      DXBC_DstOperandAttr:$dst1,
+      DXBC_SrcOperandAttr:$condition,
+      DXBC_SrcOperandAttr:$src1,
+      DXBC_SrcOperandAttr:$src2,
+      OptionalAttr<DXBC_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat = [{
+    (`precise` $precise^)? $dst0 `,` $dst1 `,` $condition `,` $src1 `,` $src2
+    attr-dict
+  }];
+}
+
 #endif // MLIR_DIALECT_DXBC_IR_DXBCMOVEOPS
