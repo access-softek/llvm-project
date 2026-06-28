@@ -2459,6 +2459,16 @@ public:
       return PLAIN_OP(Imul, 2, 2, HasPreciseAttr::Yes);
     case D3D11_1_SB_OPCODE_MSAD:
       return PLAIN_OP(Msad, 1, 3, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_UDIV:
+      return PLAIN_OP(UDiv, 2, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_UMUL:
+      return PLAIN_OP(UMul, 2, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_UMAD:
+      return PLAIN_OP(UMad, 1, 3, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_UADDC:
+      return PLAIN_OP(UAddc, 2, 2, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_USUBB:
+      return PLAIN_OP(USubb, 2, 2, HasPreciseAttr::Yes);
     // Bitwise instructions
     case D3D10_SB_OPCODE_AND:
       return PLAIN_OP(And, 1, 2, HasPreciseAttr::Yes);
