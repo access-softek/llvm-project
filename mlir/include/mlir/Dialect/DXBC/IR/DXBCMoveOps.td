@@ -99,6 +99,72 @@ def DXBC_DMovSat : DXBC_UnaryOp<"dmov_sat"> {
 }
 
 //===----------------------------------------------------------------------===//
+// dxbc.dmovc
+//===----------------------------------------------------------------------===//
+
+class DXBC_DMovConditionalOp<string mnemonic> : DXBC_Op<mnemonic> {
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$condition,
+      DXBC_SrcOperandAttr:$src1,
+      DXBC_SrcOperandAttr:$src2,
+      OptionalAttr<DXBC_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dst `,` $condition `,` $src1 `,` $src2 attr-dict";
+}
+
+def DXBC_DMovC : DXBC_DMovConditionalOp<"dmovc"> {
+  let summary = "component-wise double-precision conditional move";
+  let description = [{
+    The `dxbc.dmovc` operation performs a component-wise double-precision
+    conditional move:
+
+    ```
+    $dst = ($condition != 0) ? $src1 : $src2
+    ```
+
+    The first two post-swizzle components of `$condition` are treated as two
+    independent 32-bit boolean values, one per output double. Doubles are
+    encoded as component pairs (x = low 32 bits, y = high 32 bits) and
+    (z = low 32 bits, w = high 32 bits). Valid `$dst` write masks are
+    `.xy`, `.zw`, and `.xyzw`; valid `$src1`/`$src2` swizzles are `.xyzw`,
+    `.xyxy`, `.zwxy`, and `.zwzw`.
+
+    Example:
+
+    ```mlir
+    dxbc.dmovc r<0>, r<1>, r<2>, r<3>
+    dxbc.dmovc r<0, <x, y>>, r<1>, r<2, <z, w, x, y>>, r<3>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.dmovc_sat
+//===----------------------------------------------------------------------===//
+
+def DXBC_DMovCSat : DXBC_DMovConditionalOp<"dmovc_sat"> {
+  let summary =
+      "component-wise double-precision conditional move, saturated to [0, 1]";
+  let description = [{
+    The `dxbc.dmovc_sat` operation performs a component-wise double-precision
+    conditional move, clamps the result to `[0.0, 1.0]`, and writes it to
+    `$dst`:
+
+    ```
+    $dst = clamp(($condition != 0) ? $src1 : $src2, 0.0, 1.0)
+    ```
+
+    Example:
+
+    ```mlir
+    dxbc.dmovc_sat r<0>, r<1>, r<2>, r<3>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxbc.swapc
 //===----------------------------------------------------------------------===//
 
