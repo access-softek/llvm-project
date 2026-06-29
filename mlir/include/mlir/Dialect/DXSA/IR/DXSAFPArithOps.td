@@ -354,17 +354,7 @@ def DXSA_LogSat : DXSA_UnaryOp<"log_sat"> {
 //===----------------------------------------------------------------------===//
 
 // Shared base for the multiply-add family: `$dst = $lhs * $rhs + $acc`.
-class DXSA_MultiplyAddOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$lhs,
-      DXSA_SrcOperandAttr:$rhs,
-      DXSA_SrcOperandAttr:$acc,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
-}
+class DXSA_MultiplyAddOp<string mnemonic> : DXSA_BaseOp<mnemonic, ["dst"], ["lhs", "rhs", "acc"]>;
 
 def DXSA_Mad : DXSA_MultiplyAddOp<"mad"> {
   let summary = "component-wise floating-point multiply-add";
@@ -782,16 +772,7 @@ def DXSA_RsqSat : DXSA_UnaryOp<"rsq_sat"> {
 
 // Shared base for sine/cosine: sin of `$operand` into `$sin`, cosine into
 // `$cos`. Either destination may be `null` when that result is not needed.
-class DXSA_SincosOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$sin,
-      DXSA_DstOperandAttr:$cos,
-      DXSA_SrcOperandAttr:$operand,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $sin `,` $cos `,` $operand attr-dict";
-}
+class DXSA_SincosOp<string mnemonic> : DXSA_BaseOp<mnemonic, ["sin", "cos"], ["operand"]>;
 
 def DXSA_Sincos : DXSA_SincosOp<"sincos"> {
   let summary = "component-wise floating-point sine and cosine";

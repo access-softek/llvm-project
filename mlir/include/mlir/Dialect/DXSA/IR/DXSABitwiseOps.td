@@ -38,7 +38,7 @@ def DXSA_And : DXSA_BinaryOp<"and"> {
 // dxsa.bfi
 //===----------------------------------------------------------------------===//
 
-def DXSA_BFI : DXSA_PlainOp<"bfi", 1, 4> {
+def DXSA_BFI : DXSA_BaseOp<"bfi", ["dst"], ["src0", "src1", "src2", "src3"]> {
   let summary = "bit field insert";
   let description = [{
     The `dxsa.bfi` operation takes a bit range from the LSB of a number

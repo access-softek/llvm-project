@@ -25,35 +25,27 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
     Op<DXSADialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
-// DXSA shared base for ops with inline operands
+// DXSA shared base for ops with all operands specified inline
 //===----------------------------------------------------------------------===//
 
-class DXSA_PlainOp<string mnemonic, int dsts, int srcs> : DXSA_Op<mnemonic> {
-  defvar dstnames = !cond(!eq(dsts, 1): ["dst"],
-                          true: !foreach(n, !range(dsts), !strconcat("dst", !cast<string>(n))));
-  defvar srcnames = !cond(!eq(srcs, 1): ["src"],
-                          !eq(srcs, 2): ["lhs", "rhs"],
-                          true: !foreach(n, !range(srcs), !strconcat("src", !cast<string>(n))));
-  defvar precisename = ["precise"];
-  defvar argnames = !listconcat(dstnames, srcnames, precisename);
-
-  defvar args = !foldl(!dag(ins, ?, argnames),
-      !range(!add(dsts, srcs, 1)),
-      acc, n, !setdagarg(acc, n, !cond(
-          !lt(n, dsts): DXSA_DstOperandAttr,
-          !lt(n, !add(dsts, srcs)): DXSA_SrcOperandAttr,
-          true: OptionalAttr<DXSA_ComponentMaskAttr>)));
-  let arguments = args;
+class DXSA_BaseOp<string mnemonic, list<string> dstnames, list<string> srcnames> : DXSA_Op<mnemonic> {
+  let arguments = !setdagarg(!dag(ins,
+    !listconcat(!listsplat(DXSA_DstOperandAttr, !size(dstnames)),
+                !listsplat(DXSA_SrcOperandAttr, !add(!size(srcnames), 1))),
+    !listconcat(dstnames, srcnames, ["precise"])),
+    !add(!size(dstnames), !size(srcnames)), OptionalAttr<DXSA_ComponentMaskAttr>);
   let results = (outs);
   let assemblyFormat = !interleave(!listconcat(
       ["(`precise` $precise^)?"],
-      !tail(!cond(!eq(!add(dsts, srcs), 0): [""], true: !listflatten(!foreach(n, !listconcat(dstnames, srcnames), ["`,`", !strconcat("$", n)])))),
+      !tail(!cond(
+          !and(!empty(dstnames), !empty(srcnames)): [""],
+          true: !listflatten(!foreach(name, !listconcat(dstnames, srcnames), ["`,`", !strconcat("$", name)])))),
       ["attr-dict"]), " ");
 }
 
-class DXSA_NullaryOp <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 0>;
-class DXSA_UnaryOp   <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 1>;
-class DXSA_BinaryOp  <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 2>;
-class DXSA_TernaryOp <string mnemonic, int dsts = 1> : DXSA_PlainOp<mnemonic, dsts, 3>;
+class DXSA_NullaryOp <string mnemonic, list<string> dstnames = ["dst"]> : DXSA_BaseOp<mnemonic, dstnames, []>;
+class DXSA_UnaryOp   <string mnemonic, list<string> dstnames = ["dst"]> : DXSA_BaseOp<mnemonic, dstnames, ["src"]>;
+class DXSA_BinaryOp  <string mnemonic, list<string> dstnames = ["dst"]> : DXSA_BaseOp<mnemonic, dstnames, ["lhs", "rhs"]>;
+class DXSA_TernaryOp <string mnemonic, list<string> dstnames = ["dst"]> : DXSA_BaseOp<mnemonic, dstnames, ["src0", "src1", "src2"]>;
 
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE
