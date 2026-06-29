@@ -1,0 +1,105 @@
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxsa-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.iadd r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x0700001e, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.iadd r<0>, -r<1>, -r<2>
+// CHECK-NEXT: }
+0x0900001e, 0x001000f2, 0x00000000, 0x80100e46, 0x00000041, 0x00000001, 0x80100e46, 0x00000041, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.iadd r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>
+// CHECK-NEXT: }
+0x0700001e, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00100006, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.imax r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x07000024, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.imax r<0>, -r<1>, -r<2>
+// CHECK-NEXT: }
+0x09000024, 0x001000f2, 0x00000000, 0x80100e46, 0x00000041, 0x00000001, 0x80100e46, 0x00000041, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.imax r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>
+// CHECK-NEXT: }
+0x07000024, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00100006, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.imin r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x07000025, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.imin r<0>, -r<1>, -r<2>
+// CHECK-NEXT: }
+0x09000025, 0x001000f2, 0x00000000, 0x80100e46, 0x00000041, 0x00000001, 0x80100e46, 0x00000041, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.imin r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>
+// CHECK-NEXT: }
+0x07000025, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00100006, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.ineg r<0>, r<1>
+// CHECK-NEXT: }
+0x05000028, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.ineg r<0, <x>>, r<1, <y, z, w, y>>
+// CHECK-NEXT: }
+0x05000028, 0x00100012, 0x00000000, 0x00100796, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.umax r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x07000053, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.umax r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>
+// CHECK-NEXT: }
+0x07000053, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00100006, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.umin r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x07000054, 0x001000f2, 0x00000000, 0x00100e46, 0x00000001, 0x00100e46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:   dxsa.umin r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>
+// CHECK-NEXT: }
+0x07000054, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00100006, 0x00000002

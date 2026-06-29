@@ -2347,16 +2347,28 @@ public:
     case D3D10_SB_OPCODE_SQRT:
       return SATURABLE_OP(Sqrt, 1, 1, HasPreciseAttr::Yes);
     // Type conversion instructions
+    case D3D11_SB_OPCODE_DTOF:
+      return PLAIN_OP(DToF, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_DTOI:
+      return PLAIN_OP(DToI, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_DTOU:
+      return PLAIN_OP(DToU, 1, 1, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_F16TOF32:
       return PLAIN_OP(F16ToF32, 1, 1, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_F32TOF16:
       return PLAIN_OP(F32ToF16, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_SB_OPCODE_FTOD:
+      return PLAIN_OP(FToD, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_FTOI:
       return PLAIN_OP(FToI, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_FTOU:
       return PLAIN_OP(FToU, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_ITOD:
+      return PLAIN_OP(IToD, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ITOF:
       return PLAIN_OP(IToF, 1, 1, HasPreciseAttr::Yes);
+    case D3D11_1_SB_OPCODE_UTOD:
+      return PLAIN_OP(UToD, 1, 1, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_UTOF:
       return PLAIN_OP(UToF, 1, 1, HasPreciseAttr::Yes);
     // Comparison instructions
@@ -2380,6 +2392,19 @@ public:
       return PLAIN_OP(Uge, 1, 2, HasPreciseAttr::Yes);
     case D3D10_SB_OPCODE_ULT:
       return PLAIN_OP(Ult, 1, 2, HasPreciseAttr::Yes);
+    // Integer arithmetic instructions
+    case D3D10_SB_OPCODE_IADD:
+      return PLAIN_OP(IAdd, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_IMAX:
+      return PLAIN_OP(IMax, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_IMIN:
+      return PLAIN_OP(IMin, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_INEG:
+      return PLAIN_OP(INeg, 1, 1, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_UMAX:
+      return PLAIN_OP(UMax, 1, 2, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_UMIN:
+      return PLAIN_OP(UMin, 1, 2, HasPreciseAttr::Yes);
     // Bitwise instructions
     case D3D10_SB_OPCODE_AND:
       return PLAIN_OP(And, 1, 2, HasPreciseAttr::Yes);
@@ -2428,6 +2453,32 @@ public:
       return PLAIN_OP(AtomicUMax, 1, 2, HasPreciseAttr::No);
     case D3D11_SB_OPCODE_ATOMIC_UMIN:
       return PLAIN_OP(AtomicUMin, 1, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_ATOMIC_CMP_STORE:
+      return PLAIN_OP(AtomicCmpStore, 1, 3, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_IADD:
+      return PLAIN_OP(ImmAtomicIAdd, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_AND:
+      return PLAIN_OP(ImmAtomicAnd, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_OR:
+      return PLAIN_OP(ImmAtomicOr, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_XOR:
+      return PLAIN_OP(ImmAtomicXor, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_EXCH:
+      return PLAIN_OP(ImmAtomicExch, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_CMP_EXCH:
+      return PLAIN_OP(ImmAtomicCmpExch, 2, 3, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_IMAX:
+      return PLAIN_OP(ImmAtomicIMax, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_IMIN:
+      return PLAIN_OP(ImmAtomicIMin, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_UMAX:
+      return PLAIN_OP(ImmAtomicUMax, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_UMIN:
+      return PLAIN_OP(ImmAtomicUMin, 2, 2, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_ALLOC:
+      return PLAIN_OP(ImmAtomicAlloc, 1, 1, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_IMM_ATOMIC_CONSUME:
+      return PLAIN_OP(ImmAtomicConsume, 1, 1, HasPreciseAttr::No);
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP
