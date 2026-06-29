@@ -418,6 +418,29 @@ def DXSA_UAVFlagsAttr :
   let assemblyFormat = "$value";
 }
 
+def DXSA_SyncFlags_UavGlobal : I32BitEnumAttrCaseBit<"uav_global", 0>;
+def DXSA_SyncFlags_UavGroup  : I32BitEnumAttrCaseBit<"uav_group",  1>;
+def DXSA_SyncFlags_Tgsm      : I32BitEnumAttrCaseBit<"tgsm",       2>;
+def DXSA_SyncFlags_Threads   : I32BitEnumAttrCaseBit<"threads",    3>;
+
+def DXSA_SyncFlags : I32BitEnumAttr<
+    "SyncFlags", "thread group sync and memory barrier flags", [
+      DXSA_SyncFlags_UavGlobal,
+      DXSA_SyncFlags_UavGroup,
+      DXSA_SyncFlags_Tgsm,
+      DXSA_SyncFlags_Threads
+    ]> {
+  let separator = "|";
+  let cppNamespace = "::mlir::dxsa";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def DXSA_SyncFlagsAttr :
+    EnumAttr<DXSADialect, DXSA_SyncFlags, "sync_flags"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def DXSA_ConstantBufferAccessPattern_ImmediateIndexed : I32EnumAttrCase<"immediateIndexed", 0>;
 def DXSA_ConstantBufferAccessPattern_DynamicIndexed   : I32EnumAttrCase<"dynamicIndexed",   1>;
 
@@ -565,6 +588,33 @@ def DXSA_Unknown : DXSA_Op<"unknown"> {
   let results = (outs);
   let hasVerifier = 1;
   let assemblyFormat = "custom<HexTokens>($tokens) attr-dict";
+}
+
+def DXSA_Sync : DXSA_Op<"sync"> {
+  let summary = "thread group sync and memory barrier";
+  let description = [{
+    The `dxsa.sync` operation issues a thread group barrier and/or memory
+    fence. The flags select which memories are made visible and whether the
+    threads of the group are synchronized:
+
+    - `uav_global`: fence unordered access view (UAV) memory across the
+      whole device.
+    - `uav_group`: fence unordered access view (UAV) memory within the
+      thread group.
+    - `tgsm`: fence thread group shared memory.
+    - `threads`: barrier across the threads of the group.
+
+    `uav_global` and `uav_group` are mutually exclusive.
+
+    Example:
+
+    ```mlir
+    dxsa.sync <uav_global|threads>
+    ```
+  }];
+  let arguments = (ins DXSA_SyncFlagsAttr:$flags);
+  let assemblyFormat = "$flags attr-dict";
+  let hasVerifier = 1;
 }
 
 def DXSA_DclGlobalFlags : DXSA_Op<"dcl_global_flags"> {
