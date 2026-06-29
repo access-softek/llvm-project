@@ -418,6 +418,29 @@ def DXBC_UAVFlagsAttr :
   let assemblyFormat = "$value";
 }
 
+def DXBC_SyncFlags_UavGlobal : I32BitEnumAttrCaseBit<"uav_global", 0>;
+def DXBC_SyncFlags_UavGroup  : I32BitEnumAttrCaseBit<"uav_group",  1>;
+def DXBC_SyncFlags_Tgsm      : I32BitEnumAttrCaseBit<"tgsm",       2>;
+def DXBC_SyncFlags_Threads   : I32BitEnumAttrCaseBit<"threads",    3>;
+
+def DXBC_SyncFlags : I32BitEnumAttr<
+    "SyncFlags", "thread group sync and memory barrier flags", [
+      DXBC_SyncFlags_UavGlobal,
+      DXBC_SyncFlags_UavGroup,
+      DXBC_SyncFlags_Tgsm,
+      DXBC_SyncFlags_Threads
+    ]> {
+  let separator = "|";
+  let cppNamespace = "::mlir::dxbc";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def DXBC_SyncFlagsAttr :
+    EnumAttr<DXBCDialect, DXBC_SyncFlags, "sync_flags"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def DXBC_ConstantBufferAccessPattern_ImmediateIndexed : I32EnumAttrCase<"immediateIndexed", 0>;
 def DXBC_ConstantBufferAccessPattern_DynamicIndexed   : I32EnumAttrCase<"dynamicIndexed",   1>;
 
@@ -565,6 +588,33 @@ def DXBC_Unknown : DXBC_Op<"unknown"> {
   let results = (outs);
   let hasVerifier = 1;
   let assemblyFormat = "custom<HexTokens>($tokens) attr-dict";
+}
+
+def DXBC_Sync : DXBC_Op<"sync"> {
+  let summary = "thread group sync and memory barrier";
+  let description = [{
+    The `dxbc.sync` operation issues a thread group barrier and/or memory
+    fence. The flags select which memories are made visible and whether the
+    threads of the group are synchronized:
+
+    - `uav_global`: fence unordered access view (UAV) memory across the
+      whole device.
+    - `uav_group`: fence unordered access view (UAV) memory within the
+      thread group.
+    - `tgsm`: fence thread group shared memory.
+    - `threads`: barrier across the threads of the group.
+
+    `uav_global` and `uav_group` are mutually exclusive.
+
+    Example:
+
+    ```mlir
+    dxbc.sync <uav_global|threads>
+    ```
+  }];
+  let arguments = (ins DXBC_SyncFlagsAttr:$flags);
+  let assemblyFormat = "$flags attr-dict";
+  let hasVerifier = 1;
 }
 
 def DXBC_DclGlobalFlags : DXBC_Op<"dcl_global_flags"> {

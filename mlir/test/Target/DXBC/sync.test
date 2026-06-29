@@ -1,0 +1,49 @@
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.sync <uav_global>
+// CHECK-NEXT: }
+0x010040be
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.sync <uav_group>
+// CHECK-NEXT: }
+0x010020be
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.sync <tgsm>
+// CHECK-NEXT: }
+0x010010be
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.sync <threads>
+// CHECK-NEXT: }
+0x010008be
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.sync <uav_global|threads>
+// CHECK-NEXT: }
+0x010048be
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.sync <tgsm|threads>
+// CHECK-NEXT: }
+0x010018be
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.sync <uav_global|tgsm|threads>
+// CHECK-NEXT: }
+0x010058be

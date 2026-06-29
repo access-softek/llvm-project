@@ -259,6 +259,13 @@ LogicalResult DclUavStructured::verify() {
   return verifyLboundUboundSpace(*this, getLbound(), getUbound(), getSpace());
 }
 
+LogicalResult Sync::verify() {
+  if (bitEnumContainsAll(getFlags(),
+                         SyncFlags::uav_global | SyncFlags::uav_group))
+    return emitOpError("uav_global and uav_group are mutually exclusive");
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // UnknownOp
 //===----------------------------------------------------------------------===//

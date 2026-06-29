@@ -566,6 +566,11 @@ public:
     return dxbc::DclGlobalFlags::create(builder, loc, flagsAttr);
   }
 
+  Instruction buildSync(dxbc::SyncFlags flags, Location loc) {
+    auto flagsAttr = dxbc::SyncFlagsAttr::get(builder.getContext(), flags);
+    return dxbc::Sync::create(builder, loc, flagsAttr);
+  }
+
   Instruction buildDclTemps(uint32_t count, Location loc) {
     return dxbc::DclTemps::create(builder, loc,
                                   builder.getI32IntegerAttr(count));
@@ -1327,6 +1332,25 @@ public:
     if (raw & D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND)
       flags |= dxbc::GlobalFlags::allResourcesBound;
     return builder.buildDclGlobalFlags(flags, loc);
+  }
+
+  FailureOr<Instruction> parseSync(uint32_t opcodeToken, size_t beginOffset,
+                                   uint32_t length, Location loc) {
+    auto raw = DECODE_D3D11_SB_SYNC_FLAGS(opcodeToken);
+    if (raw == 0)
+      return emitError(loc, "expected at least one sync flag to be set");
+    auto flags = static_cast<dxbc::SyncFlags>(0);
+    if (raw & D3D11_SB_SYNC_UNORDERED_ACCESS_VIEW_MEMORY_GLOBAL)
+      flags |= dxbc::SyncFlags::uav_global;
+    if (raw & D3D11_SB_SYNC_UNORDERED_ACCESS_VIEW_MEMORY_GROUP)
+      flags |= dxbc::SyncFlags::uav_group;
+    if (raw & D3D11_SB_SYNC_THREAD_GROUP_SHARED_MEMORY)
+      flags |= dxbc::SyncFlags::tgsm;
+    if (raw & D3D11_SB_SYNC_THREADS_IN_GROUP)
+      flags |= dxbc::SyncFlags::threads;
+    if (failed(verifyInstructionLength(beginOffset, length)))
+      return failure();
+    return builder.buildSync(flags, loc);
   }
 
   FailureOr<Instruction> parseDclTemps(Location loc) {
@@ -2520,6 +2544,9 @@ public:
       return STREAM_INDEX_OP(CutStream);
     case D3D11_SB_OPCODE_EMITTHENCUT_STREAM:
       return STREAM_INDEX_OP(EmitThenCutStream);
+    case D3D11_SB_OPCODE_SYNC:
+      return parseSync(*opcodeToken0, beginOffset, instructionLengthInTokens,
+                       getLocation());
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP
