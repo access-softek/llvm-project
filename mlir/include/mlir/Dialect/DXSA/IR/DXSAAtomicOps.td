@@ -19,7 +19,10 @@ include "mlir/Dialect/DXSA/IR/DXSAOpBase.td"
 // DXSA shared base for atomic memory ops
 //===----------------------------------------------------------------------===//
 
-class DXSA_AtomicOp<string mnemonic> : DXSA_BaseOp<mnemonic, ["dst"], ["dst_address", "src0"]>;
+class DXSA_AtomicOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins DXSA_SrcOperandAttr:$dst_address, DXSA_SrcOperandAttr:$src0);
+  let asmFormat = "$dst `,` $dst_address `,` $src0";
+}
 
 //===----------------------------------------------------------------------===//
 // dxsa.atomic_and
@@ -202,7 +205,11 @@ def DXSA_AtomicUMin : DXSA_AtomicOp<"atomic_umin"> {
 // DXSA shared base for immediate atomic ops returning the prior value
 //===----------------------------------------------------------------------===//
 
-class DXSA_ImmAtomicBinaryOp<string mnemonic> : DXSA_BaseOp<mnemonic, ["dst0", "dst1"], ["dst_address", "src0"]>;
+class DXSA_ImmAtomicBinaryOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let dsts = (ins DXSA_DstOperandAttr:$dst0, DXSA_DstOperandAttr:$dst1);
+  let srcs = (ins DXSA_SrcOperandAttr:$dst_address, DXSA_SrcOperandAttr:$src0);
+  let asmFormat = "$dst0 `,` $dst1 `,` $dst_address `,` $src0";
+}
 
 //===----------------------------------------------------------------------===//
 // dxsa.imm_atomic_iadd
@@ -402,7 +409,7 @@ def DXSA_ImmAtomicUMin : DXSA_ImmAtomicBinaryOp<"imm_atomic_umin"> {
 // dxsa.atomic_cmp_store
 //===----------------------------------------------------------------------===//
 
-def DXSA_AtomicCmpStore : DXSA_BaseOp<"atomic_cmp_store", ["dst"], ["dst_address", "src0", "src1"]> {
+def DXSA_AtomicCmpStore : DXSA_BaseOp<"atomic_cmp_store"> {
   let summary = "atomic compare and conditional write to memory";
   let description = [{
     The `dxsa.atomic_cmp_store` operation atomically compares `$src0` with the
@@ -421,6 +428,9 @@ def DXSA_AtomicCmpStore : DXSA_BaseOp<"atomic_cmp_store", ["dst"], ["dst_address
     dxsa.atomic_cmp_store u<0>, r<1>, r<2>, r<3>
     ```
   }];
+  let srcs = (ins DXSA_SrcOperandAttr:$dst_address,
+                  DXSA_SrcOperandAttr:$src0, DXSA_SrcOperandAttr:$src1);
+  let asmFormat = "$dst `,` $dst_address `,` $src0 `,` $src1";
 }
 
 //===----------------------------------------------------------------------===//
@@ -450,7 +460,7 @@ def DXSA_ImmAtomicExch : DXSA_ImmAtomicBinaryOp<"imm_atomic_exch"> {
 // dxsa.imm_atomic_cmp_exch
 //===----------------------------------------------------------------------===//
 
-def DXSA_ImmAtomicCmpExch : DXSA_BaseOp<"imm_atomic_cmp_exch", ["dst0", "dst1"], ["dst_address", "src0", "src1"]> {
+def DXSA_ImmAtomicCmpExch : DXSA_BaseOp<"imm_atomic_cmp_exch"> {
   let summary =
       "atomic compare and exchange to memory, returning the prior value";
   let description = [{
@@ -470,13 +480,20 @@ def DXSA_ImmAtomicCmpExch : DXSA_BaseOp<"imm_atomic_cmp_exch", ["dst0", "dst1"],
     dxsa.imm_atomic_cmp_exch r<0, <x>>, u<0>, r<1>, r<2>, r<3>
     ```
   }];
+  let dsts = (ins DXSA_DstOperandAttr:$dst0, DXSA_DstOperandAttr:$dst1);
+  let srcs = (ins DXSA_SrcOperandAttr:$dst_address,
+                  DXSA_SrcOperandAttr:$src0, DXSA_SrcOperandAttr:$src1);
+  let asmFormat = "$dst0 `,` $dst1 `,` $dst_address `,` $src0 `,` $src1";
 }
 
 //===----------------------------------------------------------------------===//
 // DXSA shared base for UnorderedAccessView (UAV) counter atomics
 //===----------------------------------------------------------------------===//
 
-class DXSA_ImmAtomicCounterOp<string mnemonic> : DXSA_BaseOp<mnemonic, ["dst"], ["uav"]>;
+class DXSA_ImmAtomicCounterOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins DXSA_SrcOperandAttr:$uav);
+  let asmFormat = "$dst `,` $uav";
+}
 
 //===----------------------------------------------------------------------===//
 // dxsa.imm_atomic_alloc
