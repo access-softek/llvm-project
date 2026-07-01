@@ -892,6 +892,11 @@ public:
         optionalToAttr(space), accessPattern);
   }
 
+  Instruction buildDclImmediateConstantBuffer(ArrayRef<float> values,
+                                              Location loc) {
+    return dxsa::DclImmediateConstantBuffer::create(builder, loc, values);
+  }
+
   Instruction buildDclSampler(uint32_t id, std::optional<uint32_t> lbound,
                               std::optional<uint32_t> ubound,
                               std::optional<uint32_t> space,
@@ -1830,6 +1835,21 @@ public:
                                           *structCount, loc);
   }
 
+  FailureOr<Instruction> parseDclImmediateConstantBuffer(uint32_t numTokens,
+                                                         Location loc) {
+    uint32_t numDataTokens = numTokens >= 2 ? numTokens - 2 : 0;
+
+    auto dataTokens = parseTokens(numDataTokens);
+    FAILURE_IF_FAILED(dataTokens);
+
+    SmallVector<float, 16> values;
+    values.reserve(numDataTokens);
+    for (uint32_t token : *dataTokens)
+      values.push_back(llvm::bit_cast<float>(token));
+
+    return builder.buildDclImmediateConstantBuffer(values, loc);
+  }
+
   FailureOr<Instruction> parseDclConstantBuffer(uint32_t opcodeToken,
                                                 Location loc) {
     auto rawAccessPattern =
@@ -2296,12 +2316,29 @@ public:
     uint32_t opcode = DECODE_D3D10_SB_OPCODE_TYPE(*opcodeToken0);
 
     // CUSTOMDATA carries its total token count (>= 2) in token1.
-    // Just set the instruction length for the unknown fallback.
     if (opcode == D3D10_SB_OPCODE_CUSTOMDATA) {
       auto numTokensToken = parseToken();
       FAILURE_IF_FAILED(numTokensToken);
       instructionLengthInTokens = std::max(*numTokensToken, 2u);
-      return emitError(getLocation(), "customdata is not supported yet");
+
+      if (failed(verifyInstructionLengthFitsBufferSize(
+              beginOffset, instructionLengthInTokens)))
+        return failure();
+
+      auto customDataClass = DECODE_D3D10_SB_CUSTOMDATA_CLASS(*opcodeToken0);
+      switch (customDataClass) {
+      case D3D10_SB_CUSTOMDATA_DCL_IMMEDIATE_CONSTANT_BUFFER: {
+        auto result =
+            parseDclImmediateConstantBuffer(*numTokensToken, getLocation());
+        FAILURE_IF_FAILED(result);
+        if (failed(verifyInstructionLength(beginOffset,
+                                           instructionLengthInTokens)))
+          return failure();
+        return *result;
+      }
+      default:
+        return emitError(getLocation(), "customdata is not supported yet");
+      }
     }
 
     instructionLengthInTokens = std::max(
@@ -2329,8 +2366,7 @@ public:
     auto parseResult =
         parseDclInstruction(*opcodeToken0, getLocation(), dclInstruction);
     if (parseResult.has_value()) {
-      if (failed(*parseResult))
-        return failure();
+      FAILURE_IF_FAILED(*parseResult);
       if (failed(
               verifyInstructionLength(beginOffset, instructionLengthInTokens)))
         return failure();
