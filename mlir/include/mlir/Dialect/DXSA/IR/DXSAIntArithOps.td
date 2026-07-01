@@ -134,4 +134,78 @@ def DXSA_UMin : DXSA_BinaryOp<"umin"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.imad
+//===----------------------------------------------------------------------===//
+
+def DXSA_Imad : DXSA_MultiplyAddOp<"imad"> {
+  let summary = "component-wise integer multiply-add";
+  let description = [{
+    The `dxsa.imad` operation computes the component-wise integer
+    multiply-add `$dst = $lhs * $rhs + $acc`. No carry or borrow beyond the
+    32-bit value of each component is performed, so the result is not
+    sensitive to the signedness of its operands.
+
+    Example:
+
+    ```mlir
+    dxsa.imad r<0>, r<1>, r<2>, r<3>
+    dxsa.imad r<0>, -r<1>, r<2>, r<3>
+    dxsa.imad r<0, <x>>, r<1, <y>>, r<2, <x>>, r<3, <z>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.imul
+//===----------------------------------------------------------------------===//
+
+def DXSA_Imul : DXSA_Op<"imul"> {
+  let summary = "component-wise integer multiply";
+  let description = [{
+    The `dxsa.imul` operation computes the component-wise product
+    `$lhs * $rhs` as a 64-bit integer and writes the high 32 bits to
+    `$dstHi` and the low 32 bits to `$dstLo`. Either destination may be
+    `null` when that half of the result is not needed.
+
+    Example:
+
+    ```mlir
+    dxsa.imul r<0>, r<1>, r<2>, r<3>
+    dxsa.imul null, r<0, <z>>, r<0, <y>>, -r<0, <x>>
+    dxsa.imul r<7, <x, y, z>>, r<3, <x, y, z>>, r<3, <x, y, z, x>>, r<4, <x, y, z, x>>
+    ```
+  }];
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dstHi,
+      DXSA_DstOperandAttr:$dstLo,
+      DXSA_SrcOperandAttr:$lhs,
+      DXSA_SrcOperandAttr:$rhs,
+      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+  let results = (outs);
+  let assemblyFormat =
+      "(`precise` $precise^)? $dstHi `,` $dstLo `,` $lhs `,` $rhs attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.msad
+//===----------------------------------------------------------------------===//
+
+def DXSA_Msad : DXSA_TernaryOp<"msad"> {
+  let summary = "component-wise masked sum of absolute differences";
+  let description = [{
+    The `dxsa.msad` operation computes the component-wise masked sum of
+    absolute differences. For each 32-bit component, `$src0` and `$src1`
+    each hold four packed 8-bit unsigned integers, and `$src2` supplies a
+    32-bit unsigned accumulation value. The result is written to `$dst`.
+
+    Example:
+
+    ```mlir
+    dxsa.msad r<0>, r<0>, r<1>, r<2>
+    dxsa.msad r<1, <x>>, r<1, <x>>, r<1, <y>>, r<1, <z>>
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAINTARITHOPS

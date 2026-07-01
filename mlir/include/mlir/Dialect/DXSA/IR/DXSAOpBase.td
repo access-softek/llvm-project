@@ -59,4 +59,10 @@ class DXSA_TernaryOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
   let asmFormat = "$dst `,` $src0 `,` $src1 `,` $src2";
 }
 
+// Shared base for the multiply-add family: `$dst = $lhs * $rhs + $acc`.
+class DXSA_MultiplyAddOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins DXSA_SrcOperandAttr:$lhs, DXSA_SrcOperandAttr:$rhs, DXSA_SrcOperandAttr:$acc);
+  let asmFormat = "$dst `,` $lhs `,` $rhs `,` $acc";
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE

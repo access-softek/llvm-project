@@ -103,3 +103,109 @@
 // CHECK-NEXT:   dxsa.umin r<0, <x>>, r<1, <y, z, w, y>>, r<2, <x, x, x, x>>
 // CHECK-NEXT: }
 0x07000054, 0x00100012, 0x00000000, 0x00100796, 0x00000001, 0x00100006, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imad precise <x, y, z, w> r<0>, r<0>, r<1>, r<2>
+// CHECK-NEXT:  }
+0x09780023, 0x001000F2, 0x00000000, 0x00100E46, 0x00000000, 0x00100E46, 0x00000001, 0x00100E46, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imad r<1>, r<1>, r<2>, r<3>
+// CHECK-NEXT:  }
+0x09000023, 0x001000F2, 0x00000001, 0x00100E46, 0x00000001, 0x00100E46, 0x00000002, 0x00100E46, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imad r<1>, -r<1>, r<2>, r<3>
+// CHECK-NEXT:  }
+0x0A000023, 0x001000F2, 0x00000001, 0x80100E46, 0x00000041, 0x00000001, 0x00100E46, 0x00000002, 0x00100E46, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imad r<1>, -r<1>, r<2>, -r<3>
+// CHECK-NEXT:  }
+0x0B000023, 0x001000F2, 0x00000001, 0x80100E46, 0x00000041, 0x00000001, 0x00100E46, 0x00000002, 0x80100E46, 0x00000041, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imad r<1>, r<1, <y, x, z, w>>, r<2>, r<3, <z, x, y, w>>
+// CHECK-NEXT:  }
+0x09000023, 0x001000F2, 0x00000001, 0x00100E16, 0x00000001, 0x00100E46, 0x00000002, 0x00100D26, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imad r<1, <x>>, r<1, <x>>, r<1, <y>>, r<1, <z>>
+// CHECK-NEXT:  }
+0x09000023, 0x00100012, 0x00000001, 0x0010000A, 0x00000001, 0x0010001A, 0x00000001, 0x0010002A, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imul precise <x, y, z> r<7, <x, y, z>>, r<3, <x, y, z>>, r<3, <x, y, z, x>>, r<4, <x, y, z, x>>
+// CHECK-NEXT:  }
+0x09380026, 0x00100072, 0x00000007, 0x00100072, 0x00000003, 0x00100246, 0x00000003, 0x00100246, 0x00000004
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imul r<6, <x, z, w>>, r<2, <x, z, w>>, r<2, <y, y, z, x>>, r<3, <y, y, z, x>>
+// CHECK-NEXT:  }
+0x09000026, 0x001000d2, 0x00000006, 0x001000d2, 0x00000002, 0x00100256, 0x00000002, 0x00100256, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imul r<5, <x>>, r<1, <x>>, r<1, <y>>, r<1, <x>>
+// CHECK-NEXT:  }
+0x09000026, 0x00100012, 0x00000005, 0x00100012, 0x00000001, 0x0010001a, 0x00000001, 0x0010000a, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imul r<5, <w>>, r<0, <w>>, -r<1, <y>>, r<1, <x>>
+// CHECK-NEXT:  }
+0x0a000026, 0x00100082, 0x00000005, 0x00100082, 0x00000000, 0x8010001a, 0x00000041, 0x00000001, 0x0010000a, 0x00000001
+
+// -----
+
+// Typically, FXC produces imul with null for destHI operand.
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.imul null, r<0, <z>>, r<0, <y>>, -r<0, <x>>
+// CHECK-NEXT:  }
+0x09000026, 0x0000d000, 0x00100042, 0x00000000, 0x0010001a, 0x00000000, 0x8010000a, 0x00000041, 0x00000000
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.msad r<0>, r<0>, r<1>, r<2>
+// CHECK-NEXT: }
+0x090000D5, 0x001000F2, 0x00000000, 0x001000F2, 0x00000000, 0x001000F2, 0x00000001, 0x001000F2, 0x00000002
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.msad r<1, <x, y>>, r<1, <x, x, x, x>>, r<2, <y, z, y, y>>, r<1, <y, z, y, y>>
+// CHECK-NEXT: }
+0x090000D5, 0x00100032, 0x00000001, 0x00100006, 0x00000001, 0x00100596, 0x00000002, 0x00100596, 0x00000001
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.msad precise <x, y, z, w> r<2>, r<2, <x, x, x, x>>, r<4>, r<3, <z, w, x, y>>
+// CHECK-NEXT: }
+0x097800D5, 0x001000F2, 0x00000002, 0x00100006, 0x00000002, 0x00100E46, 0x00000004, 0x001004E6, 0x00000003
+
+// -----
+
+// CHECK-LABEL: dxsa.module {
+// CHECK-NEXT:    dxsa.msad r<1, <x>>, r<1, <x>>, r<1, <y>>, r<1, <z>>
+// CHECK-NEXT: }
+0x090000D5, 0x00100012, 0x00000001, 0x0010000A, 0x00000001, 0x0010001A, 0x00000001, 0x0010002A, 0x00000001
