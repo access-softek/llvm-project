@@ -1156,6 +1156,29 @@ def DXBC_DclTgsmStructured : DXBC_Op<"dcl_tgsm_structured"> {
   let hasVerifier = 1;
 }
 
+def DXBC_DclImmediateConstantBuffer : DXBC_Op<"dcl_immediate_constant_buffer"> {
+  let summary = "declares an immediate constant buffer";
+  let description = [{
+    The `dxbc.dcl_immediate_constant_buffer` operation declares
+    an immediate constant buffer holding an array of 32-bit floating-point
+    values grouped into 4-component vectors.
+
+    Example:
+
+    ```mlir
+    dxbc.dcl_immediate_constant_buffer
+                   [
+                     1.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00,
+                     0.000000e+00, 1.000000e+00, 0.000000e+00, 0.000000e+00,
+                     0.000000e+00, 0.000000e+00, 1.000000e+00, 0.000000e+00,
+                     0.000000e+00, 0.000000e+00, 0.000000e+00, 1.000000e+00
+                   ]
+    ```
+  }];
+  let arguments = (ins DenseF32ArrayAttr:$values);
+  let assemblyFormat = "$values attr-dict";
+}
+
 def DXBC_DclConstantBuffer : DXBC_Op<"dcl_constant_buffer"> {
   let summary = "declares a constant buffer";
   let description = [{
