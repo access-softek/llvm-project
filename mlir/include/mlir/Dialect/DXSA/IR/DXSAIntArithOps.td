@@ -160,7 +160,7 @@ def DXSA_Imad : DXSA_MultiplyAddOp<"imad"> {
 // dxsa.imul
 //===----------------------------------------------------------------------===//
 
-def DXSA_Imul : DXSA_Op<"imul"> {
+def DXSA_Imul : DXSA_BinaryOp<"imul"> {
   let summary = "component-wise integer multiply";
   let description = [{
     The `dxsa.imul` operation computes the component-wise product
@@ -176,15 +176,8 @@ def DXSA_Imul : DXSA_Op<"imul"> {
     dxsa.imul r<7, <x, y, z>>, r<3, <x, y, z>>, r<3, <x, y, z, x>>, r<4, <x, y, z, x>>
     ```
   }];
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dstHi,
-      DXSA_DstOperandAttr:$dstLo,
-      DXSA_SrcOperandAttr:$lhs,
-      DXSA_SrcOperandAttr:$rhs,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dstHi `,` $dstLo `,` $lhs `,` $rhs attr-dict";
+  let dsts = (ins DXSA_DstOperandAttr:$dstHi, DXSA_DstOperandAttr:$dstLo);
+  let asmFormat = "$dstHi `,` $dstLo `,` $lhs `,` $rhs";
 }
 
 //===----------------------------------------------------------------------===//
