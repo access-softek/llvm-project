@@ -1425,4 +1425,17 @@ def DXBC_DclThreadGroup : DXBC_Op<"dcl_thread_group"> {
   let hasVerifier = 1;
 }
 
+def DXBC_Nop : DXBC_NoOperandOp<"nop"> {
+  let summary = "no operation";
+  let description = [{
+    The `dxbc.nop` operation has no effect.
+
+    Example:
+
+    ```mlir
+    dxbc.nop
+    ```
+  }];
+}
+
 #endif // DXBC_OPS

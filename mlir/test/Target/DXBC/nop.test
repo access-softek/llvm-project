@@ -1,0 +1,9 @@
+// RUN: mlir-translate --import-dxbc-hex %s | FileCheck %s
+// RUN: mlir-translate --import-dxbc-hex %s | mlir-opt --verify-roundtrip
+
+// CHECK:      dxbc.module {
+
+// CHECK-NEXT:   dxbc.nop
+0x0100003A
+
+// CHECK-NEXT: }
