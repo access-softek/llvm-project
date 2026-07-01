@@ -769,15 +769,10 @@ def DXSA_RsqSat : DXSA_UnaryOp<"rsq_sat"> {
 
 // Shared base for sine/cosine: sin of `$operand` into `$sin`, cosine into
 // `$cos`. Either destination may be `null` when that result is not needed.
-class DXSA_SincosOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$sin,
-      DXSA_DstOperandAttr:$cos,
-      DXSA_SrcOperandAttr:$operand,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $sin `,` $cos `,` $operand attr-dict";
+class DXSA_SincosOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let dsts = (ins DXSA_DstOperandAttr:$sin, DXSA_DstOperandAttr:$cos);
+  let srcs = (ins DXSA_SrcOperandAttr:$operand);
+  let asmFormat = "$sin `,` $cos `,` $operand";
 }
 
 def DXSA_Sincos : DXSA_SincosOp<"sincos"> {

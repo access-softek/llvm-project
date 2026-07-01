@@ -25,53 +25,44 @@ class DXSA_Op<string mnemonic, list<Trait> traits = []> :
     Op<DXSADialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
-// DXSA shared bases for ops with inline operands
+// DXSA shared base for ops with all operands specified inline
 //===----------------------------------------------------------------------===//
 
-class DXSA_UnaryOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$src,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
+class DXSA_BaseOp<string mnemonic> : DXSA_Op<mnemonic> {
+  dag dsts;
+  dag srcs;
+  string asmFormat;
+  let dsts = (ins DXSA_DstOperandAttr:$dst);
+
+  let arguments = !con(dsts, srcs, (ins OptionalAttr<DXSA_ComponentMaskAttr>:$precise));
   let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $src attr-dict";
+  let assemblyFormat = !strconcat("(`precise` $precise^)? ", asmFormat, " attr-dict");
 }
 
-class DXSA_BinaryOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$lhs,
-      DXSA_SrcOperandAttr:$rhs,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs attr-dict";
+class DXSA_NullaryOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins);
+  let asmFormat = "$dst";
 }
 
-class DXSA_TernaryOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$src0,
-      DXSA_SrcOperandAttr:$src1,
-      DXSA_SrcOperandAttr:$src2,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $src0 `,` $src1 `,` $src2 attr-dict";
+class DXSA_UnaryOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins DXSA_SrcOperandAttr:$src);
+  let asmFormat = "$dst `,` $src";
+}
+
+class DXSA_BinaryOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins DXSA_SrcOperandAttr:$lhs, DXSA_SrcOperandAttr:$rhs);
+  let asmFormat = "$dst `,` $lhs `,` $rhs";
+}
+
+class DXSA_TernaryOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins DXSA_SrcOperandAttr:$src0, DXSA_SrcOperandAttr:$src1, DXSA_SrcOperandAttr:$src2);
+  let asmFormat = "$dst `,` $src0 `,` $src1 `,` $src2";
 }
 
 // Shared base for the multiply-add family: `$dst = $lhs * $rhs + $acc`.
-class DXSA_MultiplyAddOp<string mnemonic> : DXSA_Op<mnemonic> {
-  let arguments = (ins
-      DXSA_DstOperandAttr:$dst,
-      DXSA_SrcOperandAttr:$lhs,
-      DXSA_SrcOperandAttr:$rhs,
-      DXSA_SrcOperandAttr:$acc,
-      OptionalAttr<DXSA_ComponentMaskAttr>:$precise);
-  let results = (outs);
-  let assemblyFormat =
-      "(`precise` $precise^)? $dst `,` $lhs `,` $rhs `,` $acc attr-dict";
+class DXSA_MultiplyAddOp<string mnemonic> : DXSA_BaseOp<mnemonic> {
+  let srcs = (ins DXSA_SrcOperandAttr:$lhs, DXSA_SrcOperandAttr:$rhs, DXSA_SrcOperandAttr:$acc);
+  let asmFormat = "$dst `,` $lhs `,` $rhs `,` $acc";
 }
 
 #endif // MLIR_DIALECT_DXSA_IR_DXSAOPBASE
