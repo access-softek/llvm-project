@@ -2627,6 +2627,15 @@ public:
       return PLAIN_OP(Loop, 0, 0, HasPreciseAttr::No);
     case D3D10_SB_OPCODE_RET:
       return PLAIN_OP(Ret, 0, 0, HasPreciseAttr::No);
+    // Shader phase instructions
+    case D3D11_SB_OPCODE_HS_DECLS:
+      return PLAIN_OP(HsDecls, 0, 0, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_HS_CONTROL_POINT_PHASE:
+      return PLAIN_OP(HsControlPointPhase, 0, 0, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_HS_FORK_PHASE:
+      return PLAIN_OP(HsForkPhase, 0, 0, HasPreciseAttr::No);
+    case D3D11_SB_OPCODE_HS_JOIN_PHASE:
+      return PLAIN_OP(HsJoinPhase, 0, 0, HasPreciseAttr::No);
     // Other instructions
     case D3D10_SB_OPCODE_NOP:
       return PLAIN_OP(Nop, 0, 0, HasPreciseAttr::No);

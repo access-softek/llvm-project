@@ -1005,6 +1005,66 @@ def DXBC_DclHsForkPhaseInstanceCount :
   let assemblyFormat = "$count attr-dict";
 }
 
+//===----------------------------------------------------------------------===//
+// Hull shader phase markers
+//===----------------------------------------------------------------------===//
+
+def DXBC_HsDecls : DXBC_NoOperandOp<"hs_decls"> {
+  let summary = "marks the hull shader declaration section";
+  let description = [{
+    The `dxbc.hs_decls` operation marks the declaration section of a hull
+    shader program.
+
+    Example:
+
+    ```mlir
+    dxbc.hs_decls
+    ```
+  }];
+}
+
+def DXBC_HsControlPointPhase : DXBC_NoOperandOp<"hs_control_point_phase"> {
+  let summary = "marks the hull shader control point phase";
+  let description = [{
+    The `dxbc.hs_control_point_phase` operation marks the control point phase
+    of a hull shader program.
+
+    Example:
+
+    ```mlir
+    dxbc.hs_control_point_phase
+    ```
+  }];
+}
+
+def DXBC_HsForkPhase : DXBC_NoOperandOp<"hs_fork_phase"> {
+  let summary = "marks the hull shader fork phase";
+  let description = [{
+    The `dxbc.hs_fork_phase` operation marks the fork phase of a hull shader
+    program.
+
+    Example:
+
+    ```mlir
+    dxbc.hs_fork_phase
+    ```
+  }];
+}
+
+def DXBC_HsJoinPhase : DXBC_NoOperandOp<"hs_join_phase"> {
+  let summary = "marks the hull shader join phase";
+  let description = [{
+    The `dxbc.hs_join_phase` operation marks the join phase of a hull shader
+    program.
+
+    Example:
+
+    ```mlir
+    dxbc.hs_join_phase
+    ```
+  }];
+}
+
 def DXBC_DclGsInstanceCount : DXBC_Op<"dcl_gs_instance_count"> {
   let summary = "declares instance count for the geometry shader";
   let description = [{

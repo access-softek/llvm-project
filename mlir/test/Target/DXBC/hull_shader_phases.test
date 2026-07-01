@@ -1,0 +1,28 @@
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | FileCheck %s
+// RUN: mlir-translate --split-input-file --import-dxbc-hex %s | mlir-opt --split-input-file --verify-roundtrip
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.hs_decls
+// CHECK-NEXT: }
+0x01000071
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.hs_control_point_phase
+// CHECK-NEXT: }
+0x01000072
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.hs_fork_phase
+// CHECK-NEXT: }
+0x01000073
+
+// -----
+
+// CHECK-LABEL: dxbc.module {
+// CHECK-NEXT:   dxbc.hs_join_phase
+// CHECK-NEXT: }
+0x01000074
