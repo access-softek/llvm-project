@@ -21,7 +21,9 @@ namespace mlir {
 void registerFromLLVMIRTranslation();
 void registerFromSPIRVTranslation();
 void registerFromWasmTranslation();
+void registerFromDxbcBinTranslation();
 void registerToCppTranslation();
+void registerToDxbcBinTranslation();
 void registerToLLVMIRTranslation();
 void registerToSPIRVTranslation();
 
@@ -38,7 +40,9 @@ inline void registerAllTranslations() {
     registerFromSPIRVTranslation();
     registerIRDLToCppTranslation();
     registerFromWasmTranslation();
+    registerFromDxbcBinTranslation();
     registerToCppTranslation();
+    registerToDxbcBinTranslation();
     registerToLLVMIRTranslation();
     registerToSPIRVTranslation();
     smt::registerExportSMTLIBTranslation();

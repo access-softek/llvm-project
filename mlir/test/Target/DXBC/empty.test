@@ -1,0 +1,4 @@
+// RUN: mlir-translate --import-dxbc-bin | FileCheck %s
+
+// CHECK: module {
+// CHECK-NEXT }
