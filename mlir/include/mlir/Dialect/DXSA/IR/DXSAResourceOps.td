@@ -821,4 +821,372 @@ def DXSA_Gather4POCFeedback : DXSA_Op<"gather4_po_c_s"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// dxsa.ld
+//===----------------------------------------------------------------------===//
+
+def DXSA_Ld : DXSA_Op<"ld"> {
+  let summary = "simplified alternative to the `dxsa.sample` instruction";
+  let description = [{
+    Using the provided integer address, `dxsa.ld` fetches data from
+    the specified Buffer/Texture without any filtering (e.g. point
+    sampling). The source data may come from any Resource Type,
+    other than TextureCube.
+
+    Unlike `dxsa.sample`, `dxsa.ld` is also capable of fetching data
+    from Buffers.
+
+    This instruction is available in the Vertex Shader, Pixel Shader
+    and Geometry Shader.
+
+    `src_address` provides the set of texture coordinates needed to
+    perform the sample in the form of unsigned integers.
+
+    The optional `offset` operand suffix (address offset by immediate
+    integer) indicates that the texture coordinates for the sample are
+    to be offset by a set of provided immediate texel space integer
+    constant values. The literal values are a set of 4 bit 2's
+    complement numbers, having integer range [-8,7].
+
+    Example:
+
+    ```mlir
+    dxsa.ld r<0>, r<0>, t<3, vector>
+    dxsa.ld r<2>, r<1, <x, y, w, w>>, t<3, vector>, <u = -5, v = 7, w = 0>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_resource,
+      OptionalAttr<DXSA_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+def DXSA_LdFeedback : DXSA_Op<"ld_s"> {
+  let summary = "same as `dxsa.ld`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_resource`, `offset` operands are the
+    same as in `dxsa.ld` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not
+    present) if not used. See Tiled Resources Texture Sampling
+    Features(5.9.4.5) for details.
+
+    Example:
+
+    ```mlir
+    dxsa.ld_s r<2>, r<1, <x, y, w, w>>, t<3, vector>, r<3, <x>>, <u = -5, v = 7, w = 0>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_resource,
+      DXSA_DstOperandAttr:$feedback,
+      OptionalAttr<DXSA_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource `,` $feedback
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ld2dms
+//===----------------------------------------------------------------------===//
+
+def DXSA_Ld2dms : DXSA_Op<"ld2dms"> {
+  let summary = "variant of `dxsa.ld` for reading individual samples out of 2d multisample textures";
+  let description = [{
+    Simplified alternative to the `dxsa.sample` instruction for MS
+    resources. Using the provided integer address and `sample_index`,
+    `dxsa.ld2dms` fetches data from the specified Texture without any
+    filtering (e.g. point sampling). `sample_index` does not have to
+    be a literal, the multisample count does not have to be specified
+    on the texture resource, and it works with depth/stencil views,
+    otherwise it is identical to the DX10 version of this instruction.
+
+    Example:
+
+    ```mlir
+    dxsa.ld2dms r<2, <x, y, z>>, r<1, <x, y, w, w>>, t<3, vector>, v<0, <z>>
+    dxsa.ld2dms r<2, <x, y, z>>, r<1, <x, y, w, w>>, t<3, vector>, v<0, <z>>, <u = -5, v = 7, w = 0>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_resource,
+      DXSA_SrcOperandAttr:$sample_index,
+      OptionalAttr<DXSA_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource `,` $sample_index
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+def DXSA_Ld2dmsFeedback : DXSA_Op<"ld2dms_s"> {
+  let summary = "same as `dxsa.ld2dms`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_resource`, `sample_index`, `offset`
+    operands are the same as in `dxsa.ld2dms` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not
+    present) if not used. See Tiled Resources Texture Sampling
+    Features(5.9.4.5) for details.
+
+    Example:
+
+    ```mlir
+    dxsa.ld2dms_s r<2, <x, y, z>>, r<1, <x, y, w, w>>, t<3, vector>, v<0, <z>>, r<3, <x>>
+    dxsa.ld2dms_s r<2, <x, y, z>>, r<1, <x, y, w, w>>, t<3, vector>, v<0, <z>>, r<3, <x>>, <u = -5, v = 7, w = 0>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_resource,
+      DXSA_SrcOperandAttr:$sample_index,
+      DXSA_DstOperandAttr:$feedback,
+      OptionalAttr<DXSA_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource `,` $sample_index `,` $feedback
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ld_raw
+//===----------------------------------------------------------------------===//
+
+def DXSA_LdRaw : DXSA_Op<"ld_raw"> {
+  let summary = "random-access read of a 1-4 32 bit components from a raw buffer";
+  let description = [{
+    The `dxsa.ld_raw` reads (1-4) component 32 bit from `src` at `src_offset`.
+
+    `src` must be:
+      - Any shader stage: SRV (t#).
+      - Compute Shader or Pixel Shader: UAV (u#).
+      - Compute Shader:Thread Group Shared Memory (g#).
+
+    `src_byte_offset` specifies the base 32-bit value in memory for a
+    window of 4 sequential 32-bit values in which data may be read
+    (depending on the swizzle and mask on other parameters).
+
+    Example:
+
+    ```mlir
+    dxsa.ld_raw r<0, <x, z>>, r<0, <x>>, g<0, vector, <z, x, w, y>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_byte_offset,
+      DXSA_SrcOperandAttr:$src);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_byte_offset `,` $src
+    attr-dict
+  }];
+}
+
+def DXSA_LdRawFeedback : DXSA_Op<"ld_raw_s"> {
+  let summary = "same as `dxsa.ld_raw`, but with an additional status output";
+  let description = [{
+    `dst`, `src_byte_offset`, `src` operands are the same as in
+    `dxsa.ld_raw` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not present)
+    if not used. See Tiled Resources Texture Sampling Features(5.9.4.5) for
+    details.
+
+    Example:
+
+    ```mlir
+    dxsa.ld_raw_s r<5, <x>>, r<0, <x>>, u<1, vector, <x, x, x, x>>, r<6, <x>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_byte_offset,
+      DXSA_SrcOperandAttr:$src,
+      DXSA_DstOperandAttr:$feedback);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_byte_offset `,` $src `,` $feedback
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ld_structured
+//===----------------------------------------------------------------------===//
+
+def DXSA_LdStructured : DXSA_Op<"ld_structured"> {
+  let summary = "random-access read of a 1-4 32 bit components from a structured buffer";
+  let description = [{
+    The `dxsa.ld_structured` reads (1-4) component 32bit from `src` at
+    `src_address` and `src_byte_offset`.
+
+    `src` must be an SRV (t#), UAV (u#), or in the Compute Shader it can
+    also be Thread Group Shared Memory (g#).
+
+    `src_address` specifies the index of the structure to read.
+
+    `src_byte_offset` specifies the byte offset in the structure to
+    start reading from.
+
+    Example:
+
+    ```mlir
+    dxsa.ld_structured r<0, <w>>, r<0, <z>>, l(0x8), g<0, vector, <x, x, x, x>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_byte_offset,
+      DXSA_SrcOperandAttr:$src);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_byte_offset `,` $src
+    attr-dict
+  }];
+}
+
+def DXSA_LdStructuredFeedback : DXSA_Op<"ld_structured_s"> {
+  let summary = "same as `dxsa.ld_structured`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_byte_offset`, `src` operands are the
+    same as in `dxsa.ld_structured` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not present)
+    if not used. See Tiled Resources Texture Sampling Features(5.9.4.5) for
+    details.
+
+    Example:
+
+    ```mlir
+    dxsa.ld_structured_s r<5, <x, y>>, r<0, <y>>, l(0x0), u<1, vector>, r<0, <x>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_byte_offset,
+      DXSA_SrcOperandAttr:$src,
+      DXSA_DstOperandAttr:$feedback);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_byte_offset `,` $src `,` $feedback
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.ld_uav_typed
+//===----------------------------------------------------------------------===//
+
+def DXSA_LdUavTyped : DXSA_Op<"ld_uav_typed"> {
+  let summary = "random-access read of an element from a typed UAV";
+  let description = [{
+    The `dxsa.ld_uav_typed` reads 4 component element from `src_uav`
+    at the unsigned integer address in `src_address`, converted to 32
+    bit per component based on the format, then written to `dst` in
+    Shader.
+
+    `src_uav` is a UAV (u#) declared as typed. However, the type of the
+    bound resource must be R32_UINT/SINT/FLOAT. This is a limitation
+    on some D3D11 Hardware that is intended to be relaxed in future
+    releases. Note that `dxsa.store_uav_typed` has no such
+    limitation.
+
+    The number of 32-bit unsigned integer components taken from
+    address are determined by the dimensionality of the resource
+    declared at `src_uav`. Addressing is the same as the `dxsa.ld`
+    instruction.
+
+    Out of bounds addressing is the same as the `dxsa.ld` instruction.
+
+    Example:
+
+    ```mlir
+    dxsa.ld_uav_typed r<0, min16i, <x, y, z>>, v<0, <y, y, y, y>>, u<3, vector>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_uav);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_uav
+    attr-dict
+  }];
+}
+
+def DXSA_LdUavTypedFeedback : DXSA_Op<"ld_uav_typed_s"> {
+  let summary = "same as `dxsa.ld_uav_typed`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_uav` operands are the same as in
+    `dxsa.ld_uav_typed` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not present)
+    if not used. See Tiled Resources Texture Sampling Features(5.9.4.5) for
+    details.
+
+    Example:
+
+    ```mlir
+    dxsa.ld_uav_typed_s r<0, min16i, <x, y, z>>, v<0, <x, x, x, x>>, u<3, vector, <w, y, z, x>>, r<4, <x>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXSA_DstOperandAttr:$dst,
+      DXSA_SrcOperandAttr:$src_address,
+      DXSA_SrcOperandAttr:$src_uav,
+      DXSA_DstOperandAttr:$feedback);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_uav `,` $feedback
+    attr-dict
+  }];
+}
+
 #endif // MLIR_DIALECT_DXSA_IR_DXSARESOURCEOPS
