@@ -16,6 +16,201 @@
 include "mlir/Dialect/DXSA/IR/DXSAOpBase.td"
 
 //===----------------------------------------------------------------------===//
+// dxsa.bufinfo
+//===----------------------------------------------------------------------===//
+
+def DXSA_BufInfo : DXSA_UnaryOp<"bufinfo"> {
+  let summary = "query the element count on a Buffer (but not Constant Buffer)";
+  let description = [{
+    srcResource (`$src`) can be a Buffer (not a Constant Buffer) in an
+    SRV (`t#`) or UAV (`u#`).
+
+    All components in `$dst` receive the integer number of elements in the
+    Buffer’s Shader Resource View. The number of elements depends on the
+    view parameters such as memory format.
+
+    For a Typed Buffer SRV or UAV, the return value is the number of elements
+    in the View (where an element is one unit of the typed format).
+
+    For a Raw Buffer SRV or UAV, the return value is the number of bytes in
+    the view.
+
+    For a Structured Buffer SRV or UAV, the return value is the number of
+    structures in the view.
+
+    Example:
+
+    ```mlir
+    dxsa.bufinfo r<0, <x>>, t<0, vector>
+    dxsa.bufinfo r<0, <y>>, u<1, vector, <y, x, z, w>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.resinfo
+//===----------------------------------------------------------------------===//
+
+def DXSA_ResInfo : DXSA_BinaryOp<"resinfo"> {
+  let summary = "query the dimensions of a given input resource.";
+  let description = [{
+    The `dxsa.resinfo` queries the dimensions of a given input resource.
+
+    srcMipLevel (`$lhs`) is read as an unsigned integer scalar
+    (so a single component selector is required for the
+    source register, if it is not a scalar immediate value).
+    srcResource (`$rhs`) is a `t#` or `u#` input texture for which the
+    dimensions are being queried.
+    `$dst` receives [width, height, depth or array size, total-mip-count],
+    selected by the write mask.
+
+    Returned values are all floating point, unless the `_uint` modifier is used,
+    in which case the returned values are all integers. If the `_rcpFloat`
+    modifier is used, all returned values are floating point, and the width,
+    height and depth are returned as reciprocals (1.0f/width, 1.0f/height,
+    1.0f/depth), including INF if width/height/depth are 0 (from out-of-range
+    srcMipLevel behavior above). Note that the `_rcpFloat` modifier only applies
+    to width, height, and depth returned values (and does not apply to values
+    that are set to 0 and thus not returned, and also does not apply to array
+    size returns).
+
+    For more information, see Direct3D 11.3 Functional Specification, 22.4.14.
+
+    Example:
+
+    ```mlir
+    dxsa.resinfo r<0>, r<1, <x>>, r<2>
+    dxsa.resinfo r<0, <x>>, r<1, <x>>, r<2, <x, x, x, x>>
+    ```
+  }];
+}
+
+def DXSA_ResInfoUInt : DXSA_BinaryOp<"resinfo_uint"> {
+  let summary = "query the dimensions of a given input resource.";
+  let description = [{
+    The `dxsa.resinfo_uint` queries the dimensions of a given input resource.
+    Returned values are all integer.
+
+    See `dxsa.resinfo` for more info.
+
+    Example:
+
+    ```mlir
+    dxsa.resinfo_uint r<0>, r<1, <x>>, r<2>
+    dxsa.resinfo_uint r<0, <x>>, r<1, <x>>, r<2, <x, x, x, x>>
+    ```
+  }];
+}
+
+def DXSA_ResInfoRcpFloat : DXSA_BinaryOp<"resinfo_rcpFloat"> {
+  let summary = "query the dimensions of a given input resource.";
+  let description = [{
+    The `dxsa.resinfo_rcpFloat` queries the dimensions of a given input resource.
+    All returned values are floating point, and the width, height and depth are
+    returned as reciprocals (1.0f/width, 1.0f/height, 1.0f/depth),
+    including INF if width/height/depth are 0 (from out-of-range srcMipLevel
+    behavior above).
+    Note that the `_rcpFloat` modifier only applies to width, height, and depth
+    returned values (and does not apply to values that are set to 0 and thus
+    not returned, and also does not apply to array size returns).
+
+    See `dxsa.resinfo` for more info.
+
+    Example:
+
+    ```mlir
+    dxsa.resinfo_rcpFloat r<0>, r<1, <x>>, r<2>
+    dxsa.resinfo_rcpFloat r<0, <x>>, r<1, <x>>, r<2, <x, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.sampleinfo
+//===----------------------------------------------------------------------===//
+
+def DXSA_SampleInfo : DXSA_UnaryOp<"sampleinfo"> {
+  let summary = "query the number of samples in a given shader resource view "
+                "or in the rasterizer";
+  let description = [{
+    The `dxsa.sampleinfo` returns the number of samples for the given resource
+    or the rasterizer. Only valid for resources that can be loaded using `ld2dms`
+    unless the "rasterizer" is specified as `$src`.
+    `$src` could be `t#` register (a shader resource view) or "rasterizer" register.
+
+    The instruction computes the following vector (SampleCount,0,0,0).
+    The swizzle on srcResource allows the returned values to be swizzled
+    arbitrarily before they are written to the destination.
+    If there is no resource bound to the specified slot, 0 is returned.
+    Returned value is floating point.
+
+    Example:
+
+    ```mlir
+    dxsa.sampleinfo r<0>, r<1>
+    dxsa.sampleinfo o<0, <x, y>>, rasterizer<vector, <x>>
+    ```
+  }];
+}
+
+def DXSA_SampleInfoUInt : DXSA_UnaryOp<"sampleinfo_uint"> {
+  let summary = "query the number of samples in a given shader resource view "
+                "or in the rasterizer";
+  let description = [{
+    The `dxsa.sampleinfo_uint` returns the number of samples for the given resource
+    or the rasterizer. Only valid for resources that can be loaded using `ld2dms`
+    unless the "rasterizer" is specified as `$src`.
+    `$src` could be `t#` register (a shader resource view) or "rasterizer" register.
+
+    The instruction computes the following vector (SampleCount,0,0,0).
+    The swizzle on srcResource allows the returned values to be swizzled
+    arbitrarily before they are written to the destination.
+    If there is no resource bound to the specified slot, 0 is returned.
+    Returned value is integer.
+
+    Example:
+
+    ```mlir
+    dxsa.sampleinfo_uint r<0>, r<1>
+    dxsa.sampleinfo_uint o<0, <x, y>>, rasterizer<vector, <x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxsa.samplepos
+//===----------------------------------------------------------------------===//
+
+def DXSA_SamplePos : DXSA_BinaryOp<"samplepos"> {
+  let summary = "query the position of a sample in a given shader resource "
+                "view or in the rasterizer.";
+  let description = [{
+    The `dxsa.samplepos` returns the 2D sample position of sample
+    sampleIndex (`$rhs`) for the given resource. Only valid for resources that
+    can be loaded using `ld2dms` unless the "rasterizer" is specified as
+    srcResource (`$lhs`).
+
+    srcResource could be t# register (a shader resource view) or "rasterizer" register.
+
+    The instruction computes the following floating point vector (Xposition, Yposition, 0, 0).
+
+    The swizzle on srcResource allows the returned values to be swizzled arbitrarily
+    before they are written to the destination.
+    The sample position is relative to the pixel's center, based on the Pixel Coordinate System (3.3.1).
+
+    If sampleIndex is out of bounds a zero vector is returned.
+    If there is no resource bound to the specified slot, 0 is returned.
+
+    Example:
+
+    ```mlir
+    dxsa.samplepos r<0>, r<1>, l(0x2)
+    dxsa.samplepos r<0>, r<1>, r<2, <x, x, x, x>>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // dxsa.eval_centroid
 //===----------------------------------------------------------------------===//
 
