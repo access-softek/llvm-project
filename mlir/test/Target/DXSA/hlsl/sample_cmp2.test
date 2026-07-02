@@ -11,10 +11,10 @@
 // CHECK:         dxsa.add r<0, <x>>, v<0, <x>>, v<0, <y>>
 // CHECK:         dxsa.ftou r<0, <x>>, r<0, <x>>
 // CHECK:         dxsa.utof r<0, <x>>, r<0, <x>>
-// CHECK:         dxsa.unknown <tokens = [0x8D000047, 0x800000C2, 0x00155543, 0x00100022, 0x00000000, 0x00101046, 0x00000000, 0x00107006, 0x00000003, 0x00106000, 0x00000005, 0x0010000A, 0x00000000]>
-// CHECK:         dxsa.unknown <tokens = [0x8E000047, 0x8000F601, 0x800000C2, 0x00155543, 0x00100042, 0x00000000, 0x00101046, 0x00000000, 0x00107006, 0x00000003, 0x00106000, 0x00000005, 0x0010000A, 0x00000000]>
+// CHECK:         dxsa.sample_c_lz r<0, <y>>, v<0, <x, y, x, x>>, t<3, vector, <x, x, x, x>>, s<5>, r<0, <x>>
+// CHECK:         dxsa.sample_c_lz r<0, <z>>, v<0, <x, y, x, x>>, t<3, vector, <x, x, x, x>>, s<5>, r<0, <x>>, <u = -5, v = 7, w = 0>
 // CHECK:         dxsa.add r<0, <y>>, r<0, <z>>, r<0, <y>>
-// CHECK:         dxsa.unknown <tokens = [0x8E000047, 0x80003801, 0x800000C2, 0x00155543, 0x00100042, 0x00000000, 0x00101046, 0x00000000, 0x00107006, 0x00000003, 0x00106000, 0x00000005, 0x0010000A, 0x00000000]>
+// CHECK:         dxsa.sample_c_lz r<0, <z>>, v<0, <x, y, x, x>>, t<3, vector, <x, x, x, x>>, s<5>, r<0, <x>>, <u = -4, v = 1, w = 0>
 // CHECK:         dxsa.unknown <tokens = [0x900000E5, 0x80005A01, 0x800000C2, 0x00155543, 0x00100012, 0x00000000, 0x00100012, 0x00000001, 0x00101046, 0x00000000, 0x00107006, 0x00000003, 0x00106000, 0x00000005, 0x0010000A, 0x00000000]>
 // CHECK:         dxsa.add r<0, <y>>, r<0, <z>>, r<0, <y>>
 // CHECK:         dxsa.add r<0, <y>>, r<0, <x>>, r<0, <y>>
