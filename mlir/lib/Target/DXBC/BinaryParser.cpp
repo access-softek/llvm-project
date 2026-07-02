@@ -390,6 +390,30 @@ struct InstructionModifier {
 // Whether an op carries a precise modifier attribute.
 enum class HasPreciseAttr { No, Yes };
 
+struct ExtendedInstructionSampleOffset {
+  int32_t u;
+  int32_t v;
+  int32_t w;
+};
+
+struct ExtendedInstructionResourceDim {
+  uint32_t dim;
+  std::optional<uint32_t> stride;
+};
+
+struct ExtendedInstructionResourceReturnType {
+  uint32_t x;
+  uint32_t y;
+  uint32_t z;
+  uint32_t w;
+};
+
+struct ExtendedInstruction {
+  std::optional<ExtendedInstructionSampleOffset> sampleOffset;
+  std::optional<ExtendedInstructionResourceDim> resourceDim;
+  std::optional<ExtendedInstructionResourceReturnType> resourceReturnType;
+};
+
 struct OperandModifier {
   uint32_t modifier{0};
   uint32_t minPrecision{0};
@@ -1004,6 +1028,144 @@ public:
     return dxbc::DclThreadGroup::create(
         builder, loc, builder.getI32IntegerAttr(x),
         builder.getI32IntegerAttr(y), builder.getI32IntegerAttr(z));
+  }
+
+  dxbc::SampleOffsetAttr
+  buildSampleOffsetAttr(const ExtendedInstructionSampleOffset &sampleOffset) {
+    return dxbc::SampleOffsetAttr::get(context, sampleOffset.u, sampleOffset.v,
+                                       sampleOffset.w);
+  }
+
+  dxbc::SampleClampFeedbackAttr
+  buildSampleClampFeedbackAttr(dxbc::SrcOperandAttr clamp,
+                               dxbc::DstOperandAttr feedback) {
+    return dxbc::SampleClampFeedbackAttr::get(context, clamp, feedback);
+  }
+
+  Instruction buildSample(dxbc::DstOperandAttr dst,
+                          dxbc::SrcOperandAttr srcAddress,
+                          dxbc::SrcOperandAttr srcResource,
+                          dxbc::SrcOperandAttr srcSampler,
+                          dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::Sample::create(builder, loc, dst, srcAddress, srcResource,
+                                srcSampler, offset);
+  }
+
+  Instruction buildSampleClampFeedback(
+      dxbc::DstOperandAttr dst, dxbc::SrcOperandAttr srcAddress,
+      dxbc::SrcOperandAttr srcResource, dxbc::SrcOperandAttr srcSampler,
+      dxbc::SampleClampFeedbackAttr clampFeedback,
+      dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleClampFeedback::create(builder, loc, dst, srcAddress,
+                                             srcResource, srcSampler,
+                                             clampFeedback, offset);
+  }
+
+  Instruction buildSampleB(dxbc::DstOperandAttr dst,
+                           dxbc::SrcOperandAttr srcAddress,
+                           dxbc::SrcOperandAttr srcResource,
+                           dxbc::SrcOperandAttr srcSampler,
+                           dxbc::SrcOperandAttr srcLodBias,
+                           dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleB::create(builder, loc, dst, srcAddress, srcResource,
+                                 srcSampler, srcLodBias, offset);
+  }
+
+  Instruction buildSampleBClampFeedback(
+      dxbc::DstOperandAttr dst, dxbc::SrcOperandAttr srcAddress,
+      dxbc::SrcOperandAttr srcResource, dxbc::SrcOperandAttr srcSampler,
+      dxbc::SrcOperandAttr srcLodBias,
+      dxbc::SampleClampFeedbackAttr clampFeedback,
+      dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleBClampFeedback::create(
+        builder, loc, dst, srcAddress, srcResource, srcSampler, srcLodBias,
+        clampFeedback, offset);
+  }
+
+  Instruction buildSampleD(dxbc::DstOperandAttr dst,
+                           dxbc::SrcOperandAttr srcAddress,
+                           dxbc::SrcOperandAttr srcResource,
+                           dxbc::SrcOperandAttr srcSampler,
+                           dxbc::SrcOperandAttr srcXDerivatives,
+                           dxbc::SrcOperandAttr srcYDerivatives,
+                           dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleD::create(builder, loc, dst, srcAddress, srcResource,
+                                 srcSampler, srcXDerivatives, srcYDerivatives,
+                                 offset);
+  }
+
+  Instruction buildSampleDClampFeedback(
+      dxbc::DstOperandAttr dst, dxbc::SrcOperandAttr srcAddress,
+      dxbc::SrcOperandAttr srcResource, dxbc::SrcOperandAttr srcSampler,
+      dxbc::SrcOperandAttr srcXDerivatives,
+      dxbc::SrcOperandAttr srcYDerivatives,
+      dxbc::SampleClampFeedbackAttr clampFeedback,
+      dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleDClampFeedback::create(
+        builder, loc, dst, srcAddress, srcResource, srcSampler, srcXDerivatives,
+        srcYDerivatives, clampFeedback, offset);
+  }
+
+  Instruction buildSampleL(dxbc::DstOperandAttr dst,
+                           dxbc::SrcOperandAttr srcAddress,
+                           dxbc::SrcOperandAttr srcResource,
+                           dxbc::SrcOperandAttr srcSampler,
+                           dxbc::SrcOperandAttr srcLod,
+                           dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleL::create(builder, loc, dst, srcAddress, srcResource,
+                                 srcSampler, srcLod, offset);
+  }
+
+  Instruction buildSampleLFeedback(
+      dxbc::DstOperandAttr dst, dxbc::SrcOperandAttr srcAddress,
+      dxbc::SrcOperandAttr srcResource, dxbc::SrcOperandAttr srcSampler,
+      dxbc::SrcOperandAttr srcLod, dxbc::DstOperandAttr feedback,
+      dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleLFeedback::create(builder, loc, dst, srcAddress,
+                                         srcResource, srcSampler, srcLod,
+                                         feedback, offset);
+  }
+
+  Instruction buildSampleC(dxbc::DstOperandAttr dst,
+                           dxbc::SrcOperandAttr srcAddress,
+                           dxbc::SrcOperandAttr srcResource,
+                           dxbc::SrcOperandAttr srcSampler,
+                           dxbc::SrcOperandAttr srcReferenceValue,
+                           dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleC::create(builder, loc, dst, srcAddress, srcResource,
+                                 srcSampler, srcReferenceValue, offset);
+  }
+
+  Instruction buildSampleCClampFeedback(
+      dxbc::DstOperandAttr dst, dxbc::SrcOperandAttr srcAddress,
+      dxbc::SrcOperandAttr srcResource, dxbc::SrcOperandAttr srcSampler,
+      dxbc::SrcOperandAttr srcReferenceValue,
+      dxbc::SampleClampFeedbackAttr clampFeedback,
+      dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleCClampFeedback::create(
+        builder, loc, dst, srcAddress, srcResource, srcSampler,
+        srcReferenceValue, clampFeedback, offset);
+  }
+
+  Instruction buildSampleCLZ(dxbc::DstOperandAttr dst,
+                             dxbc::SrcOperandAttr srcAddress,
+                             dxbc::SrcOperandAttr srcResource,
+                             dxbc::SrcOperandAttr srcSampler,
+                             dxbc::SrcOperandAttr srcReferenceValue,
+                             dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleCLZ::create(builder, loc, dst, srcAddress, srcResource,
+                                   srcSampler, srcReferenceValue, offset);
+  }
+
+  Instruction buildSampleCLZFeedback(
+      dxbc::DstOperandAttr dst, dxbc::SrcOperandAttr srcAddress,
+      dxbc::SrcOperandAttr srcResource, dxbc::SrcOperandAttr srcSampler,
+      dxbc::SrcOperandAttr srcReferenceValue,
+      dxbc::SampleClampFeedbackAttr clampFeedback,
+      dxbc::SampleOffsetAttr offset, Location loc) {
+    return dxbc::SampleCLZFeedback::create(
+        builder, loc, dst, srcAddress, srcResource, srcSampler,
+        srcReferenceValue, clampFeedback, offset);
   }
 
 private:
@@ -1745,6 +1907,215 @@ public:
     return builder.buildGsStreamIndexOp<OpT>(*index, loc);
   }
 
+  void parseExtendedInstruction(uint32_t extendedToken,
+                                ExtendedInstruction &ext) {
+    switch (DECODE_D3D10_SB_EXTENDED_OPCODE_TYPE(extendedToken)) {
+    case D3D10_SB_EXTENDED_OPCODE_EMPTY:
+      return;
+    case D3D10_SB_EXTENDED_OPCODE_SAMPLE_CONTROLS: {
+      auto token = static_cast<int32_t>(extendedToken);
+      int32_t offsets[3] = {
+          DECODE_IMMEDIATE_D3D10_SB_ADDRESS_OFFSET(
+              D3D10_SB_IMMEDIATE_ADDRESS_OFFSET_U, token),
+          DECODE_IMMEDIATE_D3D10_SB_ADDRESS_OFFSET(
+              D3D10_SB_IMMEDIATE_ADDRESS_OFFSET_V, token),
+          DECODE_IMMEDIATE_D3D10_SB_ADDRESS_OFFSET(
+              D3D10_SB_IMMEDIATE_ADDRESS_OFFSET_W, token),
+      };
+      for (int32_t &offset : offsets) {
+        // Sign extend from 4 bits to 32.
+        if (offset & 0x8) {
+          offset |= 0xfffffff0;
+        }
+      }
+      ext.sampleOffset = {offsets[0], offsets[1], offsets[2]};
+      return;
+    }
+    case D3D11_SB_EXTENDED_OPCODE_RESOURCE_DIM: {
+      auto dim = DECODE_D3D11_SB_EXTENDED_RESOURCE_DIMENSION(extendedToken);
+      auto stride =
+          (dim == D3D11_SB_RESOURCE_DIMENSION_STRUCTURED_BUFFER)
+              ? std::optional<uint32_t>(
+                    DECODE_D3D11_SB_EXTENDED_RESOURCE_DIMENSION_STRUCTURE_STRIDE(
+                        extendedToken))
+              : std::nullopt;
+      ext.resourceDim = {dim, stride};
+      return;
+    }
+    case D3D11_SB_EXTENDED_OPCODE_RESOURCE_RETURN_TYPE: {
+      ext.resourceReturnType = {
+          DECODE_D3D11_SB_EXTENDED_RESOURCE_RETURN_TYPE(extendedToken, 0),
+          DECODE_D3D11_SB_EXTENDED_RESOURCE_RETURN_TYPE(extendedToken, 1),
+          DECODE_D3D11_SB_EXTENDED_RESOURCE_RETURN_TYPE(extendedToken, 2),
+          DECODE_D3D11_SB_EXTENDED_RESOURCE_RETURN_TYPE(extendedToken, 3),
+      };
+      return;
+    }
+    }
+  }
+
+  FailureOr<Instruction> parseSampleInstruction(uint32_t opcode,
+                                                ExtendedInstruction &ext,
+                                                size_t beginOffset,
+                                                uint32_t length, Location loc) {
+    dxbc::SampleOffsetAttr offset;
+    if (ext.sampleOffset) {
+      offset = builder.buildSampleOffsetAttr(*ext.sampleOffset);
+    }
+
+    auto dst = parseDstOperand();
+    FAILURE_IF_FAILED(dst);
+
+    dxbc::DstOperandAttr feedback;
+    switch (opcode) {
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_D_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_B_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_L_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_C_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_C_LZ_FEEDBACK:
+      auto op = parseDstOperand();
+      FAILURE_IF_FAILED(op);
+      feedback = *op;
+      break;
+    }
+
+    auto srcAddress = parseSrcOperand();
+    FAILURE_IF_FAILED(srcAddress);
+
+    auto srcResource = parseSrcOperand();
+    FAILURE_IF_FAILED(srcResource);
+
+    auto srcSampler = parseSrcOperand();
+    FAILURE_IF_FAILED(srcSampler);
+
+    FailureOr<Instruction> instr;
+    switch (opcode) {
+    case D3D10_SB_OPCODE_SAMPLE:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_CLAMP_FEEDBACK: {
+      if (feedback) {
+        auto clamp = parseSrcOperand();
+        FAILURE_IF_FAILED(clamp);
+
+        auto clampFeedback =
+            builder.buildSampleClampFeedbackAttr(*clamp, feedback);
+        instr = builder.buildSampleClampFeedback(*dst, *srcAddress,
+                                                 *srcResource, *srcSampler,
+                                                 clampFeedback, offset, loc);
+      } else {
+        instr = builder.buildSample(*dst, *srcAddress, *srcResource,
+                                    *srcSampler, offset, loc);
+      }
+      break;
+    }
+    case D3D10_SB_OPCODE_SAMPLE_D:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_D_CLAMP_FEEDBACK: {
+      auto srcXDerivatives = parseSrcOperand();
+      FAILURE_IF_FAILED(srcXDerivatives);
+
+      auto srcYDerivatives = parseSrcOperand();
+      FAILURE_IF_FAILED(srcYDerivatives);
+
+      if (feedback) {
+        auto clamp = parseSrcOperand();
+        FAILURE_IF_FAILED(clamp);
+
+        auto clampFeedback =
+            builder.buildSampleClampFeedbackAttr(*clamp, feedback);
+        instr = builder.buildSampleDClampFeedback(
+            *dst, *srcAddress, *srcResource, *srcSampler, *srcXDerivatives,
+            *srcYDerivatives, clampFeedback, offset, loc);
+      } else {
+        instr = builder.buildSampleD(*dst, *srcAddress, *srcResource,
+                                     *srcSampler, *srcXDerivatives,
+                                     *srcYDerivatives, offset, loc);
+      }
+      break;
+    }
+    case D3D10_SB_OPCODE_SAMPLE_B:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_B_CLAMP_FEEDBACK: {
+      auto srcLodBias = parseSrcOperand();
+      FAILURE_IF_FAILED(srcLodBias);
+
+      if (feedback) {
+        auto clamp = parseSrcOperand();
+        FAILURE_IF_FAILED(clamp);
+        auto clampFeedback =
+            builder.buildSampleClampFeedbackAttr(*clamp, feedback);
+        instr = builder.buildSampleBClampFeedback(
+            *dst, *srcAddress, *srcResource, *srcSampler, *srcLodBias,
+            clampFeedback, offset, loc);
+      } else {
+        instr = builder.buildSampleB(*dst, *srcAddress, *srcResource,
+                                     *srcSampler, *srcLodBias, offset, loc);
+      }
+      break;
+    }
+    case D3D10_SB_OPCODE_SAMPLE_L:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_L_FEEDBACK: {
+      auto srcLod = parseSrcOperand();
+      FAILURE_IF_FAILED(srcLod);
+
+      if (feedback) {
+        instr = builder.buildSampleLFeedback(*dst, *srcAddress, *srcResource,
+                                             *srcSampler, *srcLod, feedback,
+                                             offset, loc);
+      } else {
+        instr = builder.buildSampleL(*dst, *srcAddress, *srcResource,
+                                     *srcSampler, *srcLod, offset, loc);
+      }
+      break;
+    }
+    case D3D10_SB_OPCODE_SAMPLE_C:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_C_CLAMP_FEEDBACK: {
+      auto srcReferenceValue = parseSrcOperand();
+      FAILURE_IF_FAILED(srcReferenceValue);
+
+      if (feedback) {
+        auto clamp = parseSrcOperand();
+        FAILURE_IF_FAILED(clamp);
+        auto clampFeedback =
+            builder.buildSampleClampFeedbackAttr(*clamp, feedback);
+        instr = builder.buildSampleCClampFeedback(
+            *dst, *srcAddress, *srcResource, *srcSampler, *srcReferenceValue,
+            clampFeedback, offset, loc);
+      } else {
+        instr =
+            builder.buildSampleC(*dst, *srcAddress, *srcResource, *srcSampler,
+                                 *srcReferenceValue, offset, loc);
+      }
+      break;
+    }
+    case D3D10_SB_OPCODE_SAMPLE_C_LZ:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_C_LZ_FEEDBACK: {
+      auto srcReferenceValue = parseSrcOperand();
+      FAILURE_IF_FAILED(srcReferenceValue);
+
+      if (feedback) {
+        auto clamp = parseSrcOperand();
+        FAILURE_IF_FAILED(clamp);
+        auto clampFeedback =
+            builder.buildSampleClampFeedbackAttr(*clamp, feedback);
+
+        instr = builder.buildSampleCLZFeedback(*dst, *srcAddress, *srcResource,
+                                               *srcSampler, *srcReferenceValue,
+                                               clampFeedback, offset, loc);
+      } else {
+        instr =
+            builder.buildSampleCLZ(*dst, *srcAddress, *srcResource, *srcSampler,
+                                   *srcReferenceValue, offset, loc);
+      }
+      break;
+    }
+    default:
+      llvm_unreachable("unhandled instruction");
+    }
+
+    FAILURE_IF_FAILED(instr);
+    FAILURE_IF_FAILED(verifyInstructionLength(beginOffset, length));
+    return instr;
+  }
+
   FailureOr<Instruction> parseDclInput(Location loc) {
     auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
@@ -2350,6 +2721,18 @@ public:
     modifier.saturate =
         DECODE_IS_D3D10_SB_INSTRUCTION_SATURATE_ENABLED(*opcodeToken0);
 
+    ExtendedInstruction extendedInst;
+    if (DECODE_IS_D3D10_SB_OPCODE_EXTENDED(*opcodeToken0)) {
+      // opcodeToken0 is followed by zero or more opcodeToken1 that describe
+      // sampler or resource parameters.
+      Token opcodeToken1;
+      do {
+        opcodeToken1 = parseToken();
+        FAILURE_IF_FAILED(opcodeToken1);
+        parseExtendedInstruction(*opcodeToken1, extendedInst);
+      } while (DECODE_IS_D3D10_SB_OPCODE_EXTENDED(*opcodeToken1));
+    }
+
     // TODO: extended instructions:
     // BOOL b51PlusShader =
     // BOOL bExtended = DECODE_IS_D3D10_SB_OPCODE_EXTENDED(Token)
@@ -2693,6 +3076,20 @@ public:
     case D3D11_SB_OPCODE_SYNC:
       return parseSync(*opcodeToken0, beginOffset, instructionLengthInTokens,
                        getLocation());
+    case D3D10_SB_OPCODE_SAMPLE:
+    case D3D10_SB_OPCODE_SAMPLE_B:
+    case D3D10_SB_OPCODE_SAMPLE_C:
+    case D3D10_SB_OPCODE_SAMPLE_C_LZ:
+    case D3D10_SB_OPCODE_SAMPLE_D:
+    case D3D10_SB_OPCODE_SAMPLE_L:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_B_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_C_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_C_LZ_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_D_CLAMP_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_SAMPLE_L_FEEDBACK:
+      return parseSampleInstruction(opcode, extendedInst, beginOffset,
+                                    instructionLengthInTokens, getLocation());
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP

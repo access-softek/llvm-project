@@ -991,3 +991,18 @@ void SrcOperandAttr::print(AsmPrinter &printer) const {
     printNegAndAbsModifier(printer, getModifier(),
                            [&] { printSrcOperandBody(printer, *this); });
 }
+
+LogicalResult
+SampleOffsetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         int32_t u, int32_t v, int32_t w) {
+  int32_t values[] = {u, v, w};
+  for (int32_t value : values) {
+    if (value < -8 || value > 7) {
+      return emitError()
+             << "sample offsets must be 4 bit 2's complement numbers, "
+                "having integer range [-8,7], got "
+             << value;
+    }
+  }
+  return success();
+}
