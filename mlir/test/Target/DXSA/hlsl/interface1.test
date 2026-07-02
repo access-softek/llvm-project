@@ -4,15 +4,16 @@
 
 // CHECK-LABEL:   dxsa.dcl_global_flags <refactoringAllowed>
 // CHECK:         dxsa.dcl_constant_buffer <id = 0, size = 1>, <immediateIndexed>
-// CHECK:         dxsa.unknown <tokens = [0x02000090, 0x00000000]>
-// CHECK:         dxsa.unknown <tokens = [0x02000090, 0x00000001]>
-// CHECK:         dxsa.unknown <tokens = [0x04000091, 0x00000000, 0x00000001, 0x00000000]>
-// CHECK:         dxsa.unknown <tokens = [0x04000091, 0x00000001, 0x00000001, 0x00000001]>
-// CHECK:         dxsa.unknown <tokens = [0x06000892, 0x00000000, 0x00000001, 0x00FD0002, 0x00000000, 0x00000001]>
+// CHECK:         dxsa.instruction "dcl_function_body"
+// CHECK:         dxsa.instruction "dcl_function_body"
+// CHECK:         dxsa.instruction "dcl_function_table"
+// CHECK:         dxsa.instruction "dcl_function_table"
+// CHECK:         dxsa.instruction "dcl_interface"
 // CHECK:         dxsa.dcl_output o<0, <x>>
 // CHECK:         dxsa.dcl_temps 2
 // CHECK:         dxsa.mov r<0, <x>>, cb<[0, 0], vector, <x>>
-// CHECK:         dxsa.unknown <tokens = [0x06000078, 0x00000000, 0x04213000, 0x00000000, 0x0010000A, 0x00000000]>
+// CHECK:         %0 = dxsa.operand  {num_components = 0 : i32, type = 0 : i32}
+// CHECK:         dxsa.instruction "fcall" %0
 // CHECK:         dxsa.mov o<0, <x>>, r<0, <y>>
 // CHECK:         dxsa.ret
 // CHECK:         dxsa.label fb<0>

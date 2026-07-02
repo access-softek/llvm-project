@@ -3410,6 +3410,34 @@ public:
     case D3D11_SB_OPCODE_EMITTHENCUT_STREAM:
       return STREAM_INDEX_OP(EmitThenCutStream);
     // Resource instructions
+    case D3D11_SB_OPCODE_BUFINFO:
+      return PLAIN_OP(BufInfo, 1, 1, HasPreciseAttr::Yes);
+    case D3D10_SB_OPCODE_RESINFO: {
+      D3D10_SB_RESINFO_INSTRUCTION_RETURN_TYPE resinfo_type =
+          DECODE_D3D10_SB_RESINFO_INSTRUCTION_RETURN_TYPE(*opcodeToken0);
+      switch (resinfo_type) {
+      case D3D10_SB_RESINFO_INSTRUCTION_RETURN_FLOAT:
+        return PLAIN_OP(ResInfo, 1, 2, HasPreciseAttr::Yes);
+      case D3D10_SB_RESINFO_INSTRUCTION_RETURN_RCPFLOAT:
+        return PLAIN_OP(ResInfoRcpFloat, 1, 2, HasPreciseAttr::Yes);
+      case D3D10_SB_RESINFO_INSTRUCTION_RETURN_UINT:
+        return PLAIN_OP(ResInfoUInt, 1, 2, HasPreciseAttr::Yes);
+      }
+      llvm_unreachable("unhandled resinfo");
+    }
+    case D3D10_1_SB_OPCODE_SAMPLE_INFO: {
+      D3D10_SB_INSTRUCTION_RETURN_TYPE sampleinfo_type =
+          DECODE_D3D10_SB_INSTRUCTION_RETURN_TYPE(*opcodeToken0);
+      switch (sampleinfo_type) {
+      case D3D10_SB_INSTRUCTION_RETURN_FLOAT:
+        return PLAIN_OP(SampleInfo, 1, 1, HasPreciseAttr::Yes);
+      case D3D10_SB_INSTRUCTION_RETURN_UINT:
+        return PLAIN_OP(SampleInfoUInt, 1, 1, HasPreciseAttr::Yes);
+      }
+      llvm_unreachable("unhandled sampleinfo");
+    }
+    case D3D10_1_SB_OPCODE_SAMPLE_POS:
+      return PLAIN_OP(SamplePos, 1, 2, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_EVAL_CENTROID:
       return PLAIN_OP(EvalCentroid, 1, 1, HasPreciseAttr::Yes);
     case D3D11_SB_OPCODE_EVAL_SAMPLE_INDEX:
@@ -3668,9 +3696,18 @@ public:
   }
 
   LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length) {
-    if (((currentTokenOffset - beginOffset) / tokenSize) != length) {
-      emitError(getLocation(), "instruction length mismatch");
+    // WORKAROUND: some instructions such as samplepos have trailing
+    // tokens that do not correspond to any operands. Therefore we
+    // allow actual instruction length to be less then length read
+    // from the opcode token.
+    if (((currentTokenOffset - beginOffset) / tokenSize) > length) {
+      emitError(getLocation(), "operands did not fit into instruction length");
       return failure();
+    }
+    // WORKAROUND: skip unparsed tokens in the end. See above.
+    while (((currentTokenOffset - beginOffset) / tokenSize) < length) {
+      auto token = parseToken();
+      FAILURE_IF_FAILED(token);
     }
     return success();
   }

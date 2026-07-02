@@ -10,20 +10,11 @@
 // CHECK:         dxsa.dcl_output o<1>
 // CHECK:         dxsa.dcl_temps 2
 // CHECK:         dxsa.ftoi r<0, <x, y, z>>, v<0, <z, w, y, z>>
-// CHECK:         dxsa.unknown <tokens = [0x0800006E, 0x00100092, 0x00000000, 0x00107406, 0x00000000, 0x0010000A, 0x00000000, 0x00000000]>
-// CHECK:         dxsa.unknown <tokens = [0x0800006E, 0x00100032, 0x00000001, 0x00107046, 0x00000001, 0x0010001A, 0x00000000, 0x00000000]>
-// CHECK:         %[[INDEX_0:.*]] = dxsa.index.imm {imm = 0 : i32}
-// CHECK:         %[[OPERAND_0:.*]] = dxsa.operand %[[INDEX_0]] {mask = 96 : i32, num_components = 4 : i32, type = 0 : i32}
-// CHECK:         %[[OPERAND_1:.*]] = dxsa.operand  {num_components = 4 : i32, swizzle = dense<[0, 0, 1, 0]> : vector<4xi32>, type = 14 : i32}
-// CHECK:         %[[INDEX_1:.*]] = dxsa.index.imm {imm = 0 : i32}
-// CHECK:         %[[OPERAND_2:.*]] = dxsa.operand %[[INDEX_1]] {num_components = 4 : i32, one = 2 : i32, type = 0 : i32}
-// CHECK:         dxsa.instruction "samplepos" %[[OPERAND_0]], %[[OPERAND_1]], %[[OPERAND_2]]
+// CHECK:         dxsa.samplepos r<0, <x, w>>, t<0, vector, <x, x, x, y>>, r<0, <x>>
+// CHECK:         dxsa.samplepos r<1, <x, y>>, t<1, vector, <x, y, x, x>>, r<0, <y>>
+// CHECK:         dxsa.samplepos r<0, <y, z>>, rasterizer<vector, <x, x, y, x>>, r<0, <z>>
 // CHECK:         dxsa.add r<0, <x, w>>, r<0, <x, x, x, w>>, r<1, <x, x, x, y>>
-// CHECK:         %[[INDEX_2:.*]] = dxsa.index.imm {imm = 1 : i32}
-// CHECK:         %[[OPERAND_3:.*]] = dxsa.operand %[[INDEX_2]] {mask = 48 : i32, num_components = 4 : i32, type = 0 : i32}
-// CHECK:         %[[OPERAND_4:.*]] = dxsa.operand  {num_components = 4 : i32, swizzle = dense<[0, 1, 0, 0]> : vector<4xi32>, type = 14 : i32}
-// CHECK:         %[[OPERAND_5:.*]] = dxsa.operand.imm {imm = dense<3> : vector<1xi32>}
-// CHECK:         dxsa.instruction "samplepos" %[[OPERAND_3]], %[[OPERAND_4]], %[[OPERAND_5]]
+// CHECK:         dxsa.samplepos r<1, <x, y>>, rasterizer<vector, <x, y, x, x>>, l(0x3)
 // CHECK:         dxsa.add r<0, <x, w>>, r<0, <x, x, x, w>>, r<1, <x, x, x, y>>
 // CHECK:         dxsa.add r<0, <x, y>>, r<0, <y, z, y, y>>, r<0, <x, w, x, x>>
 // CHECK:         dxsa.mov o<0, <x, y>>, r<0, <x, y, x, x>>
