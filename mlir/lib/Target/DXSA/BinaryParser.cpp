@@ -1168,6 +1168,89 @@ public:
         srcReferenceValue, clampFeedback, offset);
   }
 
+  Instruction buildGather4(dxsa::DstOperandAttr dst,
+                           dxsa::SrcOperandAttr srcAddress,
+                           dxsa::SrcOperandAttr srcResource,
+                           dxsa::SrcOperandAttr srcSampler,
+                           dxsa::SampleOffsetAttr offset, Location loc) {
+    return dxsa::Gather4::create(builder, loc, dst, srcAddress, srcResource,
+                                 srcSampler, offset);
+  }
+
+  Instruction buildGather4Feedback(dxsa::DstOperandAttr dst,
+                                   dxsa::SrcOperandAttr srcAddress,
+                                   dxsa::SrcOperandAttr srcResource,
+                                   dxsa::SrcOperandAttr srcSampler,
+                                   dxsa::DstOperandAttr feedback,
+                                   dxsa::SampleOffsetAttr offset,
+                                   Location loc) {
+    return dxsa::Gather4Feedback::create(builder, loc, dst, srcAddress,
+                                         srcResource, srcSampler, feedback,
+                                         offset);
+  }
+
+  Instruction buildGather4C(dxsa::DstOperandAttr dst,
+                            dxsa::SrcOperandAttr srcAddress,
+                            dxsa::SrcOperandAttr srcResource,
+                            dxsa::SrcOperandAttr srcSampler,
+                            dxsa::SrcOperandAttr srcReferenceValue,
+                            dxsa::SampleOffsetAttr offset, Location loc) {
+    return dxsa::Gather4C::create(builder, loc, dst, srcAddress, srcResource,
+                                  srcSampler, srcReferenceValue, offset);
+  }
+
+  Instruction buildGather4CFeedback(
+      dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr srcAddress,
+      dxsa::SrcOperandAttr srcResource, dxsa::SrcOperandAttr srcSampler,
+      dxsa::SrcOperandAttr srcReferenceValue, dxsa::DstOperandAttr feedback,
+      dxsa::SampleOffsetAttr offset, Location loc) {
+    return dxsa::Gather4CFeedback::create(builder, loc, dst, srcAddress,
+                                          srcResource, srcSampler,
+                                          srcReferenceValue, feedback, offset);
+  }
+
+  Instruction buildGather4PO(dxsa::DstOperandAttr dst,
+                             dxsa::SrcOperandAttr srcAddress,
+                             dxsa::SrcOperandAttr srcOffset,
+                             dxsa::SrcOperandAttr srcResource,
+                             dxsa::SrcOperandAttr srcSampler, Location loc) {
+    return dxsa::Gather4PO::create(builder, loc, dst, srcAddress, srcOffset,
+                                   srcResource, srcSampler);
+  }
+
+  Instruction buildGather4POFeedback(dxsa::DstOperandAttr dst,
+                                     dxsa::SrcOperandAttr srcAddress,
+                                     dxsa::SrcOperandAttr srcOffset,
+                                     dxsa::SrcOperandAttr srcResource,
+                                     dxsa::SrcOperandAttr srcSampler,
+                                     dxsa::DstOperandAttr feedback,
+                                     Location loc) {
+    return dxsa::Gather4POFeedback::create(builder, loc, dst, srcAddress,
+                                           srcOffset, srcResource, srcSampler,
+                                           feedback);
+  }
+
+  Instruction buildGather4POC(dxsa::DstOperandAttr dst,
+                              dxsa::SrcOperandAttr srcAddress,
+                              dxsa::SrcOperandAttr srcOffset,
+                              dxsa::SrcOperandAttr srcResource,
+                              dxsa::SrcOperandAttr srcSampler,
+                              dxsa::SrcOperandAttr srcReferenceValue,
+                              Location loc) {
+    return dxsa::Gather4POC::create(builder, loc, dst, srcAddress, srcOffset,
+                                    srcResource, srcSampler, srcReferenceValue);
+  }
+
+  Instruction buildGather4POCFeedback(
+      dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr srcAddress,
+      dxsa::SrcOperandAttr srcOffset, dxsa::SrcOperandAttr srcResource,
+      dxsa::SrcOperandAttr srcSampler, dxsa::SrcOperandAttr srcReferenceValue,
+      dxsa::DstOperandAttr feedback, Location loc) {
+    return dxsa::Gather4POCFeedback::create(builder, loc, dst, srcAddress,
+                                            srcOffset, srcResource, srcSampler,
+                                            srcReferenceValue, feedback);
+  }
+
 private:
   MLIRContext *context;
   OpBuilder builder;
@@ -2104,6 +2187,118 @@ public:
         instr =
             builder.buildSampleCLZ(*dst, *srcAddress, *srcResource, *srcSampler,
                                    *srcReferenceValue, offset, loc);
+      }
+      break;
+    }
+    default:
+      llvm_unreachable("unhandled instruction");
+    }
+
+    FAILURE_IF_FAILED(instr);
+    FAILURE_IF_FAILED(verifyInstructionLength(beginOffset, length));
+    return instr;
+  }
+
+  FailureOr<Instruction>
+  parseGather4Instructions(uint32_t opcode, ExtendedInstruction &ext,
+                           size_t beginOffset, uint32_t length, Location loc) {
+    dxsa::SampleOffsetAttr offset;
+    if (ext.sampleOffset) {
+      offset = builder.buildSampleOffsetAttr(*ext.sampleOffset);
+    }
+
+    auto dst = parseDstOperand();
+    FAILURE_IF_FAILED(dst);
+
+    dxsa::DstOperandAttr feedback;
+    switch (opcode) {
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_C_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_C_FEEDBACK:
+      // For Feedback variant, feedback operand is the second dst
+      // register.
+      auto op = parseDstOperand();
+      FAILURE_IF_FAILED(op);
+      feedback = *op;
+      break;
+    }
+
+    auto srcAddress = parseSrcOperand();
+    FAILURE_IF_FAILED(srcAddress);
+
+    dxsa::SrcOperandAttr srcOffset;
+    switch (opcode) {
+    case D3D11_SB_OPCODE_GATHER4_PO:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_FEEDBACK:
+    case D3D11_SB_OPCODE_GATHER4_PO_C:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_C_FEEDBACK: {
+      auto offset = parseSrcOperand();
+      FAILURE_IF_FAILED(offset);
+      srcOffset = *offset;
+    }
+    }
+
+    auto srcResource = parseSrcOperand();
+    FAILURE_IF_FAILED(srcResource);
+
+    auto srcSampler = parseSrcOperand();
+    FAILURE_IF_FAILED(srcSampler);
+
+    FailureOr<Instruction> instr;
+    switch (opcode) {
+    case D3D10_1_SB_OPCODE_GATHER4:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_FEEDBACK: {
+      if (feedback) {
+        instr =
+            builder.buildGather4Feedback(*dst, *srcAddress, *srcResource,
+                                         *srcSampler, feedback, offset, loc);
+      } else {
+        instr = builder.buildGather4(*dst, *srcAddress, *srcResource,
+                                     *srcSampler, offset, loc);
+      }
+      break;
+    }
+    case D3D11_SB_OPCODE_GATHER4_C:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_C_FEEDBACK: {
+      auto srcReferenceValue = parseSrcOperand();
+      FAILURE_IF_FAILED(srcReferenceValue);
+      if (feedback) {
+        instr = builder.buildGather4CFeedback(*dst, *srcAddress, *srcResource,
+                                              *srcSampler, *srcReferenceValue,
+                                              feedback, offset, loc);
+      } else {
+        instr =
+            builder.buildGather4C(*dst, *srcAddress, *srcResource, *srcSampler,
+                                  *srcReferenceValue, offset, loc);
+      }
+      break;
+    }
+    case D3D11_SB_OPCODE_GATHER4_PO:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_FEEDBACK: {
+      if (feedback) {
+        instr = builder.buildGather4POFeedback(*dst, *srcAddress, srcOffset,
+                                               *srcResource, *srcSampler,
+                                               feedback, loc);
+      } else {
+        instr = builder.buildGather4PO(*dst, *srcAddress, srcOffset,
+                                       *srcResource, *srcSampler, loc);
+      }
+      break;
+    }
+    case D3D11_SB_OPCODE_GATHER4_PO_C:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_C_FEEDBACK: {
+      auto srcReferenceValue = parseSrcOperand();
+      FAILURE_IF_FAILED(srcReferenceValue);
+      if (feedback) {
+        instr = builder.buildGather4POCFeedback(
+            *dst, *srcAddress, srcOffset, *srcResource, *srcSampler,
+            *srcReferenceValue, feedback, loc);
+
+      } else {
+        instr =
+            builder.buildGather4POC(*dst, *srcAddress, srcOffset, *srcResource,
+                                    *srcSampler, *srcReferenceValue, loc);
       }
       break;
     }
@@ -3090,6 +3285,16 @@ public:
     case D3DWDDM1_3_SB_OPCODE_SAMPLE_L_FEEDBACK:
       return parseSampleInstruction(opcode, extendedInst, beginOffset,
                                     instructionLengthInTokens, getLocation());
+    case D3D10_1_SB_OPCODE_GATHER4:
+    case D3D11_SB_OPCODE_GATHER4_C:
+    case D3D11_SB_OPCODE_GATHER4_PO:
+    case D3D11_SB_OPCODE_GATHER4_PO_C:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_C_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_C_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_FEEDBACK:
+      return parseGather4Instructions(opcode, extendedInst, beginOffset,
+                                      instructionLengthInTokens, getLocation());
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP

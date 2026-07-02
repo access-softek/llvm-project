@@ -9,7 +9,7 @@
 // CHECK:         dxsa.dcl_input_ps  linear v<0, <x, y>>
 // CHECK:         dxsa.dcl_output o<0, <x, y>>
 // CHECK:         dxsa.dcl_temps 1
-// CHECK:         dxsa.unknown <tokens = [0x8B000045, 0x800000C2, 0x00155543, 0x00100032, 0x00000000, 0x00101046, 0x00000000, 0x00107E46, 0x00000003, 0x00106000, 0x00000005]>
+// CHECK:         dxsa.sample r<0, <x, y>>, v<0, <x, y, x, x>>, t<3, vector>, s<5>
 // CHECK:         dxsa.add o<0, <x, y>>, r<0, <x, y, x, x>>, cb<[0, 2], vector, <x, y, x, x>>
 // CHECK:         dxsa.ret
 

@@ -18,3 +18,4 @@
 // CHECK:         dxsa.dp4 r<1, <w>>, v<3>, icb<r<0, <y>>, vector>
 // CHECK:         dxsa.dp4 o<0, <x>>, r<1>, icb<r<0, <x>>, vector>
 // CHECK:         dxsa.ret
+
