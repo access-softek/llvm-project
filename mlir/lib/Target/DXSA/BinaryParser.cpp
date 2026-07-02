@@ -3423,6 +3423,7 @@ public:
       case D3D10_SB_RESINFO_INSTRUCTION_RETURN_UINT:
         return PLAIN_OP(ResInfoUInt, 1, 2, HasPreciseAttr::Yes);
       }
+      llvm_unreachable("unhandled resinfo");
     }
     case D3D10_1_SB_OPCODE_SAMPLE_INFO: {
       D3D10_SB_INSTRUCTION_RETURN_TYPE sampleinfo_type =
@@ -3433,6 +3434,7 @@ public:
       case D3D10_SB_INSTRUCTION_RETURN_UINT:
         return PLAIN_OP(SampleInfoUInt, 1, 1, HasPreciseAttr::Yes);
       }
+      llvm_unreachable("unhandled sampleinfo");
     }
     case D3D10_1_SB_OPCODE_SAMPLE_POS:
       return PLAIN_OP(SamplePos, 1, 2, HasPreciseAttr::Yes);
@@ -3694,11 +3696,15 @@ public:
   }
 
   LogicalResult verifyInstructionLength(size_t beginOffset, uint32_t length) {
+    // WORKAROUND: some instructions such as samplepos have trailing
+    // tokens that do not correspond to any operands. Therefore we
+    // allow actual instruction length to be less then length read
+    // from the opcode token.
     if (((currentTokenOffset - beginOffset) / tokenSize) > length) {
       emitError(getLocation(), "operands did not fit into instruction length");
       return failure();
     }
-    // Skip unparsed tokens in the end
+    // WORKAROUND: skip unparsed tokens in the end. See above.
     while (((currentTokenOffset - beginOffset) / tokenSize) < length) {
       auto token = parseToken();
       FAILURE_IF_FAILED(token);
