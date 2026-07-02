@@ -24,12 +24,20 @@
 0x02000068, 0x00000003
 
 // Valid D3D10_SB_OPCODE_DCL_TEMPS opcode, but the length is 3 instead of 2.
-// CHECK-NEXT:   dxbc.unknown <tokens = [0x03000068, 0x00000005, 0xCAFEBABE]>
-// DIAG: warning: treating next 3 token(s) as unknown: instruction length mismatch
-0x03000068, 0x00000005, 0xCAFEBABE
-
+// This is allowed, the last one will be skipped.
 // CHECK-NEXT:   dxbc.dcl_temps 4
-0x02000068, 0x00000004
+0x03000068, 0x00000004, 0xCAFEBABE
+
+// CHECK-NEXT:   dxbc.dcl_temps 5
+0x02000068, 0x00000005
+
+// Valid D3D10_SB_OPCODE_DCL_TEMPS opcode, but the length is 1 instead of 2.
+// CHECK-NEXT:   dxbc.unknown <tokens = [0x01000068]>
+// CHECK-NEXT:   dxbc.unknown <tokens = [0x00000006]>
+0x01000068, 0x00000006
+
+// CHECK-NEXT:   dxbc.dcl_temps 7
+0x02000068, 0x00000007
 
 // add r0.xyzw, <src0>, r2.xyzw with the src0 operand type field corrupted to
 // an unknown value (0xFF).
@@ -37,7 +45,7 @@
 // DIAG: warning: treating next 7 token(s) as unknown: unknown operand type: 255
 0x07000000, 0x001000F2, 0x00000000, 0x001FFE46, 0x00000001, 0x00100E46, 0x00000002
 
-// CHECK-NEXT:   dxbc.dcl_temps 5
-0x02000068, 0x00000005
+// CHECK-NEXT:   dxbc.dcl_temps 8
+0x02000068, 0x00000008
 
 // CHECK-NEXT: }
