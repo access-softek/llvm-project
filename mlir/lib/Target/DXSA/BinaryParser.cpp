@@ -1251,6 +1251,88 @@ public:
                                             srcReferenceValue, feedback);
   }
 
+  Instruction buildLd(dxsa::DstOperandAttr dst, dxsa::SrcOperandAttr srcAddress,
+                      dxsa::SrcOperandAttr srcResource,
+                      dxsa::SampleOffsetAttr offset, Location loc) {
+    return dxsa::Ld::create(builder, loc, dst, srcAddress, srcResource, offset);
+  }
+
+  Instruction buildLdFeedback(dxsa::DstOperandAttr dst,
+                              dxsa::SrcOperandAttr srcAddress,
+                              dxsa::SrcOperandAttr srcResource,
+                              dxsa::DstOperandAttr feedback,
+                              dxsa::SampleOffsetAttr offset, Location loc) {
+    return dxsa::LdFeedback::create(builder, loc, dst, srcAddress, srcResource,
+                                    feedback, offset);
+  }
+
+  Instruction buildLd2dms(dxsa::DstOperandAttr dst,
+                          dxsa::SrcOperandAttr srcAddress,
+                          dxsa::SrcOperandAttr srcResource,
+                          dxsa::SrcOperandAttr sampleIndex,
+                          dxsa::SampleOffsetAttr offset, Location loc) {
+    return dxsa::Ld2dms::create(builder, loc, dst, srcAddress, srcResource,
+                                sampleIndex, offset);
+  }
+
+  Instruction buildLd2dmsFeedback(dxsa::DstOperandAttr dst,
+                                  dxsa::SrcOperandAttr srcAddress,
+                                  dxsa::SrcOperandAttr srcResource,
+                                  dxsa::SrcOperandAttr sampleIndex,
+                                  dxsa::DstOperandAttr feedback,
+                                  dxsa::SampleOffsetAttr offset, Location loc) {
+    return dxsa::Ld2dmsFeedback::create(builder, loc, dst, srcAddress,
+                                        srcResource, sampleIndex, feedback,
+                                        offset);
+  }
+
+  Instruction buildLdRaw(dxsa::DstOperandAttr dst,
+                         dxsa::SrcOperandAttr srcByteOffset,
+                         dxsa::SrcOperandAttr src, Location loc) {
+    return dxsa::LdRaw::create(builder, loc, dst, srcByteOffset, src);
+  }
+
+  Instruction buildLdRawFeedback(dxsa::DstOperandAttr dst,
+                                 dxsa::SrcOperandAttr srcByteOffset,
+                                 dxsa::SrcOperandAttr src,
+                                 dxsa::DstOperandAttr feedback, Location loc) {
+    return dxsa::LdRawFeedback::create(builder, loc, dst, srcByteOffset, src,
+                                       feedback);
+  }
+
+  Instruction buildLdStructured(dxsa::DstOperandAttr dst,
+                                dxsa::SrcOperandAttr srcAddress,
+                                dxsa::SrcOperandAttr srcByteOffset,
+                                dxsa::SrcOperandAttr src, Location loc) {
+    return dxsa::LdStructured::create(builder, loc, dst, srcAddress,
+                                      srcByteOffset, src);
+  }
+
+  Instruction buildLdStructuredFeedback(dxsa::DstOperandAttr dst,
+                                        dxsa::SrcOperandAttr srcAddress,
+                                        dxsa::SrcOperandAttr srcByteOffset,
+                                        dxsa::SrcOperandAttr src,
+                                        dxsa::DstOperandAttr feedback,
+                                        Location loc) {
+    return dxsa::LdStructuredFeedback::create(builder, loc, dst, srcAddress,
+                                              srcByteOffset, src, feedback);
+  }
+
+  Instruction buildLdUavTyped(dxsa::DstOperandAttr dst,
+                              dxsa::SrcOperandAttr srcAddress,
+                              dxsa::SrcOperandAttr srcUav, Location loc) {
+    return dxsa::LdUavTyped::create(builder, loc, dst, srcAddress, srcUav);
+  }
+
+  Instruction buildLdUavTypedFeedback(dxsa::DstOperandAttr dst,
+                                      dxsa::SrcOperandAttr srcAddress,
+                                      dxsa::SrcOperandAttr srcUav,
+                                      dxsa::DstOperandAttr feedback,
+                                      Location loc) {
+    return dxsa::LdUavTypedFeedback::create(builder, loc, dst, srcAddress,
+                                            srcUav, feedback);
+  }
+
 private:
   MLIRContext *context;
   OpBuilder builder;
@@ -2311,6 +2393,133 @@ public:
     return instr;
   }
 
+  FailureOr<Instruction> parseLdInstructions(uint32_t opcode,
+                                             ExtendedInstruction &ext,
+                                             size_t beginOffset,
+                                             uint32_t length, Location loc) {
+    dxsa::SampleOffsetAttr offset;
+    if (ext.sampleOffset) {
+      offset = builder.buildSampleOffsetAttr(*ext.sampleOffset);
+    }
+
+    auto dst = parseDstOperand();
+    FAILURE_IF_FAILED(dst);
+
+    dxsa::DstOperandAttr feedback;
+    switch (opcode) {
+    case D3DWDDM1_3_SB_OPCODE_LD_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_MS_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_RAW_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_STRUCTURED_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_UAV_TYPED_FEEDBACK:
+      // For Feedback variant, feedback operand is the second dst
+      // register.
+      auto op = parseDstOperand();
+      FAILURE_IF_FAILED(op);
+      feedback = *op;
+      break;
+    }
+
+    FailureOr<Instruction> instr;
+    switch (opcode) {
+    case D3D10_SB_OPCODE_LD:
+    case D3DWDDM1_3_SB_OPCODE_LD_FEEDBACK: {
+      auto srcAddress = parseSrcOperand();
+      FAILURE_IF_FAILED(srcAddress);
+
+      auto srcResource = parseSrcOperand();
+      FAILURE_IF_FAILED(srcResource);
+
+      if (feedback) {
+        instr = builder.buildLdFeedback(*dst, *srcAddress, *srcResource,
+                                        feedback, offset, loc);
+      } else {
+        instr = builder.buildLd(*dst, *srcAddress, *srcResource, offset, loc);
+      }
+      break;
+    }
+    case D3D10_SB_OPCODE_LD_MS:
+    case D3DWDDM1_3_SB_OPCODE_LD_MS_FEEDBACK: {
+      auto srcAddress = parseSrcOperand();
+      FAILURE_IF_FAILED(srcAddress);
+
+      auto srcResource = parseSrcOperand();
+      FAILURE_IF_FAILED(srcResource);
+
+      auto sampleIndex = parseSrcOperand();
+      FAILURE_IF_FAILED(sampleIndex);
+
+      if (feedback) {
+        instr =
+            builder.buildLd2dmsFeedback(*dst, *srcAddress, *srcResource,
+                                        *sampleIndex, feedback, offset, loc);
+      } else {
+        instr = builder.buildLd2dms(*dst, *srcAddress, *srcResource,
+                                    *sampleIndex, offset, loc);
+      }
+      break;
+    }
+    case D3D11_SB_OPCODE_LD_RAW:
+    case D3DWDDM1_3_SB_OPCODE_LD_RAW_FEEDBACK: {
+      auto srcByteOffset = parseSrcOperand();
+      FAILURE_IF_FAILED(srcByteOffset);
+
+      auto src = parseSrcOperand();
+      FAILURE_IF_FAILED(src);
+
+      if (feedback) {
+        instr = builder.buildLdRawFeedback(*dst, *srcByteOffset, *src, feedback,
+                                           loc);
+      } else {
+        instr = builder.buildLdRaw(*dst, *srcByteOffset, *src, loc);
+      }
+      break;
+    }
+    case D3D11_SB_OPCODE_LD_STRUCTURED:
+    case D3DWDDM1_3_SB_OPCODE_LD_STRUCTURED_FEEDBACK: {
+      auto srcAddress = parseSrcOperand();
+      FAILURE_IF_FAILED(srcAddress);
+
+      auto srcByteOffset = parseSrcOperand();
+      FAILURE_IF_FAILED(srcByteOffset);
+
+      auto src = parseSrcOperand();
+      FAILURE_IF_FAILED(src);
+
+      if (feedback) {
+        instr = builder.buildLdStructuredFeedback(
+            *dst, *srcAddress, *srcByteOffset, *src, feedback, loc);
+      } else {
+        instr = builder.buildLdStructured(*dst, *srcAddress, *srcByteOffset,
+                                          *src, loc);
+      }
+      break;
+    }
+    case D3D11_SB_OPCODE_LD_UAV_TYPED:
+    case D3DWDDM1_3_SB_OPCODE_LD_UAV_TYPED_FEEDBACK: {
+      auto srcAddress = parseSrcOperand();
+      FAILURE_IF_FAILED(srcAddress);
+
+      auto srcUav = parseSrcOperand();
+      FAILURE_IF_FAILED(srcUav);
+
+      if (feedback) {
+        instr = builder.buildLdUavTypedFeedback(*dst, *srcAddress, *srcUav,
+                                                feedback, loc);
+      } else {
+        instr = builder.buildLdUavTyped(*dst, *srcAddress, *srcUav, loc);
+      }
+      break;
+    }
+    default:
+      llvm_unreachable("unhandled instruction");
+    }
+
+    FAILURE_IF_FAILED(instr);
+    FAILURE_IF_FAILED(verifyInstructionLength(beginOffset, length));
+    return instr;
+  }
+
   FailureOr<Instruction> parseDclInput(Location loc) {
     auto operand = parseDstOperand();
     FAILURE_IF_FAILED(operand);
@@ -3295,6 +3504,18 @@ public:
     case D3DWDDM1_3_SB_OPCODE_GATHER4_PO_FEEDBACK:
       return parseGather4Instructions(opcode, extendedInst, beginOffset,
                                       instructionLengthInTokens, getLocation());
+    case D3D10_SB_OPCODE_LD:
+    case D3D10_SB_OPCODE_LD_MS:
+    case D3D11_SB_OPCODE_LD_RAW:
+    case D3D11_SB_OPCODE_LD_STRUCTURED:
+    case D3D11_SB_OPCODE_LD_UAV_TYPED:
+    case D3DWDDM1_3_SB_OPCODE_LD_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_MS_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_RAW_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_STRUCTURED_FEEDBACK:
+    case D3DWDDM1_3_SB_OPCODE_LD_UAV_TYPED_FEEDBACK:
+      return parseLdInstructions(opcode, extendedInst, beginOffset,
+                                 instructionLengthInTokens, getLocation());
     }
 #undef SATURABLE_OP
 #undef PLAIN_OP
