@@ -476,7 +476,7 @@ def DXBC_SampleCLZ : DXBC_Op<"sample_c_lz"> {
 }
 
 def DXBC_SampleCLZFeedback : DXBC_Op<"sample_c_lz_s"> {
-  let summary = "same as `dxbc.sample_c_lz`, but with an additional LOD clamp and status output";
+  let summary = "same as `dxbc.sample_c_lz`, but with an additional status output";
   let description = [{
     `dst`, `src_address`, `src_resource`, `src_sampler`,
     `src_reference_value`, `offset` operands are the same as in
@@ -500,6 +500,323 @@ def DXBC_SampleCLZFeedback : DXBC_Op<"sample_c_lz_s"> {
   let assemblyFormat = [{
     $dst `,` $src_address `,` $src_resource `,` $src_sampler `,` $src_reference_value `,` $feedback
     (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.gather4
+//===----------------------------------------------------------------------===//
+
+def DXBC_Gather4 : DXBC_Op<"gather4"> {
+  let summary = "gathers four texels and packs them into a single register";
+  let description = [{
+    The `dxbc.gather4` operation gathers the four texels that would be used in a
+    bi-linear filtering operation and packs them into a single register. Only
+    works with 2D or CubeMap textures (incl arrays). Only the addressing modes
+    of the sampler are used and the top level of any mip pyramid is used.
+
+    `dxbc.gather4` behaves like the `dxbc.sample` instruction, but a filtered
+    sample is not generated.  The four samples that would contribute to
+    filtering are placed into xyzw in counter clockwise order starting with the
+    sample to the lower left of the queried location.  This is the same as point
+    sampling with (u,v) texture coordinate deltas at the following locations:
+    (-,+),(+,+),(+,-),(-,-), where the magnitude of the deltas are always half a
+    texel.
+
+    `src_address` provides the set of texture coordinates needed to perform the
+    sample, as floating point values referencing normalized space in the
+    texture.
+
+    `src_resource` is a texture register (t). This is simply a placeholder for a
+    texture, including the return data type of the resource being sampled.
+
+    `src_sampler` is a sampler register (s).  This is simply a placeholder for a
+    collection of filtering controls (such as point vs. linear, mipmapping and
+    address wrapping controls).
+
+    The optional `offset` operand suffix (address offset by immediate integer)
+    indicates that the texture coordinates for the sample are to be offset by a
+    set of provided immediate texel space integer constant values. The literal
+    values are a set of 4 bit 2's complement numbers, having integer range
+    [-8,7].
+
+    Example:
+
+    ```mlir
+    dxbc.gather4 r<0>, v<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <x>>
+    dxbc.gather4 r<1>, v<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <y>>, <u = -5, v = 7, w = 0>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler,
+      OptionalAttr<DXBC_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource `,` $src_sampler
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+def DXBC_Gather4Feedback : DXBC_Op<"gather4_s"> {
+  let summary = "same as `dxbc.gather4`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_resource`, `src_sampler`, `offset`
+    operands are the same as in `dxbc.gather4` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not
+    present) if not used.  See Tiled Resources Texture Sampling
+    Features(5.9.4.5) for details.
+
+    Example:
+
+    ```mlir
+    dxbc.gather4_s r<1>, v<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <w>>, r<2, <x>>, <u = -3, v = 2, w = 0>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler,
+      DXBC_DstOperandAttr:$feedback,
+      OptionalAttr<DXBC_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource `,` $src_sampler `,` $feedback
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.gather4_c
+//===----------------------------------------------------------------------===//
+
+def DXBC_Gather4C : DXBC_Op<"gather4_c"> {
+  let summary = "same as `dxbc.gather4`, except performs comparison on texels, similar to `dxbc.sample_c`";
+  let description = [{
+    The operands to `dxbc.gather4_c` are identical to `dxbc.gather4`, except
+    that there is an additional float32 source operand, `src_reference_value`,
+    which must be a register with single-component selected, or a scalar
+    literal.
+
+    See existing `dxbc.sample_c` for how `src_reference_value` gets compared
+    against each fetched texel.  Unlike `dxbc.sample_c`, `dxbc.gather4_c` simply
+    returns each comparison result, rather than filtering them.
+
+    Example:
+
+    ```mlir
+    dxbc.gather4_c r<0>, v<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <x>>, v<0, <y>>
+    dxbc.gather4_c r<1>, v<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <y>>, v<0, <y>>, <u = -5, v = 7, w = 0>
+     ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler,
+      DXBC_SrcOperandAttr:$src_reference_value,
+      OptionalAttr<DXBC_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource `,` $src_sampler `,` $src_reference_value
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+def DXBC_Gather4CFeedback : DXBC_Op<"gather4_c_s"> {
+  let summary = "same as `dxbc.`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_resource`, `src_sampler`,
+    `src_reference_value`, `offset` operands are the same as in
+    `dxbc.gather4_c` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not
+    present) if not used.  See Tiled Resources Texture Sampling
+    Features(5.9.4.5) for details.
+
+    Example:
+
+    ```mlir
+    dxbc.gather4_c_s r<1>, v<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <w>>, v<0, <y>>, r<2, <x>>, <u = -3, v = 2, w = 0>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler,
+      DXBC_SrcOperandAttr:$src_reference_value,
+      DXBC_DstOperandAttr:$feedback,
+      OptionalAttr<DXBC_SampleOffsetAttr>:$offset);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_resource `,` $src_sampler `,` $src_reference_value `,` $feedback
+    (`,` $offset^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.gather4_po
+//===----------------------------------------------------------------------===//
+
+def DXBC_Gather4PO : DXBC_Op<"gather4_po"> {
+  let summary = "variant of `dxbc.gather4`, where the offset comes as a parameter to the instruction";
+  let description = [{
+    Variant of `dxbc.gather4`, where instead of supporting an immediate offset
+    [-8..7], the offset comes as a `src_offset` parameter to the instruction,
+    and also has larger range of [-32..31].
+
+    The first 2 components of the 4-vector offset parameter supply 32-bit
+    integer offsets.  The other components of this parameter are ignored.
+
+    The 6 least significant bits of each offset value is honored as a signed
+    value, yielding [-32..31] range.
+
+    `dxbc.gather4_po` only works with 2D textures (unlike gather4, which also
+    works with TextureCubes).
+
+    Example:
+
+    ```mlir
+    dxbc.gather4_po r<1, <x>>, v<0, <x, y, x, x>>, r<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <x>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_offset,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_offset `,` $src_resource `,` $src_sampler
+    attr-dict
+  }];
+}
+
+def DXBC_Gather4POFeedback : DXBC_Op<"gather4_po_s"> {
+  let summary = "same as `dxbc.gather4_po`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_offset`, `src_resource`, `src_sampler`
+    operands are the same as in `dxbc.gather4_po` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not
+    present) if not used.  See Tiled Resources Texture Sampling
+    Features(5.9.4.5) for details.
+
+    Example:
+
+    ```mlir
+    dxbc.gather4_po_s r<3, <x>>, v<0, <x, y, x, x>>, r<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <w>>, r<4, <x>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_offset,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler,
+      DXBC_DstOperandAttr:$feedback);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_offset `,` $src_resource `,` $src_sampler `,` $feedback
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// dxbc.gather4_po_c
+//===----------------------------------------------------------------------===//
+
+def DXBC_Gather4POC : DXBC_Op<"gather4_po_c"> {
+  let summary = "same as `dxbc.gather4_po`, except performs comparison on texels, similar to `dxbc.sample_c`";
+  let description = [{
+    The operands to `dxbc.gather4_po_c` are identical to `dxbc.gather4_po`,
+    except that there is an additional float32 source operand,
+    `src_reference_value`, which must be a register with single-component
+    selected, or a scalar literal.
+
+    See existing `dxbc.sample_c` for how `src_reference_value` gets compared
+    against each fetched texel.  Unlike `dxbc.sample_c`, `dxbc.gather4_po_c`
+    simply returns each comparison result, rather than filtering them.
+
+    Example:
+
+    ```mlir
+    dxbc.gather4_po_c r<1, <x>>, v<0, <x, y, x, x>>, r<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <x>>, v<0, <y>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_offset,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler,
+      DXBC_SrcOperandAttr:$src_reference_value);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_offset `,` $src_resource `,` $src_sampler `,` $src_reference_value
+    attr-dict
+  }];
+}
+
+def DXBC_Gather4POCFeedback : DXBC_Op<"gather4_po_c_s"> {
+  let summary = "same as `dxbc.gather4_po_c`, but with an additional status output";
+  let description = [{
+    `dst`, `src_address`, `src_offset`, `src_resource`, `src_sampler`,
+    `src_reference_value` operands are the same as in
+    `dxbc.gather4_po_c` instruction.
+
+    The `feedback` operand appends an additional 32 bit scalar Tiled
+    Resources shader feedback status output value. Can be NULL (or not present)
+    if not used.  See Tiled Resources Texture Sampling Features(5.9.4.5) for
+    details.
+
+    Example:
+
+    ```mlir
+    dxbc.gather4_po_c_s r<3, <x>>, v<0, <x, y, x, x>>, r<0, <x, y, x, x>>, t<0, vector>, s<0, vector, <w>>, v<0, <y>>, r<4, <x>>
+    ```
+  }];
+
+  let arguments = (ins
+      DXBC_DstOperandAttr:$dst,
+      DXBC_SrcOperandAttr:$src_address,
+      DXBC_SrcOperandAttr:$src_offset,
+      DXBC_SrcOperandAttr:$src_resource,
+      DXBC_SrcOperandAttr:$src_sampler,
+      DXBC_SrcOperandAttr:$src_reference_value,
+      DXBC_DstOperandAttr:$feedback);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $dst `,` $src_address `,` $src_offset `,` $src_resource `,` $src_sampler `,` $src_reference_value `,` $feedback
     attr-dict
   }];
 }
