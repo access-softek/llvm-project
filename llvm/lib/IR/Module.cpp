@@ -935,3 +935,23 @@ WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
     return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
   return WinX64EHUnwindV2Mode::Disabled;
 }
+
+bool Module::GlobalAsmProperties::set(StringRef Name, std::string Value) {
+  if (Name == "target_features")
+    TargetFeatures = std::move(Value);
+  else if (Name == "target_cpu")
+    TargetCPU = std::move(Value);
+  else
+    return false;
+  return true;
+}
+
+SmallVector<std::pair<StringRef, StringRef>>
+Module::GlobalAsmProperties::getAsStrings() const {
+  SmallVector<std::pair<StringRef, StringRef>> Props;
+  if (!TargetFeatures.empty())
+    Props.emplace_back("target_features", TargetFeatures);
+  if (!TargetCPU.empty())
+    Props.emplace_back("target_cpu", TargetCPU);
+  return Props;
+}

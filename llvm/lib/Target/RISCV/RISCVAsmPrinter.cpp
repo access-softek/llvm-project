@@ -112,7 +112,8 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitFunctionEntryLabel() override;
-  bool emitDirectiveOptionArch();
+  bool emitTargetFeaturePush(const MCSubtargetInfo &STI) override;
+  void emitTargetFeaturePop(const MCSubtargetInfo &STI, bool DidPush) override;
 
   void emitNoteGnuProperty(const Module &M);
 
@@ -452,21 +453,24 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-bool RISCVAsmPrinter::emitDirectiveOptionArch() {
+bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
-  for (const auto &Feature : RISCVFeatureKV) {
-    if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
+  for (const auto &Feature : MCSTI.getAllProcessorFeatures()) {
+    if (STI.hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
     if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
       continue;
 
-    auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
-                                                : RISCVOptionArchArgType::Minus;
-    NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
+    auto Delta = STI.hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
+                                               : RISCVOptionArchArgType::Minus;
+    StringRef ExtName = Feature.Key;
+    ExtName.consume_front("experimental-");
+    NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
@@ -477,12 +481,19 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   return false;
 }
 
+void RISCVAsmPrinter::emitTargetFeaturePop(const MCSubtargetInfo &STI,
+                                           bool DidPush) {
+  if (DidPush) {
+    RISCVTargetStreamer &RTS =
+        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RTS.emitDirectiveOptionPop();
+  }
+}
+
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
-  RISCVTargetStreamer &RTS =
-      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  bool EmittedOptionArch = emitDirectiveOptionArch();
+  bool EmittedOptionArch = emitTargetFeaturePush(*STI);
 
   SetupMachineFunction(MF);
   emitFunctionBody();
@@ -490,8 +501,7 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Emit the XRay table
   emitXRayTable();
 
-  if (EmittedOptionArch)
-    RTS.emitDirectiveOptionPop();
+  emitTargetFeaturePop(*STI, EmittedOptionArch);
   return false;
 }
 

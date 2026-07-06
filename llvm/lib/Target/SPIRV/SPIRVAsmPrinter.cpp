@@ -863,6 +863,12 @@ void SPIRVAsmPrinter::outputModuleSections() {
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
   ModuleSectionsEmitted = false;
+  if (!M.getModuleInlineAsm().empty()) {
+    M.getContext().emitError(
+        "SPIR-V does not support module-level inline assembly");
+    M.removeModuleInlineAsm();
+  }
+
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
