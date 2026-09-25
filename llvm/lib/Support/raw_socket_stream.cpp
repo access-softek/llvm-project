@@ -65,6 +65,7 @@ static std::error_code getLastSocketErrorCode() {
 using NativeSocket = SOCKET;
 #else
 using NativeSocket = int;
+#define INVALID_SOCKET -1
 #endif
 
 static int closeSocket(NativeSocket Socket) {
@@ -90,13 +91,8 @@ static Expected<sockaddr_un> setSocketAddr(StringRef SocketPath) {
 }
 
 static Expected<int> getSocketFD(StringRef SocketPath) {
-#ifdef _WIN32
-  SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
+  NativeSocket Socket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (Socket == INVALID_SOCKET) {
-#else
-  int Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == -1) {
-#endif // _WIN32
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "Create socket failed");
   }
@@ -175,12 +171,9 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 
 #ifdef _WIN32
   WSABalancer _;
-  SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
+#endif // _WIN32
+  NativeSocket Socket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (Socket == INVALID_SOCKET)
-#else
-  int Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == -1)
-#endif
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "socket create failed");
 
