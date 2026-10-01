@@ -26,6 +26,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
@@ -877,6 +878,7 @@ struct ScanServer {
   int PidFD = -1;
   /// \p std::nullopt means it runs indefinitely.
   std::optional<unsigned> TimeoutSeconds;
+  std::optional<unsigned> TimeTraceGranularity;
   std::unique_ptr<llvm::ListeningSocket> Listener;
   std::atomic<bool> ShutDown{false};
 
@@ -1041,6 +1043,13 @@ int ScanServer::listen() {
   auto ServiceLoop = [this, &Service, &NumRunning, &Start,
                       &SecondsSinceLastClose, &SharedOS,
                       &AcceptLock](unsigned I) {
+    if (TimeTraceGranularity)
+      llvm::timeTraceProfilerInitialize(*TimeTraceGranularity, Argv0);
+    llvm::scope_exit FinishTimeTrace([] {
+      if (llvm::timeTraceProfilerEnabled())
+        llvm::timeTraceProfilerFinishThread();
+    });
+
     std::optional<tooling::DependencyScanningTool> Tool;
     SmallString<256> Message;
     while (true) {
@@ -1063,6 +1072,7 @@ int ScanServer::listen() {
         stream = std::move(*fd);
       }
 
+      llvm::TimeTraceScope RequestScope("Depscan Request");
       cc1depscand::CC1DepScanDProtocol Comms(*stream);
 
       // Explicitly close the socket and clear any errors before the stream is
@@ -1112,12 +1122,15 @@ int ScanServer::listen() {
       llvm::StringSaver Saver(Alloc);
       StringRef WorkingDirectory;
       SmallVector<const char *> Args;
-      if (llvm::Error E = Comms.getCommand(Saver, WorkingDirectory, Args)) {
-        SharedOS.applyLocked([&](raw_ostream &OS) {
-          OS << I << ": failed to get command\n";
-          logAllUnhandledErrors(std::move(E), OS);
-        });
-        continue; // FIXME: Tell the client something went wrong.
+      {
+        llvm::TimeTraceScope TimeScope("Depscan Get Command");
+        if (llvm::Error E = Comms.getCommand(Saver, WorkingDirectory, Args)) {
+          SharedOS.applyLocked([&](raw_ostream &OS) {
+            OS << I << ": failed to get command\n";
+            logAllUnhandledErrors(std::move(E), OS);
+          });
+          continue; // FIXME: Tell the client something went wrong.
+        }
       }
 
       // cc1 request.
@@ -1161,14 +1174,17 @@ int ScanServer::listen() {
           OS << " " << Arg;
         OS << "\n";
       };
-      if (llvm::Error E = Comms.putScanResultSuccess(RootID->toString(),
-                                                     NewArgs, DiagsOS.str())) {
-        SharedOS.applyLocked([&](raw_ostream &OS) {
-          printScannedCC1(OS);
-          printComputedCC1(OS);
-          logAllUnhandledErrors(std::move(E), OS);
-        });
-        continue; // FIXME: Tell the client something went wrong.
+      {
+        llvm::TimeTraceScope TimeScope("Depscan Put Scan Result");
+        if (llvm::Error E = Comms.putScanResultSuccess(
+                RootID->toString(), NewArgs, DiagsOS.str())) {
+          SharedOS.applyLocked([&](raw_ostream &OS) {
+            printScannedCC1(OS);
+            printComputedCC1(OS);
+            logAllUnhandledErrors(std::move(E), OS);
+          });
+          continue; // FIXME: Tell the client something went wrong.
+        }
       }
 
       // Done!
@@ -1374,6 +1390,23 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainA
   openAndReplaceFD(2, LogErrPath);
 #endif
 
+  if (llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE")) {
+    unsigned Granularity = 500;
+    if (auto Value =
+            llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE_GRANULARITY"))
+      llvm::to_integer(*Value, Granularity);
+    Server.TimeTraceGranularity = Granularity;
+    llvm::timeTraceProfilerInitialize(Granularity, Argv0);
+  }
+
   Server.start(/*Exclusive*/ false, CASArgs);
-  return Server.listen();
+  int Result = Server.listen();
+
+  if (Server.TimeTraceGranularity) {
+    if (Error E = llvm::timeTraceProfilerWrite(/*PreferredFileName=*/"",
+                                               Server.BasePath))
+      logAllUnhandledErrors(std::move(E), llvm::errs());
+    llvm::timeTraceProfilerCleanup();
+  }
+  return Result;
 }
