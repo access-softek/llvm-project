@@ -73,8 +73,10 @@ llvm::Error CC1DepScanDProtocol::getArgs(llvm::StringSaver &Saver,
   return Error::success();
 }
 
-llvm::Error CC1DepScanDProtocol::putCommand(StringRef WorkingDirectory,
+llvm::Error CC1DepScanDProtocol::putCommand(CmdKind Cmd, StringRef WorkingDirectory,
                                             ArrayRef<const char *> Args) {
+  if (llvm::Error E = putCmdKind(Cmd))
+    return E;
   if (llvm::Error E = putString(WorkingDirectory))
     return E;
   if (llvm::Error E = putArgs(Args))
@@ -83,9 +85,11 @@ llvm::Error CC1DepScanDProtocol::putCommand(StringRef WorkingDirectory,
 }
 
 llvm::Error
-CC1DepScanDProtocol::getCommand(llvm::StringSaver &Saver,
+CC1DepScanDProtocol::getCommand(CmdKind &Cmd, llvm::StringSaver &Saver,
                                 StringRef &WorkingDirectory,
                                 SmallVectorImpl<const char *> &Args) {
+  if (llvm::Error E = getCmdKind(Cmd))
+    return E;
   if (llvm::Error E = getString(Saver, WorkingDirectory))
     return E;
   if (llvm::Error E = getArgs(Saver, Args))

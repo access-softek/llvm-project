@@ -163,6 +163,26 @@ public:
     return llvm::Error::success();
   }
 
+  enum CmdKind {
+    ScanCmd,
+    ShowStatCmd,
+    ZeroStatCmd,
+    InvalidCmd, // Last...
+  };
+  llvm::Error putCmdKind(CmdKind Cmd) {
+    return putNumber(unsigned(Cmd));
+  }
+  llvm::Error getCmdKind(CmdKind &Cmd) {
+    unsigned Read;
+    if (llvm::Error E = getNumber(Read))
+      return E;
+    if (Read >= InvalidCmd)
+      Cmd = InvalidCmd;
+    else
+      Cmd = CmdKind(Read);
+    return llvm::Error::success();
+  }
+
   /// Read a string. \p String will be a null-terminated string owned by \p
   /// Saver.
   llvm::Error getString(llvm::StringSaver &Saver, StringRef &String) {
@@ -184,9 +204,9 @@ public:
   llvm::Error getArgs(llvm::StringSaver &Saver,
                       SmallVectorImpl<const char *> &Args);
 
-  llvm::Error putCommand(StringRef WorkingDirectory,
+  llvm::Error putCommand(CmdKind Cmd, StringRef WorkingDirectory,
                          ArrayRef<const char *> Args);
-  llvm::Error getCommand(llvm::StringSaver &Saver, StringRef &WorkingDirectory,
+  llvm::Error getCommand(CmdKind &Cmd, llvm::StringSaver &Saver, StringRef &WorkingDirectory,
                          SmallVectorImpl<const char *> &Args);
 
   llvm::Error putScanResultFailed(StringRef Reason, StringRef DiagnosticOutput);

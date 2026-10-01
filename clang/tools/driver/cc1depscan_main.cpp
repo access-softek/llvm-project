@@ -604,7 +604,7 @@ static int scanAndUpdateCC1UsingDaemon(
   CC1DepScanDProtocol Comms(Daemon->getStream());
 
   // llvm::dbgs() << "sending request...\n";
-  if (auto E = Comms.putCommand(WorkingDirectory, OldArgs))
+  if (auto E = Comms.putCommand(CC1DepScanDProtocol::ScanCmd, WorkingDirectory, OldArgs))
     return reportScanFailure(std::move(E));
 
   llvm::BumpPtrAllocator Alloc;
@@ -986,6 +986,14 @@ void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
   Listener = std::make_unique<llvm::ListeningSocket>(std::move(*Socket));
 }
 
+struct Stat {
+  std::chrono::steady_clock::time_point Start;
+  uint64_t Count = 0;
+  double TotalSeconds = 0.0;
+  double LastSeconds = 0.0;
+  std::mutex Lock;
+};
+
 int ScanServer::listen() {
   llvm::DefaultThreadPool Pool;
 
@@ -1012,13 +1020,12 @@ int ScanServer::listen() {
   std::atomic<int> NumRunning(0);
   std::mutex AcceptLock;
 
-  std::chrono::steady_clock::time_point Start =
-      std::chrono::steady_clock::now();
+  Stat Stat = {std::chrono::steady_clock::now()};
   std::atomic<uint64_t> SecondsSinceLastClose(0);
 
   SharedStream SharedOS(llvm::errs());
 
-  auto ServiceLoop = [this, &Service, &NumRunning, &Start,
+  auto ServiceLoop = [this, &Service, &NumRunning, &Stat,
                       &SecondsSinceLastClose, &SharedOS,
                       &AcceptLock](unsigned I) {
     std::optional<tooling::DependencyScanningTool> Tool;
@@ -1058,7 +1065,7 @@ int ScanServer::listen() {
       llvm::scope_exit StopRunning([&]() {
         SecondsSinceLastClose.store(
             std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - Start)
+                std::chrono::steady_clock::now() - Stat.Start)
                 .count());
         --NumRunning;
       });
@@ -1092,12 +1099,42 @@ int ScanServer::listen() {
       llvm::StringSaver Saver(Alloc);
       StringRef WorkingDirectory;
       SmallVector<const char *> Args;
-      if (llvm::Error E = Comms.getCommand(Saver, WorkingDirectory, Args)) {
+      cc1depscand::CC1DepScanDProtocol::CmdKind Cmd;
+      if (llvm::Error E = Comms.getCommand(Cmd, Saver, WorkingDirectory, Args)) {
         SharedOS.applyLocked([&](raw_ostream &OS) {
           OS << I << ": failed to get command\n";
           logAllUnhandledErrors(std::move(E), OS);
         });
         continue; // FIXME: Tell the client something went wrong.
+      }
+
+      if (Cmd == cc1depscand::CC1DepScanDProtocol::ShowStatCmd ||
+          Cmd == cc1depscand::CC1DepScanDProtocol::ZeroStatCmd) {
+
+        SmallString<64> StatText;
+        llvm::raw_svector_ostream OS(StatText);
+        OS << llvm::format("Count %llu\n" 
+                         "Total scan time %.6fs\n"
+                         "Last scan time %.6fs\n", Stat.Count, Stat.TotalSeconds, Stat.LastSeconds);
+
+        consumeError(Comms.putScanResultFailed(
+          Cmd == cc1depscand::CC1DepScanDProtocol::ZeroStatCmd ? "zero-stats" : "show-stats", OS.str()));
+
+        if (Cmd == cc1depscand::CC1DepScanDProtocol::ZeroStatCmd) {
+          std::unique_lock<std::mutex> Guard(Stat.Lock);
+          Stat.Count = 0;
+          Stat.TotalSeconds = 0.0;
+          Stat.LastSeconds = 0.0;
+        }
+        continue;
+      }
+
+      if (Cmd != cc1depscand::CC1DepScanDProtocol::ScanCmd) {
+        SharedOS.applyLocked([&](raw_ostream &OS) {
+          OS << I << ": invalid Cmd " << Cmd;
+        OS << "\n";
+        });
+        continue;
       }
 
       // cc1 request.
@@ -1111,6 +1148,13 @@ int ScanServer::listen() {
 
       if (!Tool)
         Tool.emplace(Service);
+
+      llvm::ScopedDurationTimer ScopedTime([&Stat](double Seconds) {
+        std::unique_lock<std::mutex> Guard(Stat.Lock);
+        Stat.Count++;
+        Stat.TotalSeconds += Seconds;
+        Stat.LastSeconds = Seconds;
+      });
 
       std::unique_ptr<DiagnosticOptions> DiagOpts =
           CreateAndPopulateDiagOpts(Args);
@@ -1187,7 +1231,7 @@ int ScanServer::listen() {
     // Figure out the latest access time that we'll delete.
     uint64_t LastAccessToDestroy =
         std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::steady_clock::now() - Start)
+            std::chrono::steady_clock::now() - Stat.Start)
             .count();
     if (LastAccessToDestroy < SecondsBeforeDestruction)
       continue; // In case ::sleep returns slightly early.
@@ -1266,7 +1310,38 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainA
       reportError(Twine("cannot create basedir: ") + EC.message());
   }
 
-  if (Command == "-serve") {
+  if (Command == "-show-stats" || Command == "-zero-stats") {
+    DiagnosticOptions DiagOpts;
+    auto DiagConsumer =
+      std::make_unique<TextDiagnosticPrinter>(llvm::errs(), DiagOpts, false);
+    DiagnosticsEngine Diag(new DiagnosticIDs(), DiagOpts);
+    Diag.setClient(DiagConsumer.get(), /*ShouldOwnClient=*/false);
+    auto reportScanFailure = [&](Error E) {
+      Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
+      return 1;
+    };
+    auto Daemon = cc1depscand::ScanDaemon::connectToDaemonAndShakeHands(Server.BasePath);
+    if (!Daemon)
+      return reportScanFailure(Daemon.takeError());
+    cc1depscand::CC1DepScanDProtocol Comms(Daemon->getStream());
+    if (auto E = Comms.putCommand(Command == "-show-stats" ? cc1depscand::CC1DepScanDProtocol::ShowStatCmd
+                                                           : cc1depscand::CC1DepScanDProtocol::ZeroStatCmd, "", ""))
+      return reportScanFailure(std::move(E));
+
+    llvm::BumpPtrAllocator Alloc;
+    llvm::StringSaver Saver(Alloc);
+    SmallVector<const char *> RawNewArgs;
+    cc1depscand::CC1DepScanDProtocol::ResultKind Result;
+    StringRef FailedReason;
+    StringRef RootID;
+    StringRef DiagOut;
+    auto E = Comms.getScanResult(Saver, Result, FailedReason, RootID, RawNewArgs, DiagOut);
+    llvm::outs() << FailedReason << "\n";
+    llvm::outs() << DiagOut;
+    if (E)
+      return reportScanFailure(std::move(E));
+    return 0;
+  } else if (Command == "-serve") {
     Server.start(/*Exclusive*/ true, CASArgs);
     return Server.listen();
   } else if (Command == "-execute") {
