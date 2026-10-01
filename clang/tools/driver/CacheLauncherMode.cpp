@@ -228,6 +228,13 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
   }
   AppendArgs({"-greproducible"});
 
+  if (llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE")) {
+    AppendArgs({"-ftime-trace"});
+    if (auto Granularity =
+            llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE_GRANULARITY"))
+      AppendArgs({"-ftime-trace-granularity=" + *Granularity});
+  }
+
   if (SupportsMCCAS && !ServicePath &&
       !llvm::sys::Process::GetEnv("CLANG_CACHE_DISABLE_MCCAS")) {
     AppendArgs({"-Xclang", "-fcas-backend"});

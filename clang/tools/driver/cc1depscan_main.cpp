@@ -19,6 +19,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/ScopedDurationTimer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualOutputBackends.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_socket_stream.h"
@@ -544,6 +546,7 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
                        llvm::function_ref<const char *(const Twine &)> SaveArg,
                        const CASOptions &CASOpts, DiagnosticsEngine &Diag,
                        std::optional<llvm::cas::CASID> &RootID) {
+  llvm::TimeTraceScope TimeScope("Depscan Inline");
   auto [DB, Cache] = CASOpts.createDatabases(Diag);
   if (!DB || !Cache)
     return 1;
@@ -587,6 +590,7 @@ static int scanAndUpdateCC1UsingDaemon(
     llvm::function_ref<const char *(const Twine &)> SaveArg,
     const CASOptions &CASOpts, std::optional<llvm::cas::CASID> &Root) {
   using namespace clang::cc1depscand;
+  llvm::TimeTraceScope TimeScope("Depscan Daemon", Path);
   auto reportScanFailure = [&](Error E) {
     Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
     return 1;
@@ -596,16 +600,22 @@ static int scanAndUpdateCC1UsingDaemon(
 
   bool NoSpawnDaemon = (bool)Sharing.Path;
   // llvm::dbgs() << "connecting to daemon...\n";
-  auto Daemon = NoSpawnDaemon
-                    ? ScanDaemon::connectToDaemonAndShakeHands(Path)
-                    : ScanDaemon::constructAndShakeHands(Path, Exec, Sharing);
+  auto Daemon = [&] {
+    llvm::TimeTraceScope TimeScope("Depscan Connect");
+    return NoSpawnDaemon
+               ? ScanDaemon::connectToDaemonAndShakeHands(Path)
+               : ScanDaemon::constructAndShakeHands(Path, Exec, Sharing);
+  }();
   if (!Daemon)
     return reportScanFailure(Daemon.takeError());
   CC1DepScanDProtocol Comms(Daemon->getStream());
 
   // llvm::dbgs() << "sending request...\n";
-  if (auto E = Comms.putCommand(WorkingDirectory, OldArgs))
-    return reportScanFailure(std::move(E));
+  {
+    llvm::TimeTraceScope TimeScope("Depscan Send Command");
+    if (auto E = Comms.putCommand(WorkingDirectory, OldArgs))
+      return reportScanFailure(std::move(E));
+  }
 
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
@@ -614,8 +624,11 @@ static int scanAndUpdateCC1UsingDaemon(
   StringRef FailedReason;
   StringRef RootID;
   StringRef DiagOut;
-  auto E = Comms.getScanResult(Saver, Result, FailedReason, RootID, RawNewArgs,
+  auto E = [&] {
+    llvm::TimeTraceScope TimeScope("Depscan Get Scan Result");
+    return Comms.getScanResult(Saver, Result, FailedReason, RootID, RawNewArgs,
                                DiagOut);
+  }();
   // Send the diagnostics to std::err.
   llvm::errs() << DiagOut;
   if (E)
@@ -775,6 +788,13 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
         << Args.getArgString(MissingArgIndex) << MissingArgCount;
     return 1;
   }
+
+  if (Args.hasArg(options::OPT_ftime_trace, options::OPT_ftime_trace_EQ) &&
+      !llvm::timeTraceProfilerEnabled())
+    llvm::timeTraceProfilerInitialize(
+        getLastArgIntValue(Args, options::OPT_ftime_trace_granularity_EQ, 500,
+                           Diags),
+        Argv0, Args.hasArg(options::OPT_ftime_trace_verbose));
 
   auto *CC1Args = Args.getLastArg(clang::options::OPT_cc1_args);
   if (!CC1Args) {

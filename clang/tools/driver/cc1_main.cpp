@@ -254,11 +254,30 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation),
                                                   std::move(PCHOps));
 
-  if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
+  if (!Clang->getFrontendOpts().TimeTracePath.empty() &&
+      !llvm::timeTraceProfilerEnabled()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
         Clang->getFrontendOpts().TimeTraceVerbose);
   }
+  // Handle the time trace on any exit, including the early return on a cache
+  // hit from tryReplayCachedResult.
+  llvm::scope_exit WriteTimeTrace([TimeTracePath =
+                                       Clang->getFrontendOpts().TimeTracePath] {
+    if (!llvm::timeTraceProfilerEnabled())
+      return;
+    llvm::vfs::OnDiskOutputBackend Backend;
+    if (std::optional<llvm::vfs::OutputFile> ProfilerOutput =
+            llvm::expectedToOptional(
+                Backend.createFile(TimeTracePath, llvm::vfs::OutputConfig()
+                                                      .setTextWithCRLF()
+                                                      .setNoDiscardOnSignal()
+                                                      .setNoAtomicWrite()))) {
+      llvm::timeTraceProfilerWrite(*ProfilerOutput);
+      llvm::consumeError(ProfilerOutput->keep());
+      llvm::timeTraceProfilerCleanup();
+    }
+  });
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
     return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
@@ -331,21 +350,6 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       llvm::TimerGroup::printAll(*IOFile);
     }
     llvm::TimerGroup::clearAll();
-  }
-
-  if (llvm::timeTraceProfilerEnabled()) {
-    llvm::vfs::OnDiskOutputBackend Backend;
-    if (std::optional<llvm::vfs::OutputFile> profilerOutput =
-            llvm::expectedToOptional(
-                Backend.createFile(Clang->getFrontendOpts().TimeTracePath,
-                                   llvm::vfs::OutputConfig()
-                                       .setTextWithCRLF()
-                                       .setNoDiscardOnSignal()
-                                       .setNoAtomicWrite()))) {
-      llvm::timeTraceProfilerWrite(*profilerOutput);
-      llvm::consumeError(profilerOutput->keep());
-      llvm::timeTraceProfilerCleanup();
-    }
   }
 
   // When running with -disable-free, don't do any destruction or shutdown.
