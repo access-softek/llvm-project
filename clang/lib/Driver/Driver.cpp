@@ -106,6 +106,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TarWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -1443,6 +1444,7 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
 
 Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   llvm::PrettyStackTraceString CrashInfo("Compilation construction");
+  llvm::TimeTraceScope TimeScope("Driver::BuildCompilation");
 
   // FIXME: Handle environment options which affect driver behavior, somewhere
   // (client?). GCC_EXEC_PREFIX, LPATH, CC_PRINT_OPTIONS.
@@ -1696,8 +1698,11 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       std::make_unique<InputArgList>(std::move(Args));
 
   // Owned by the host.
-  const ToolChain &TC =
-      getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
+  const ToolChain &TC = [&]() -> const ToolChain & {
+    llvm::TimeTraceScope TimeScope("Driver::BuildCompilation::getToolChain");
+    return getToolChain(*UArgs,
+                        computeTargetTriple(*this, TargetTriple, *UArgs));
+  }();
 
   {
     SmallVector<std::string> MultilibMacroDefinesStr =
@@ -1851,7 +1856,10 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     return C;
   }
 
-  BuildJobs(*C);
+  {
+    llvm::TimeTraceScope TimeScope("Driver::BuildCompilation::BuildJobs");
+    BuildJobs(*C);
+  }
 
   if (UseModulesDriver)
     modules::runModulesDriver(*C, ModulesManifest.Modules);

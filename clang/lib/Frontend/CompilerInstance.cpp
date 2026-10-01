@@ -1301,10 +1301,20 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
     ModuleImportResults.clear();
 
-    if (Act.BeginSourceFile(*this, FIF)) {
+    auto InputName = [&] {
+      return FIF.isFile() ? FIF.getFile().str() : std::string("<buffer>");
+    };
+    bool Begun = [&] {
+      llvm::TimeTraceScope TimeScope("FrontendAction::BeginSourceFile",
+                                     InputName);
+      return Act.BeginSourceFile(*this, FIF);
+    }();
+    if (Begun) {
       if (llvm::Error Err = Act.Execute()) {
         consumeError(std::move(Err)); // FIXME this drops errors on the floor.
       }
+      llvm::TimeTraceScope TimeScope("FrontendAction::EndSourceFile",
+                                     InputName);
       Act.EndSourceFile();
     }
   }

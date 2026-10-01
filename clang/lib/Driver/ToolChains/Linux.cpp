@@ -22,6 +22,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
@@ -767,6 +768,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
 
 void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                       ArgStringList &CC1Args) const {
+  llvm::TimeTraceScope TimeScope("Linux::AddClangSystemIncludeArgs");
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
 

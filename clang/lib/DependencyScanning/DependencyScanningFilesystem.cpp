@@ -11,6 +11,7 @@
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
 using namespace clang;
@@ -66,6 +67,8 @@ bool DependencyScanningWorkerFilesystem::ensureDirectiveTokensArePopulated(
   if (Contents->DepDirectives.load())
     return true;
 
+  llvm::TimeTraceScope TimeScope("scanSourceForDependencyDirectives",
+                                 Ref.Filename);
   SmallVector<dependency_directives_scan::Directive, 64> Directives;
   // Scan the file for preprocessor directives that might affect the
   // dependencies.
@@ -339,7 +342,12 @@ DependencyScanningWorkerFilesystem::resolveFilenameThroughSharedCache(
   //   - Stat failed, not cacheable: publish the error to current waiters but
   //     don't persist; a later separate query re-runs the stat (so a file
   //     created mid-scan becomes visible).
-  auto Stat = BaseFS->status(OriginalFilename);
+  auto Stat = [&] {
+    llvm::TimeTraceScope TimeScope("DependencyScanningWorkerFilesystem::"
+                                   "resolveFilenameThroughSharedCache::status",
+                                   OriginalFilename);
+    return BaseFS->status(OriginalFilename);
+  }();
   const bool ShouldCacheNegativeStat =
       !Stat && Service.getOpts().CacheNegativeStats &&
       shouldCacheNegativeStatsForPath(OriginalFilename);
@@ -538,7 +546,12 @@ DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
   }
 
   // If we don't know the real path, compute it...
-  std::error_code EC = getUnderlyingFS().getRealPath(OriginalFilename, Output);
+  std::error_code EC = [&] {
+    llvm::TimeTraceScope TimeScope(
+        "DependencyScanningWorkerFilesystem::getRealPath::getRealPath",
+        OriginalFilename);
+    return getUnderlyingFS().getRealPath(OriginalFilename, Output);
+  }();
   llvm::ErrorOr<llvm::StringRef> ComputedRealPath = EC;
   if (!EC)
     ComputedRealPath = StringRef{Output.data(), Output.size()};

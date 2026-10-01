@@ -26,6 +26,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -35,6 +36,7 @@ static constexpr StringLiteral ActionCacheFile = "actions.";
 
 Expected<ArrayRef<char>> OnDiskKeyValueDB::put(ArrayRef<uint8_t> Key,
                                                ArrayRef<char> Value) {
+  TimeTraceScope TimeScope("OnDiskKeyValueDB::put");
   if (LLVM_UNLIKELY(Value.size() != ValueSize))
     return createStringError(errc::invalid_argument,
                              "expected value size of " + itostr(ValueSize) +
@@ -53,6 +55,7 @@ Expected<ArrayRef<char>> OnDiskKeyValueDB::put(ArrayRef<uint8_t> Key,
 
 Expected<std::optional<ArrayRef<char>>>
 OnDiskKeyValueDB::get(ArrayRef<uint8_t> Key) {
+  TimeTraceScope TimeScope("OnDiskKeyValueDB::get");
   // Check the result cache.
   OnDiskTrieRawHashMap::ConstOnDiskPtr ActionP = Cache.find(Key);
   if (ActionP) {
@@ -71,6 +74,7 @@ OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
                        StringRef ValueName, size_t ValueSize,
                        UnifiedOnDiskCache *Cache,
                        std::shared_ptr<OnDiskCASLogger> Logger) {
+  TimeTraceScope TimeScope("OnDiskKeyValueDB::open", Path);
   if (std::error_code EC = sys::fs::create_directories(Path))
     return createFileError(Path, EC);
 

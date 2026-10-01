@@ -19,6 +19,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 
@@ -47,6 +48,7 @@ static bool isSameProgram(StringRef clangCachePath, StringRef compilerPath) {
 static bool shouldCacheInvocation(ArrayRef<const char *> Args,
                                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                                   bool &SupportsMCCAS, bool &IsCOFF) {
+  llvm::TimeTraceScope TimeScope("shouldCacheInvocation");
   SmallVector<const char *, 128> CheckArgs(Args.begin(), Args.end());
   // Make sure "-###" is not present otherwise we won't get an object back.
   CheckArgs.erase(
@@ -228,6 +230,13 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
   }
   AppendArgs({"-greproducible"});
 
+  if (llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE")) {
+    AppendArgs({"-ftime-trace"});
+    if (auto Granularity =
+            llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE_GRANULARITY"))
+      AppendArgs({"-ftime-trace-granularity=" + *Granularity});
+  }
+
   if (SupportsMCCAS && !ServicePath &&
       !llvm::sys::Process::GetEnv("CLANG_CACHE_DISABLE_MCCAS")) {
     AppendArgs({"-Xclang", "-fcas-backend"});
@@ -305,8 +314,20 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     return std::nullopt;
   }
 
-  llvm::ErrorOr<std::string> compilerPathOrErr =
-      llvm::sys::findProgramByName(Args.front());
+  // Start here rather than in cc1 so that the trace also covers the launcher
+  // and the driver; the cc1 job writes it.
+  if (llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE")) {
+    unsigned Granularity = 500;
+    if (auto Value =
+            llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE_GRANULARITY"))
+      llvm::to_integer(*Value, Granularity);
+    llvm::timeTraceProfilerInitialize(Granularity, clangCachePath);
+  }
+
+  llvm::ErrorOr<std::string> compilerPathOrErr = [&] {
+    llvm::TimeTraceScope TimeScope("findProgramByName", Args.front());
+    return llvm::sys::findProgramByName(Args.front());
+  }();
   if (!compilerPathOrErr) {
     Diags.Report(diag::err_clang_cache_cannot_find_binary) << Args.front();
     return 1;
@@ -318,6 +339,9 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
   if (isSameProgram(clangCachePath, compilerPath)) {
     bool SupportsMCCAS = false, IsCOFF = false;
     if (!shouldCacheInvocation(Args, DiagsPtr, SupportsMCCAS, IsCOFF)) {
+      // Without the launcher's -ftime-trace nothing would write the trace.
+      if (llvm::timeTraceProfilerEnabled())
+        llvm::timeTraceProfilerCleanup();
       if (Diags.hasErrorOccurred())
         return 1;
       return std::nullopt;

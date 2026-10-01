@@ -460,6 +460,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
+    // No scope here: the in-process cc1 job writes the trace before this
+    // call returns, and an unfinished scope is not written.
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
     for (const auto &P : FailingCommands) {

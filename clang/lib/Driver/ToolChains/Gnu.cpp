@@ -28,6 +28,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -2107,6 +2108,7 @@ static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
 /// triple.
 void Generic_GCC::GCCInstallationDetector::init(
     const llvm::Triple &TargetTriple, const ArgList &Args) {
+  llvm::TimeTraceScope TimeScope("Generic_GCC::GCCInstallationDetector::init");
   llvm::Triple BiarchVariantTriple = TargetTriple.isArch32Bit()
                                          ? TargetTriple.get64BitArchVariant()
                                          : TargetTriple.get32BitArchVariant();
@@ -3252,6 +3254,7 @@ void Generic_GCC::AddMultilibIncludeArgs(const ArgList &DriverArgs,
 
 void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
+  llvm::TimeTraceScope TimeScope("Generic_GCC::AddClangCXXStdlibIncludeArgs");
   if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdincxx,
                         options::OPT_nostdlibinc))
     return;
