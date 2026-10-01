@@ -19,6 +19,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 
@@ -312,6 +313,16 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     return std::nullopt;
   }
 
+  // Start here rather than in cc1 so that the trace also covers the launcher
+  // and the driver; the cc1 job writes it.
+  if (llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE")) {
+    unsigned Granularity = 500;
+    if (auto Value =
+            llvm::sys::Process::GetEnv("CLANG_CACHE_TIME_TRACE_GRANULARITY"))
+      llvm::to_integer(*Value, Granularity);
+    llvm::timeTraceProfilerInitialize(Granularity, clangCachePath);
+  }
+
   llvm::ErrorOr<std::string> compilerPathOrErr =
       llvm::sys::findProgramByName(Args.front());
   if (!compilerPathOrErr) {
@@ -325,6 +336,9 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
   if (isSameProgram(clangCachePath, compilerPath)) {
     bool SupportsMCCAS = false, IsCOFF = false;
     if (!shouldCacheInvocation(Args, DiagsPtr, SupportsMCCAS, IsCOFF)) {
+      // Without the launcher's -ftime-trace nothing would write the trace.
+      if (llvm::timeTraceProfilerEnabled())
+        llvm::timeTraceProfilerCleanup();
       if (Diags.hasErrorOccurred())
         return 1;
       return std::nullopt;

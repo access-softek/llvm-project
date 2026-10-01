@@ -9,6 +9,7 @@
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
@@ -25,12 +26,17 @@ public:
   CASProvidingFile(ObjectRef Ref, std::unique_ptr<File> UnderlyingFile)
       : UnderlyingFile(std::move(UnderlyingFile)), Ref(Ref) {}
 
-  ErrorOr<vfs::Status> status() final { return UnderlyingFile->status(); }
+  ErrorOr<vfs::Status> status() final {
+    TimeTraceScope TimeScope("CASProvidingFile::status");
+    return UnderlyingFile->status();
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> getBuffer(const Twine &Name,
                                                    int64_t FileSize,
                                                    bool RequiresNullTerminator,
                                                    bool IsVolatile) final {
+    TimeTraceScope TimeScope("CASProvidingFile::getBuffer",
+                             [&] { return Name.str(); });
     return UnderlyingFile->getBuffer(Name, FileSize, RequiresNullTerminator,
                                      IsVolatile);
   }
@@ -50,10 +56,18 @@ public:
       : DB(std::move(DB)), FS(std::move(FS)) {}
 
   llvm::ErrorOr<Status> status(const Twine &Path) final {
+    TimeTraceScope TimeScope("CASProvidingFileSystem::status",
+                             [&] { return Path.str(); });
     return FS->status(Path);
   }
-  bool exists(const Twine &Path) final { return FS->exists(Path); }
+  bool exists(const Twine &Path) final {
+    TimeTraceScope TimeScope("CASProvidingFileSystem::exists",
+                             [&] { return Path.str(); });
+    return FS->exists(Path);
+  }
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) final {
+    TimeTraceScope TimeScope("CASProvidingFileSystem::dir_begin",
+                             [&] { return Dir.str(); });
     return FS->dir_begin(Dir, EC);
   }
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const final {
@@ -64,6 +78,8 @@ public:
   }
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) final {
+    TimeTraceScope TimeScope("CASProvidingFileSystem::getRealPath",
+                             [&] { return Path.str(); });
     return FS->getRealPath(Path, Output);
   }
   std::error_code isLocal(const Twine &Path, bool &Result) final {
@@ -85,6 +101,8 @@ public:
 
   llvm::Expected<std::unique_ptr<CASBackedFile>>
   openCASBackedFileForRead(const Twine &Path) final {
+    TimeTraceScope TimeScope("CASProvidingFileSystem::openCASBackedFileForRead",
+                             [&] { return Path.str(); });
     auto F = FS->openFileForRead(Path);
     if (!F)
       return errorCodeToError(F.getError());

@@ -12,6 +12,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -78,8 +79,13 @@ void cas::ondisk::setMaxMappingSize(uint64_t Size) {
   OnDiskCASMaxMappingSize = Size;
 }
 
+static StringRef getLockKindName(sys::fs::LockKind Kind) {
+  return Kind == sys::fs::LockKind::Exclusive ? "exclusive" : "shared";
+}
+
 std::error_code cas::ondisk::lockFileThreadSafe(int FD,
                                                 sys::fs::LockKind Kind) {
+  TimeTraceScope TimeScope("cas::ondisk::lockFileThreadSafe", getLockKindName(Kind));
 #if HAVE_FLOCK
   if (sys::RetryAfterSignal(
           -1, flock, FD,
@@ -95,6 +101,7 @@ std::error_code cas::ondisk::lockFileThreadSafe(int FD,
 }
 
 std::error_code cas::ondisk::unlockFileThreadSafe(int FD) {
+  TimeTraceScope TimeScope("cas::ondisk::unlockFileThreadSafe");
 #if HAVE_FLOCK
   if (sys::RetryAfterSignal(-1, flock, FD, LOCK_UN) == 0)
     return std::error_code();
@@ -110,6 +117,7 @@ std::error_code cas::ondisk::unlockFileThreadSafe(int FD) {
 std::error_code
 cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
                                    sys::fs::LockKind Kind) {
+  TimeTraceScope TimeScope("cas::ondisk::tryLockFileThreadSafe", getLockKindName(Kind));
 #if HAVE_FLOCK
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
@@ -140,6 +148,7 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
 
 Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
                                                   size_t NewSize) {
+  TimeTraceScope TimeScope("cas::ondisk::preallocateFileTail");
   auto CreateError = [&](std::error_code EC) -> Expected<size_t> {
     if (EC == std::errc::not_supported)
       // Ignore ENOTSUP in case the filesystem cannot preallocate.

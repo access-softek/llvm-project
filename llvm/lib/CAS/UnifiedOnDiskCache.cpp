@@ -85,6 +85,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -209,6 +210,7 @@ static void getNextDBDirName(StringRef DBDir, llvm::raw_ostream &OS) {
 
 static Error validateOutOfProcess(StringRef LLVMCasBinary, StringRef RootPath,
                                   bool CheckHash) {
+  TimeTraceScope TimeScope("validateOutOfProcess", LLVMCasBinary);
   SmallVector<StringRef> Args{LLVMCasBinary, "-cas", RootPath, "-validate"};
   if (CheckHash)
     Args.push_back("-check-hash");
@@ -258,6 +260,7 @@ Error UnifiedOnDiskCache::validateActionCache() const {
 static Error validateInProcess(StringRef RootPath, StringRef HashName,
                                unsigned HashByteSize, bool CheckHash,
                                OnDiskGraphDB::HashingFuncT HashFn) {
+  TimeTraceScope TimeScope("validateInProcess", RootPath);
   std::shared_ptr<UnifiedOnDiskCache> UniDB;
   if (Error E = UnifiedOnDiskCache::open(RootPath, std::nullopt, HashName,
                                          HashByteSize)
@@ -274,6 +277,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
     StringRef RootPath, StringRef HashName, unsigned HashByteSize,
     bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn, bool AllowRecovery,
     bool ForceValidation, std::optional<StringRef> LLVMCasBinaryPath) {
+  TimeTraceScope TimeScope("UnifiedOnDiskCache::validateIfNeeded", RootPath);
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -418,6 +422,7 @@ Expected<std::unique_ptr<UnifiedOnDiskCache>>
 UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
                          StringRef HashName, unsigned HashByteSize,
                          OnDiskGraphDB::FaultInPolicy FaultInPolicy) {
+  TimeTraceScope TimeScope("UnifiedOnDiskCache::open", RootPath);
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   if (std::error_code EC = sys::fs::create_directories(RootPath))
@@ -555,6 +560,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
 
   if (LockFD == -1)
     return Error::success(); // already closed.
+  TimeTraceScope TimeScope("UnifiedOnDiskCache::close", RootPath);
   llvm::scope_exit CloseLock([&]() {
     assert(LockFD >= 0);
     sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);

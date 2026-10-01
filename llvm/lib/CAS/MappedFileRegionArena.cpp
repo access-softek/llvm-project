@@ -57,6 +57,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/TimeProfiler.h"
 
 #if LLVM_ON_UNIX
 #include <sys/stat.h>
@@ -172,6 +173,7 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
   MappedFileRegionArena Result;
   Result.Path = Path.str();
   Result.Logger = std::move(Logger);
+  TimeTraceScope TimeScope("MappedFileRegionArena::create", Result.Path);
 
   // Open the support file. See file comment for details of locking scheme.
   SmallString<128> SharedFilePath(Result.Path);
@@ -248,6 +250,7 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
       if (Error E = MainFile->switchLock(sys::fs::LockKind::Exclusive))
         return std::move(E);
     }
+    TimeTraceScope ResizeScope("MappedFileRegionArena::create::resize_file_sparse");
     if (std::error_code EC =
             sys::fs::resize_file_sparse(MainFile->FD, Capacity))
       return createFileError(Result.Path, EC);
@@ -258,6 +261,7 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
 
   // Create the mapped region.
   {
+    TimeTraceScope MapScope("MappedFileRegionArena::create::mapped_file_region");
     std::error_code EC;
     const char *Name = nullptr;
 #ifdef _WIN32
@@ -308,6 +312,7 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
 void MappedFileRegionArena::destroyImpl() {
   if (!FD)
     return;
+  TimeTraceScope TimeScope("MappedFileRegionArena::destroyImpl", Path);
 
   // Drop the shared lock indicating we are no longer accessing the file.
   if (SharedLockFD)

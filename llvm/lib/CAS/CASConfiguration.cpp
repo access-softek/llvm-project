@@ -11,6 +11,7 @@
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -26,6 +27,7 @@ Error CASConfiguration::getResolvedCASPath(
 
 Expected<std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 CASConfiguration::createDatabases() const {
+  TimeTraceScope TimeScope("CASConfiguration::createDatabases", CASPath);
   if (!PluginPath.empty())
     return createPluginCASDatabases(PluginPath, CASPath, PluginOptions);
 

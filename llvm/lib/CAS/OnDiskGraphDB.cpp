@@ -62,6 +62,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <atomic>
 #include <mutex>
 #include <optional>
@@ -1316,6 +1317,7 @@ OnDiskGraphDB::getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name,
 
 Expected<std::optional<ObjectHandle>>
 OnDiskGraphDB::load(ObjectID ExternalRef) {
+  TimeTraceScope TimeScope("OnDiskGraphDB::load");
   InternalRef Ref = getInternalRef(ExternalRef);
   auto I = getIndexProxyFromRef(Ref);
   if (!I)
@@ -1361,7 +1363,10 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
 
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
-  auto File = sys::fs::openNativeFileForRead(Path);
+  auto File = [&] {
+    TimeTraceScope OpenScope("OnDiskGraphDB::load::openNativeFileForRead", Path);
+    return sys::fs::openNativeFileForRead(Path);
+  }();
   if (!File)
     return createFileError(Path, File.takeError());
 
@@ -1372,8 +1377,11 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
     return createCorruptObjectError(getDigest(*I));
 
   std::error_code EC;
-  auto Region = std::make_unique<sys::fs::mapped_file_region>(
-      *File, sys::fs::mapped_file_region::readonly, Status.getSize(), 0, EC);
+  auto Region = [&] {
+    TimeTraceScope MapScope("OnDiskGraphDB::load::mapped_file_region", Path);
+    return std::make_unique<sys::fs::mapped_file_region>(
+        *File, sys::fs::mapped_file_region::readonly, Status.getSize(), 0, EC);
+  }();
   if (EC)
     return createCorruptObjectError(getDigest(*I));
 
@@ -1620,6 +1628,10 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
 
 Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
                            ArrayRef<char> Data) {
+  TimeTraceScope TimeScope("OnDiskGraphDB::store", [&] {
+    return (Twine("refs=") + Twine(Refs.size()) + " size=" + Twine(Data.size()))
+        .str();
+  });
   auto I = getIndexProxyFromRef(getInternalRef(ID));
   if (LLVM_UNLIKELY(!I))
     return I.takeError();
@@ -1747,6 +1759,7 @@ Error OnDiskGraphDB::storeFile(ObjectID ID, StringRef FilePath) {
 Error OnDiskGraphDB::storeFile(
     ObjectID ID, StringRef FilePath,
     std::optional<InternalUpstreamImportKind> ImportKind) {
+  TimeTraceScope TimeScope("OnDiskGraphDB::storeFile", FilePath);
   auto I = getIndexProxyFromRef(getInternalRef(ID));
   if (LLVM_UNLIKELY(!I))
     return I.takeError();
@@ -1860,6 +1873,7 @@ OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
                     unsigned HashByteSize, OnDiskGraphDB *UpstreamDB,
                     std::shared_ptr<OnDiskCASLogger> Logger,
                     FaultInPolicy Policy) {
+  TimeTraceScope TimeScope("OnDiskGraphDB::open", AbsPath);
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
 
@@ -2059,6 +2073,7 @@ Expected<std::optional<ObjectHandle>>
 OnDiskGraphDB::faultInFromUpstream(ObjectID PrimaryID) {
   if (!UpstreamDB)
     return std::nullopt;
+  TimeTraceScope TimeScope("OnDiskGraphDB::faultInFromUpstream");
 
   auto UpstreamID = UpstreamDB->getReference(getDigest(PrimaryID));
   if (LLVM_UNLIKELY(!UpstreamID))
