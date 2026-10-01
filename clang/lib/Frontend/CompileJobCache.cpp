@@ -26,6 +26,7 @@
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ScopedDurationTimer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualOutputBackends.h"
 
 using namespace clang;
@@ -299,6 +300,7 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   if (!CacheCompileJob)
     return std::nullopt;
 
+  llvm::TimeTraceScope TimeScope("CompileJobCache::initialize");
   std::tie(CAS, Cache) = Clang.getOrCreateCASDatabases();
   if (!CAS || !Cache)
     return 1; // Exit with error!
@@ -440,6 +442,7 @@ CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
   if (!CacheCompileJob)
     return std::nullopt;
 
+  llvm::TimeTraceScope TimeScope("CompileJobCache::tryReplayCachedResult");
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
   assert(ResultCacheKey.has_value() && "ResultCacheKey not initialized?");
@@ -542,6 +545,7 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
   if (!CacheCompileJob)
     return Success;
 
+  llvm::TimeTraceScope TimeScope("CompileJobCache::finishComputedResult");
   CacheBackend->stopDiagnosticsCapture();
 
   // Don't cache failed builds.
