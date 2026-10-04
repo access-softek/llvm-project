@@ -19,6 +19,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -554,6 +555,8 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
     // Try to set it, if it's empty.
     if (!Existing) {
       if (!NewRecord) {
+        TimeTraceScope TimeScope(
+            "OnDiskTrieRawHashMap::insertLazy::createRecord");
         auto Err = Trie.createRecord(Alloc, Hash).moveInto(NewRecord);
         if (LLVM_UNLIKELY(Err))
           return std::move(Err);

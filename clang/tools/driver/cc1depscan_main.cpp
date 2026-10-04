@@ -644,15 +644,22 @@ static int scanAndUpdateCC1UsingDaemon(
   for (int I = 0, E = RawNewArgs.size(); I != E; ++I)
     NewArgs[I] = SaveArg(RawNewArgs[I]);
 
-  // Create CAS after daemon returns the result so daemon can perform corrupted
-  // CAS recovery.
-  auto [CAS, _] = CASOpts.createDatabases(Diag);
-  if (!CAS)
-    return 1;
+  {
+    llvm::TimeTraceScope TimeScope("Depscan Parse Root ID");
+    // Create CAS after daemon returns the result so daemon can perform
+    // corrupted CAS recovery.
+    auto [CAS, _] = CASOpts.createDatabases(Diag);
+    if (!CAS)
+      return 1;
 
-  if (auto E = CAS->parseID(RootID).moveInto(Root))
-    return reportScanFailure(std::move(E));
+    if (auto E = CAS->parseID(RootID).moveInto(Root))
+      return reportScanFailure(std::move(E));
+  }
 
+  {
+    llvm::TimeTraceScope TimeScope("Depscan Disconnect");
+    ScanDaemon Closed = std::move(*Daemon);
+  }
   return 0;
 }
 

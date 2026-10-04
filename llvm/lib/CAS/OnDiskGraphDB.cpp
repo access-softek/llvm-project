@@ -1642,6 +1642,7 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     if (Existing.SK != TrieRecord::StorageKind::Unknown)
       return Error::success();
   }
+  TimeTraceScope CreateScope("OnDiskGraphDB::store::create");
 
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
