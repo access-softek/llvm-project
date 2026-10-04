@@ -30,6 +30,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <winioctl.h>
+#include <winternl.h>
 
 #undef max
 
@@ -550,16 +551,55 @@ static std::error_code realPathFromHandle(HANDLE H,
   return std::error_code();
 }
 
+/// Returns true if the volume holding \p Handle is known to be a fixed local
+/// disk. Returns false if it is not or if that could not be determined.
+static bool isLocalByQueryVolumeInformationFile(HANDLE Handle) {
+  struct FsDeviceInformation {
+    DEVICE_TYPE DeviceType;
+    ULONG Characteristics;
+  };
+  typedef LONG(WINAPI * NtQueryVolumeInformationFilePtr)(
+      HANDLE, IO_STATUS_BLOCK *, PVOID, ULONG, int);
+  static const auto NtQueryVolumeInformationFile =
+      (NtQueryVolumeInformationFilePtr)(void *)::GetProcAddress(
+          ::GetModuleHandleW(L"ntdll.dll"), "NtQueryVolumeInformationFile");
+  const int FileFsDeviceInformationClass = 4;
+  const ULONG RemovableMedia = 0x1; // FILE_REMOVABLE_MEDIA
+  const ULONG RemoteDevice = 0x10;  // FILE_REMOTE_DEVICE
+
+  if (!NtQueryVolumeInformationFile)
+    return false;
+
+  IO_STATUS_BLOCK IoStatus;
+  FsDeviceInformation Info;
+  if (NtQueryVolumeInformationFile(Handle, &IoStatus, &Info, sizeof(Info),
+                                   FileFsDeviceInformationClass) < 0)
+    return false;
+
+  return (Info.DeviceType == FILE_DEVICE_DISK ||
+          Info.DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
+         !(Info.Characteristics & (RemovableMedia | RemoteDevice));
+}
+
+static std::error_code is_local_internal(HANDLE Handle, bool &Result) {
+  // Fast path for the common case: an ordinary local disk, one system call on
+  // the handle. Everything else goes through the path-based check below.
+  if (isLocalByQueryVolumeInformationFile(Handle)) {
+    Result = true;
+    return std::error_code();
+  }
+
+  SmallVector<wchar_t, 128> FinalPath;
+  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
+    return EC;
+  return is_local_internal(FinalPath, Result);
+}
+
 std::error_code is_local(int FD, bool &Result) {
   sandbox::violationIfEnabled();
 
-  SmallVector<wchar_t, 128> FinalPath;
   HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-
-  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
-    return EC;
-
-  return is_local_internal(FinalPath, Result);
+  return is_local_internal(Handle, Result);
 }
 
 static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
@@ -578,12 +618,8 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
   // Check if the file is on a network (non-local) drive. If so, don't
   // continue when DeleteFile is true, since it prevents opening the file for
   // writes.
-  SmallVector<wchar_t, 128> FinalPath;
-  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
-    return EC;
-
   bool IsLocal;
-  if (std::error_code EC = is_local_internal(FinalPath, IsLocal))
+  if (std::error_code EC = is_local_internal(Handle, IsLocal))
     return EC;
 
   if (!IsLocal)
@@ -1192,12 +1228,9 @@ void mapped_file_region::unmapImpl() {
         // sure we are on a local file system.
         TimeTraceScope TimeScope("mapped_file_region::unmap::is_local");
         bool IsLocal = false;
-        SmallVector<wchar_t, 128> FinalPath;
-        if (!realPathFromHandle(FileHandle.get(), FinalPath)) {
-          // Not checking the return value here - if the check fails, assume the
-          // file isn't local.
-          is_local_internal(FinalPath, IsLocal);
-        }
+        // Not checking the return value here - if the check fails, assume the
+        // file isn't local.
+        is_local_internal(FileHandle.get(), IsLocal);
         DoFlush = !IsLocal;
       }
       if (DoFlush) {
