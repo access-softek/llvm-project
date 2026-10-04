@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -1038,6 +1039,7 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
                                          uint64_t Offset, mapmode Mode,
                                          const char *Name) {
+  TimeTraceScope TimeScope("mapped_file_region::init");
   this->Mode = Mode;
   if (!OrigFileHandle.isValid())
     return make_error_code(errc::bad_file_descriptor);
@@ -1060,9 +1062,11 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
     if (std::error_code EC = UTF8ToUTF16(Name, NameUTF16))
       return EC;
 
-  HANDLE FileMappingHandle =
-      ::CreateFileMappingW(OrigFileHandle.get(), 0, flprotect, Hi_32(Size),
-                           Lo_32(Size), Name ? c_str(NameUTF16) : 0);
+  HANDLE FileMappingHandle = [&] {
+    TimeTraceScope TimeScope("mapped_file_region::init::CreateFileMappingW");
+    return ::CreateFileMappingW(OrigFileHandle.get(), 0, flprotect, Hi_32(Size),
+                                Lo_32(Size), Name ? c_str(NameUTF16) : 0);
+  }();
   if (FileMappingHandle == NULL) {
     std::error_code ec = mapWindowsError(GetLastError());
     return ec;
@@ -1080,8 +1084,11 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
     dwDesiredAccess = FILE_MAP_COPY;
     break;
   }
-  Mapping = ::MapViewOfFile(FileMappingHandle, dwDesiredAccess, Offset >> 32,
-                            Offset & 0xffffffff, Size);
+  {
+    TimeTraceScope TimeScope("mapped_file_region::init::MapViewOfFile");
+    Mapping = ::MapViewOfFile(FileMappingHandle, dwDesiredAccess, Offset >> 32,
+                              Offset & 0xffffffff, Size);
+  }
   if (Mapping == NULL) {
     std::error_code ec = mapWindowsError(GetLastError());
     ::CloseHandle(FileMappingHandle);
@@ -1105,11 +1112,18 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
   // alive, so we need to keep a reference to the file in case all other handles
   // are closed and the file is deleted, which may cause invalid data to be read
   // from the file.
-  ::CloseHandle(FileMappingHandle);
+  {
+    TimeTraceScope TimeScope("mapped_file_region::init::CloseHandle");
+    ::CloseHandle(FileMappingHandle);
+  }
   HANDLE H;
-  if (!::DuplicateHandle(::GetCurrentProcess(), OrigFileHandle.get(),
-                         ::GetCurrentProcess(), &H, 0, 0,
-                         DUPLICATE_SAME_ACCESS)) {
+  BOOL Duplicated = [&] {
+    TimeTraceScope TimeScope("mapped_file_region::init::DuplicateHandle");
+    return ::DuplicateHandle(::GetCurrentProcess(), OrigFileHandle.get(),
+                             ::GetCurrentProcess(), &H, 0, 0,
+                             DUPLICATE_SAME_ACCESS);
+  }();
+  if (!Duplicated) {
     std::error_code ec = mapWindowsError(GetLastError());
     ::UnmapViewOfFile(Mapping);
     return ec;
@@ -1148,10 +1162,14 @@ static bool isEXE(StringRef Magic) {
 
 void mapped_file_region::unmapImpl() {
   if (Mapping) {
+    TimeTraceScope TimeScope("mapped_file_region::unmap");
 
     bool Exe = isEXE(StringRef((char *)Mapping, Size));
 
-    ::UnmapViewOfFile(Mapping);
+    {
+      TimeTraceScope TimeScope("mapped_file_region::unmap::UnmapViewOfFile");
+      ::UnmapViewOfFile(Mapping);
+    }
 
     if (Mode == mapmode::readwrite) {
       bool DoFlush = Exe && hasFlushBufferKernelBug();
@@ -1172,6 +1190,7 @@ void mapped_file_region::unmapImpl() {
         // As the flushing is quite expensive, use a heuristic to limit the
         // cases where we do the flushing. Only do the flushing if we aren't
         // sure we are on a local file system.
+        TimeTraceScope TimeScope("mapped_file_region::unmap::is_local");
         bool IsLocal = false;
         SmallVector<wchar_t, 128> FinalPath;
         if (!realPathFromHandle(FileHandle.get(), FinalPath)) {
@@ -1181,10 +1200,13 @@ void mapped_file_region::unmapImpl() {
         }
         DoFlush = !IsLocal;
       }
-      if (DoFlush)
+      if (DoFlush) {
+        TimeTraceScope TimeScope("mapped_file_region::unmap::FlushFileBuffers");
         ::FlushFileBuffers(FileHandle.get());
+      }
     }
 
+    TimeTraceScope CloseScope("mapped_file_region::unmap::CloseHandle");
     ::CloseHandle(FileHandle.get());
   }
 }
@@ -1219,8 +1241,13 @@ void mapped_file_region::willNeedImpl() {
 }
 
 std::error_code mapped_file_region::sync() const {
-  if (!::FlushViewOfFile(Mapping, Size))
-    return mapWindowsError(GetLastError());
+  TimeTraceScope TimeScope("mapped_file_region::sync");
+  {
+    TimeTraceScope TimeScope("mapped_file_region::sync::FlushViewOfFile");
+    if (!::FlushViewOfFile(Mapping, Size))
+      return mapWindowsError(GetLastError());
+  }
+  TimeTraceScope FlushScope("mapped_file_region::sync::FlushFileBuffers");
   if (!::FlushFileBuffers(FileHandle.get()))
     return mapWindowsError(GetLastError());
   return std::error_code();
