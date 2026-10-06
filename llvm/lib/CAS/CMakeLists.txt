@@ -30,6 +30,7 @@ add_llvm_component_library(LLVMCAS
   OnDiskTrieRawHashMap.cpp
   OnDiskKeyValueDB.cpp
   PluginCAS.cpp
+  Stats.cpp
   TreeSchema.cpp
   UnifiedOnDiskCache.cpp
   Utils.cpp

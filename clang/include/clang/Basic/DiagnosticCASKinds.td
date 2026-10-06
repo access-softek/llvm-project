@@ -44,6 +44,8 @@ def err_cas_missing_input_cache_entry : Error<
   "CAS missing expected input cache key '%0'">, DefaultFatal;
 def err_cas_cannot_load_api_notes_include_tree : Error<
   "cannot load APINotes from include-tree-id '%0'">, DefaultFatal;
+def err_cas_stats_cannot_be_initialized : Error<
+  "CAS stats cannot be initialized: %0">, DefaultFatal;
 
 def warn_clang_cache_disabled_caching: Warning<
   "caching disabled because %0">,
