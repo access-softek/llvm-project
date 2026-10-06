@@ -408,6 +408,16 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
   if (!Result) {
     Diags.Report(diag::remark_compile_job_cache_miss)
         << ResultCacheKey.toString();
+
+    auto Stats = Cache->getStats();
+    if (!Stats) {
+      llvm::consumeError(Stats.takeError());
+    } else {
+      Error E = Stats->inc(arrayRefFromStringRef(llvm::cas::Stats::KeyCountMiss));
+      if (E)
+        llvm::consumeError(std::move(E));
+    }
+
     return false;
   }
 
@@ -459,8 +469,19 @@ CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
     Diags.Report(diag::remark_compile_job_cache_skipped)
         << ResultCacheKey->toString();
 
-  if (*ReplayedResult)
+  if (*ReplayedResult) {
+
+    auto Stats = Cache->getStats();
+    if (!Stats) {
+      llvm::consumeError(Stats.takeError());
+    } else {
+      Error E = Stats->inc(arrayRefFromStringRef(llvm::cas::Stats::KeyCountHits));
+      if (E)
+        llvm::consumeError(std::move(E));
+    }
+
     return 0;
+  }
 
   if (CacheBackend->prepareOutputCollection())
     return 1;
@@ -880,12 +901,33 @@ Expected<bool> ObjectStoreCachingOutputs::replayCachedResult(
   if (HasMissingOutput) {
     Diags.Report(diag::remark_compile_job_cache_miss)
         << ResultCacheKey.toString();
+
+    auto Stats = Cache->getStats();
+    if (!Stats) {
+      llvm::consumeError(Stats.takeError());
+    } else {
+      Error E =
+          Stats->inc(arrayRefFromStringRef(llvm::cas::Stats::KeyCountMiss));
+      if (E)
+        llvm::consumeError(std::move(E));
+    }
+
     return false;
   }
 
   if (!JustComputedResult) {
     Diags.Report(diag::remark_compile_job_cache_hit)
         << ResultCacheKey.toString() << Result.getID().toString();
+
+    auto Stats = Cache->getStats();
+    if (!Stats) {
+      llvm::consumeError(Stats.takeError());
+    } else {
+      Error E =
+          Stats->inc(arrayRefFromStringRef(llvm::cas::Stats::KeyCountHits));
+      if (E)
+        llvm::consumeError(std::move(E));
+    }
 
     if (SerialDiags) {
       if (Error E = replayCachedDiagnostics(SerialDiags->getData()))

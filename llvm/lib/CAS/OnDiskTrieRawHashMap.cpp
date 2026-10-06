@@ -532,6 +532,7 @@ void SubtrieHandle::reinitialize(uint32_t StartBit, uint32_t NumBits) {
 Expected<OnDiskTrieRawHashMap::OnDiskPtr>
 OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
+                                 LazyInsertOnConstructCB OnExist,
                                  LazyInsertOnLeakCB OnLeak) {
   TrieRawHashMapHandle Trie = Impl->Trie;
   assert(Hash.size() == Trie.getNumHashBytes() && "Invalid hash");
@@ -580,6 +581,8 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
       if (NewRecord && OnLeak)
         OnLeak(NewRecord->Offset.asDataFileOffset(), NewRecord->Proxy,
                ExistingRecord.Offset.asDataFileOffset(), ExistingRecord.Proxy);
+      if (OnExist)
+        OnExist(ExistingRecord.Offset.asDataFileOffset(), ExistingRecord.Proxy);
       return OnDiskPtr(ExistingRecord.Proxy,
                        ExistingRecord.Offset.asDataFileOffset());
     }
@@ -1226,6 +1229,7 @@ OnDiskTrieRawHashMap::create(const Twine &PathTwine, const Twine &TrieNameTwine,
 Expected<OnDiskTrieRawHashMap::OnDiskPtr>
 OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
+                                 LazyInsertOnConstructCB OnExist,
                                  LazyInsertOnLeakCB OnLeak) {
   return createStringError(make_error_code(std::errc::not_supported),
                            "OnDiskTrieRawHashMap is not supported");

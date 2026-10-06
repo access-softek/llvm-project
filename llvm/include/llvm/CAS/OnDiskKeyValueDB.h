@@ -28,6 +28,12 @@ class UnifiedOnDiskCache;
 /// * The value buffers returned from a key lookup have 8-byte alignment.
 class OnDiskKeyValueDB {
 public:
+  enum class ReplaceKind : uint16_t {
+    None = 1,
+    Set = 2,
+    Inc = 3,
+  };
+
   /// Associate a value with a key.
   ///
   /// \param Key the hash bytes for the key
@@ -37,7 +43,8 @@ public:
   /// \returns the value associated with the \p Key. It may be different than
   /// \p Value if another value is already associated with this key.
   LLVM_ABI Expected<ArrayRef<char>> put(ArrayRef<uint8_t> Key,
-                                        ArrayRef<char> Value);
+                                        ArrayRef<char> Value, 
+                                        ReplaceKind Replace = ReplaceKind::None);
 
   /// \returns the value associated with the \p Key, or \p std::nullopt if the
   /// key does not exist.

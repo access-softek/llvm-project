@@ -97,6 +97,10 @@ public:
 
   Error validate() const final;
 
+  Expected<ondisk::OnDiskKeyValueDB &> getStatsDB() final {
+    return UniDB->getKeyValueDB();
+  };
+
 private:
   std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB;
 };
@@ -254,4 +258,34 @@ std::unique_ptr<ActionCache>
 cas::builtin::createActionCacheFromUnifiedOnDiskCache(
     std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
   return std::make_unique<UnifiedOnDiskActionCache>(std::move(UniDB));
+}
+
+Expected<std::optional<uint64_t>> Stats::get(ArrayRef<uint8_t> Key) {
+  auto Result = DB.get(Key);
+  if (!Result)
+    return Result.takeError();
+  auto Value = *Result;
+  if (!Value)
+    return std::nullopt;
+
+  assert(Value->size() == sizeof(uint64_t));
+  return llvm::support::endian::read64le(Value->data());
+}
+
+Error Stats::put(ArrayRef<uint8_t> Key, uint64_t Value) {
+  std::array<char, sizeof(uint64_t)> Buf;
+  llvm::support::endian::write64le(Buf.data(), Value);
+  auto Result = DB.put(Key, Buf, ondisk::OnDiskKeyValueDB::ReplaceKind::Set);
+  if (!Result)
+    return Result.takeError();
+  return Error::success();
+}
+
+Error Stats::inc(ArrayRef<uint8_t> Key, uint64_t Value) {
+  std::array<char, sizeof(uint64_t)> Buf;
+  llvm::support::endian::write64le(Buf.data(), Value);
+  auto Result = DB.put(Key, Buf, ondisk::OnDiskKeyValueDB::ReplaceKind::Inc);
+  if (!Result)
+    return Result.takeError();
+  return Error::success();
 }

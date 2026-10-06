@@ -193,6 +193,7 @@ public:
   LLVM_ABI Expected<OnDiskPtr>
   insertLazy(ArrayRef<uint8_t> Hash,
              LazyInsertOnConstructCB OnConstruct = nullptr,
+             LazyInsertOnConstructCB OnExist = nullptr,
              LazyInsertOnLeakCB OnLeak = nullptr);
 
   Expected<OnDiskPtr> insert(const ConstValueProxy &Value) {

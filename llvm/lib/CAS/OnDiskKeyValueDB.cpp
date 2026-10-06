@@ -34,18 +34,38 @@ using namespace llvm::cas::ondisk;
 static constexpr StringLiteral ActionCacheFile = "actions.";
 
 Expected<ArrayRef<char>> OnDiskKeyValueDB::put(ArrayRef<uint8_t> Key,
-                                               ArrayRef<char> Value) {
+                                               ArrayRef<char> Value,
+                                               ReplaceKind Replace) {
   if (LLVM_UNLIKELY(Value.size() != ValueSize))
     return createStringError(errc::invalid_argument,
                              "expected value size of " + itostr(ValueSize) +
                                  ", got: " + itostr(Value.size()));
   assert(Value.size() == ValueSize);
+  OnDiskTrieRawHashMap::LazyInsertOnConstructCB OnExist = nullptr;
+  if (Replace == ReplaceKind::Set) {
+    OnExist = [&](FileOffset ExistingOffset,
+                  OnDiskTrieRawHashMap::ValueProxy ExistingValue) {
+      assert(ExistingValue.Data.size() == ValueSize);
+      // FIXME: Use atomic
+      llvm::copy(Value, ExistingValue.Data.data());
+    };
+  }
+  else if (Replace == ReplaceKind::Inc) {
+    OnExist = [&](FileOffset ExistingOffset,
+                  OnDiskTrieRawHashMap::ValueProxy ExistingValue) {
+      assert(ExistingValue.Data.size() == ValueSize);
+      // FIXME: Use atomic
+      uint64_t V = llvm::support::endian::read64le(ExistingValue.Data.data());
+      V += llvm::support::endian::read64le(Value.data());
+      llvm::support::endian::write64le(ExistingValue.Data.data(), V);
+    };
+  }
   auto ActionP = Cache.insertLazy(
       Key, [&](FileOffset TentativeOffset,
                OnDiskTrieRawHashMap::ValueProxy TentativeValue) {
         assert(TentativeValue.Data.size() == ValueSize);
         llvm::copy(Value, TentativeValue.Data.data());
-      });
+      }, /*OnExist=*/OnExist);
   if (LLVM_UNLIKELY(!ActionP))
     return ActionP.takeError();
   return (*ActionP)->Data;

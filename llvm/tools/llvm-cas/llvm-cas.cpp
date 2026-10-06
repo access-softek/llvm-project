@@ -74,6 +74,8 @@ enum class CommandKind {
   ValidateObject,
   ValidateIfNeeded,
   Prune,
+  StatsShow,
+  StatsZero,
 };
 
 struct CommandOptions {
@@ -133,6 +135,10 @@ struct CommandOptions {
       return CommandKind::ValidateIfNeeded;
     case OPT_prune:
       return CommandKind::Prune;
+    case OPT_stats_show:
+      return CommandKind::StatsShow;
+    case OPT_stats_zero:
+      return CommandKind::StatsZero;
     }
     return CommandKind::Invalid;
   }
@@ -142,7 +148,8 @@ struct CommandOptions {
     return Kind != CommandKind::ValidateIfNeeded &&
            Kind != CommandKind::Validate && Kind != CommandKind::MakeBlob &&
            Kind != CommandKind::MakeNode && Kind != CommandKind::Dump &&
-           Kind != CommandKind::Prune && Kind != CommandKind::MergeTrees;
+           Kind != CommandKind::Prune && Kind != CommandKind::MergeTrees &&
+           Kind != CommandKind::StatsShow && Kind != CommandKind::StatsZero;
   }
 };
 } // namespace
@@ -175,6 +182,7 @@ static int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash);
 static int ingestCasIDFile(cas::ObjectStore &CAS, ArrayRef<std::string> CASIDs);
 static int validateIfNeeded(const CommandOptions &Opts, const char *Argv0);
 static int prune(cas::ObjectStore &CAS);
+static int stats(ActionCache &AC, bool Zero);
 
 static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
   BumpPtrAllocator Alloc;
@@ -260,6 +268,12 @@ int main(int Argc, char **Argv) {
     std::tie(CAS, AC) = ExitOnErr(createCASFromIdentifier(Opts.CASPath));
   }
   assert(CAS);
+
+  if (Opts.Command == CommandKind::StatsShow)
+    return stats(*AC, false);
+
+  if (Opts.Command == CommandKind::StatsZero)
+    return stats(*AC, true);
 
   if (Opts.Command == CommandKind::Dump)
     return dump(*CAS);
@@ -792,5 +806,33 @@ int validateIfNeeded(const CommandOptions &Opts, const char *Argv0) {
 static int prune(cas::ObjectStore &CAS) {
   ExitOnError ExitOnErr("llvm-cas: prune: ");
   ExitOnErr(CAS.pruneStorageData());
+  return 0;
+}
+
+int stats(ActionCache &AC, bool Zero) {
+  ExitOnError ExitOnErr("llvm-cas: stats: ");
+  auto Stats = ExitOnErr(AC.getStats());
+
+  outs() << "llvm-cas: stats:\n";
+
+  auto Result = Stats.get(arrayRefFromStringRef(Stats::KeyCountHits));
+  if (!Result) 
+    outs() << "Hits: <none>\n";
+  else
+    outs() << "Hits: " << *Result << "\n";
+
+  Result = Stats.get(arrayRefFromStringRef(Stats::KeyCountMiss));
+  if (!Result)
+    outs() << "Miss: <none>\n";
+  else
+    outs() << "Miss: " << *Result << "\n";
+
+  if (Zero) {
+    outs() << "zero-stats: ";
+    ExitOnErr(Stats.put(arrayRefFromStringRef(Stats::KeyCountHits), 0));
+    ExitOnErr(Stats.put(arrayRefFromStringRef(Stats::KeyCountMiss), 0));
+    outs() << "successfull\n";
+  }
+
   return 0;
 }

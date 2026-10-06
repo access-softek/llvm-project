@@ -28,6 +28,26 @@ class ObjectStore;
 class CASID;
 class ObjectProxy;
 
+namespace ondisk {
+class OnDiskKeyValueDB;
+}
+
+class Stats {
+public:
+  Stats(ondisk::OnDiskKeyValueDB &DB) : DB(DB) {}
+
+  LLVM_ABI Expected<std::optional<uint64_t>> get(ArrayRef<uint8_t> Key);
+  LLVM_ABI Error put(ArrayRef<uint8_t> Key, uint64_t Value);
+  LLVM_ABI Error inc(ArrayRef<uint8_t> Key, uint64_t Value = 1);
+
+  // FIXME: Adjust the length to match the hash (32 bytes).
+  static constexpr llvm::StringLiteral KeyCountHits = "StatCounterHits-----------------";
+  static constexpr llvm::StringLiteral KeyCountMiss = "StatCounterMiss-----------------";
+
+private:
+  ondisk::OnDiskKeyValueDB &DB;
+};
+
 /// A key for caching an operation.
 /// It is implemented as a bag of bytes and provides a convenient constructor
 /// for CAS types.
@@ -122,6 +142,13 @@ public:
   /// Validate the ActionCache contents.
   virtual Error validate() const = 0;
 
+  Expected<Stats> getStats() {
+    auto StatsDB = getStatsDB();
+    if (!StatsDB)
+      return StatsDB.takeError();
+    return Stats(*StatsDB);
+  };
+
   virtual ~ActionCache() = default;
 
 protected:
@@ -142,6 +169,11 @@ protected:
                             bool CanBeDistributed,
                             unique_function<void(Error)> Callback,
                             std::unique_ptr<Cancellable> *CancelObj);
+
+  virtual Expected<ondisk::OnDiskKeyValueDB &> getStatsDB() {
+    return createStringError(make_error_code(std::errc::not_supported),
+                             "getStatsDB() is not implemented");
+  };
 
   ActionCache(const CASContext &Context) : Context(Context) {}
 

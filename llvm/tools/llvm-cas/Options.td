@@ -50,6 +50,8 @@ def validate_if_needed : F<"validate-if-needed">,
                          HelpText<"Validate cas contents if needed">,
                          Group<grp_action>;
 def prune : F<"prune">, HelpText<"Prune local cas storage">, Group<grp_action>;
+def stats_show : F<"show-stats">, HelpText<"show stats">, Group<grp_action>;
+def stats_zero : F<"zero-stats">, HelpText<"zero stats">, Group<grp_action>;
 
 // Tool options
 
