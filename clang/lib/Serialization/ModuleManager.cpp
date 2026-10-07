@@ -163,6 +163,31 @@ AddModuleResult ModuleManager::addModule(
     return Result;
   }
 
+  // A PCM loaded from CAS can be exposed under more than one filename. This
+  // happens when two explicit modules record their shared dependency relative
+  // to different module directories. FileManager cannot de-duplicate those
+  // entries by path, but the CAS ID identifies the contents unambiguously.
+  //
+  // Do this before the FileKey lookup below so that a module already loaded
+  // through another path is reused instead of being diagnosed as a second
+  // definition of the same Clang module.
+  if (const auto *PCM = ModCache.getInMemoryModuleCache().lookup(FileName);
+      PCM && !PCM->CASID.empty()) {
+    for (ModuleFile &Loaded : *this) {
+      StringRef LoadedCASID = Loaded.CASID;
+      if (LoadedCASID.empty())
+        if (const auto *LoadedPCM =
+                ModCache.getInMemoryModuleCache().lookup(Loaded.FileName))
+          LoadedCASID = LoadedPCM->CASID;
+      if (!LoadedCASID.empty() && LoadedCASID == PCM->CASID) {
+        Result.Module = &Loaded;
+        updateModuleImports(Loaded, ImportedBy, ImportLoc);
+        Result.K = AddModuleResult::AlreadyLoaded;
+        return Result;
+      }
+    }
+  }
+
   // Check whether we already loaded this module before.
   // Note: `isModuleFileOutOfDate` and `checkSignature` are mutually exclusive
   // in practice. If a signature is stored, it means size/mtime values have been
