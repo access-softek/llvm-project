@@ -13,6 +13,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -32,6 +33,11 @@ using namespace llvm;
 
 std::string cc1depscand::getBasePath(StringRef DaemonKey) {
   assert(!DaemonKey.empty() && "Expected valid daemon key");
+
+  // Looking up the daemon's socket path is not compiler IO. On Windows,
+  // system_temp_directory() makes the path absolute, which the sandbox
+  // would reject.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
   // Construct the path.
   SmallString<128> BasePath;
@@ -243,8 +249,14 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
   std::optional<ArrayRef<StringRef>> EnvOpt =
       Env.empty() ? std::nullopt : std::optional<ArrayRef<StringRef>>(Env);
 
-  llvm::sys::ProcessInfo PI = llvm::sys::ExecuteNoWait(
-      Arg0, LaunchArgs, EnvOpt, {}, 0, &ErrMsg, &ExecutionFailed);
+  llvm::sys::ProcessInfo PI = [&] {
+    // Starting the daemon is not compiler IO either. On Windows,
+    // ExecuteNoWait() checks that the program exists before launching it,
+    // and the sandbox would reject those checks.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::sys::ExecuteNoWait(Arg0, LaunchArgs, EnvOpt, {}, 0, &ErrMsg,
+                                    &ExecutionFailed);
+  }();
 
   if (ExecutionFailed || PI.Pid == llvm::sys::ProcessInfo::InvalidPid)
     return llvm::createStringError(std::make_error_code(std::errc::invalid_argument),
