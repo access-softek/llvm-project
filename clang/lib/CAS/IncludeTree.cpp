@@ -9,10 +9,12 @@
 #include "clang/CAS/IncludeTree.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include <utility>
 
 using namespace clang;
@@ -1044,7 +1046,9 @@ public:
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
     SmallString<128> Filename;
     getPath(Path, Filename);
-    auto FileEntry = Files.find(Filename);
+    SmallString<128> Key;
+    makePathKey(Filename, Key);
+    auto FileEntry = Files.find(Key);
     if (FileEntry != Files.end()) {
       return makeStatus(Filename, FileEntry->second.Size,
                         FileEntry->second.UniqueID,
@@ -1052,7 +1056,7 @@ public:
     }
 
     // Also check whether this is a parent directory status query.
-    auto DirEntry = Directories.find(Filename);
+    auto DirEntry = Directories.find(Key);
     if (DirEntry != Directories.end()) {
       return makeStatus(Filename, /*Size*/ 0, DirEntry->second,
                         llvm::sys::fs::file_type::directory_file);
@@ -1077,7 +1081,9 @@ public:
   }
 
   Expected<MaterializedFile> materialize(StringRef Filename) {
-    auto Entry = Files.find(Filename);
+    SmallString<128> Key;
+    makePathKey(Filename, Key);
+    auto Entry = Files.find(Key);
     if (Entry == Files.end())
       return fileError(Filename);
     auto ContentsBlob = CAS.getProxy(Entry->second.ContentsRef);
@@ -1087,13 +1093,26 @@ public:
     return MaterializedFile{ContentsBlob->getData(), Entry->second};
   }
 
-  /// Produce a filename compatible with our StringMaps. See comment in
-  /// \c createIncludeTreeFileSystem.
+  /// Normalize a path before looking it up in the maps below.
   void getPath(const Twine &Path, SmallVectorImpl<char> &Out) {
     Path.toVector(Out);
     // Strip dots, but do not eliminate a path consisting only of '.'
     if (Out.size() != 1)
       llvm::sys::path::remove_dots(Out);
+  }
+
+  /// Produce a key for Files and Directories.
+  ///
+  /// Windows paths are case-insensitive, but StringMap keys are not. Files can
+  /// legitimately be recorded and looked up with different casing, for
+  /// example when a module map uses "Include" and a header search path uses
+  /// "include".
+  static void makePathKey(StringRef Path, SmallVectorImpl<char> &Key) {
+    Key.assign(Path.begin(), Path.end());
+    if (!llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
+      return;
+    for (char &C : Key)
+      C = llvm::toLower(C);
   }
 
   static llvm::vfs::Status makeStatus(StringRef Filename, uint64_t Size,
@@ -1153,7 +1172,8 @@ public:
 };
 } // namespace
 
-static std::string computeFilename(StringRef Name, IncludeTreeFileSystem &FS) {
+/// Register \p Name's parent directory with \p FS and return its map key.
+static std::string computeFileKey(StringRef Name, IncludeTreeFileSystem &FS) {
   SmallString<128> Filename(Name);
   assert(Filename != ".");
   llvm::sys::path::remove_dots(Filename);
@@ -1161,11 +1181,15 @@ static std::string computeFilename(StringRef Name, IncludeTreeFileSystem &FS) {
   StringRef DirName = llvm::sys::path::parent_path(Filename);
   if (DirName.empty())
     DirName = ".";
-  auto &DirEntry = FS.Directories[DirName];
+  SmallString<128> DirKey;
+  IncludeTreeFileSystem::makePathKey(DirName, DirKey);
+  auto &DirEntry = FS.Directories[DirKey];
   if (DirEntry == llvm::sys::fs::UniqueID()) {
     DirEntry = llvm::vfs::getNextVirtualUniqueID();
   }
-  return Filename.str().str();
+  SmallString<128> Key;
+  IncludeTreeFileSystem::makePathKey(Filename, Key);
+  return Key.str().str();
 }
 
 Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
@@ -1196,9 +1220,9 @@ cas::createIncludeTreeFileSystem(
     if (!FilenameBlob)
       return FilenameBlob.takeError();
 
-    auto Filename = computeFilename(FilenameBlob->getData(), *IncludeTreeFS);
+    auto Key = computeFileKey(FilenameBlob->getData(), *IncludeTreeFS);
     IncludeTreeFS->Files.insert(std::make_pair(
-        Filename,
+        Key,
         IncludeTreeFileSystem::FileEntry{File->getContentsRef(), Entry.Size,
                                          llvm::vfs::getNextVirtualUniqueID()}));
   }
@@ -1218,10 +1242,9 @@ cas::createIncludeTreeFileSystem(IncludeTree::FileList &List) {
         auto FilenameBlob = File.getFilename();
         if (!FilenameBlob)
           return FilenameBlob.takeError();
-        auto Filename =
-            computeFilename(FilenameBlob->getData(), *IncludeTreeFS);
+        auto Key = computeFileKey(FilenameBlob->getData(), *IncludeTreeFS);
         IncludeTreeFS->Files.insert(
-            std::make_pair(Filename, IncludeTreeFileSystem::FileEntry{
+            std::make_pair(Key, IncludeTreeFileSystem::FileEntry{
                                          File.getContentsRef(), Size,
                                          llvm::vfs::getNextVirtualUniqueID()}));
         return llvm::Error::success();

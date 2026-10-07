@@ -318,6 +318,67 @@ createTestInclueTreeFS(ObjectStore &DB, unsigned NumFiles = 10) {
   return createIncludeTreeFileSystem(DB, Files);
 }
 
+TEST(IncludeTree, IncludeTreeFileSystemPathCase) {
+  constexpr StringLiteral RecordedPath = "/SDK/Include/File.h";
+  constexpr StringLiteral LookupPath = "/sdk/include/file.h";
+  constexpr StringLiteral RecordedDirectory = "/SDK/Include";
+  constexpr StringLiteral LookupDirectory = "/sdk/include";
+  constexpr StringLiteral Contents = "contents";
+
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
+  std::optional<ObjectRef> Content;
+  ASSERT_THAT_ERROR(DB->storeFromString({}, Contents).moveInto(Content),
+                    llvm::Succeeded());
+  std::optional<IncludeTree::File> File;
+  ASSERT_THAT_ERROR(
+      IncludeTree::File::create(*DB, RecordedPath, *Content).moveInto(File),
+      llvm::Succeeded());
+
+  SmallVector<IncludeTree::FileList::FileEntry> Entries{
+      {File->getRef(), Contents.size()}};
+
+  auto CheckFileSystem = [&](llvm::vfs::FileSystem &FS) {
+    auto RecordedStatus = FS.status(RecordedPath);
+    ASSERT_TRUE(RecordedStatus);
+    EXPECT_TRUE(RecordedStatus->isRegularFile());
+    auto RecordedDirStatus = FS.status(RecordedDirectory);
+    ASSERT_TRUE(RecordedDirStatus);
+    EXPECT_TRUE(RecordedDirStatus->isDirectory());
+
+    auto LookupStatus = FS.status(LookupPath);
+    auto LookupDirStatus = FS.status(LookupDirectory);
+    auto Buffer = FS.getBufferForFile(LookupPath);
+    if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native)) {
+      ASSERT_TRUE(LookupStatus);
+      EXPECT_TRUE(LookupStatus->isRegularFile());
+      ASSERT_TRUE(LookupDirStatus);
+      EXPECT_TRUE(LookupDirStatus->isDirectory());
+      ASSERT_TRUE(Buffer);
+      EXPECT_EQ((*Buffer)->getBuffer(), Contents);
+    } else {
+      EXPECT_FALSE(LookupStatus);
+      EXPECT_FALSE(LookupDirStatus);
+      EXPECT_FALSE(Buffer);
+    }
+  };
+
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> DirectFS;
+  ASSERT_THAT_ERROR(
+      createIncludeTreeFileSystem(*DB, Entries).moveInto(DirectFS),
+      llvm::Succeeded());
+  CheckFileSystem(*DirectFS);
+
+  std::optional<IncludeTree::FileList> FileList;
+  ASSERT_THAT_ERROR(
+      IncludeTree::FileList::create(*DB, Entries, {}).moveInto(FileList),
+      llvm::Succeeded());
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FileListFS;
+  ASSERT_THAT_ERROR(
+      createIncludeTreeFileSystem(*FileList).moveInto(FileListFS),
+      llvm::Succeeded());
+  CheckFileSystem(*FileListFS);
+}
+
 TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
   StringRef PathSep = llvm::sys::path::get_separator();
   std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
