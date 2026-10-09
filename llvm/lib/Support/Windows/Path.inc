@@ -1142,6 +1142,10 @@ static bool isEXE(StringRef Magic) {
 
 void mapped_file_region::unmapImpl() {
   if (Mapping) {
+    BY_HANDLE_FILE_INFORMATION FI;
+    if (::GetFileInformationByHandle(FileHandle.get(), &FI) &&
+        (FI.dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) != 0)
+      ::FlushViewOfFile(Mapping, Size);
 
     bool Exe = isEXE(StringRef((char *)Mapping, Size));
 
