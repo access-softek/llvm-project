@@ -67,6 +67,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
@@ -381,6 +382,27 @@ static void SetupSerializedDiagnostics(DiagnosticOptions &DiagOpts,
   }
 }
 
+bool CompilerInstance::setupCacheStatsDiagnostics(DiagnosticsEngine &Diags) {
+  auto CASPath = llvm::sys::Process::GetEnv("LLVM_CACHE_CAS_PATH");
+  if (!CASPath)
+    return true;
+  llvm::cas::Stats Stats;
+  if (auto Err = Stats.open(*CASPath)) {
+    Diags.Report(diag::err_cas_stats_cannot_be_initialized)
+        << llvm::toString(std::move(Err));
+    return false;
+  }
+  auto SC = std::make_unique<CacheStatsDiagnosticConsumer>(Stats);
+  if (Diags.ownsClient()) {
+    Diags.setClient(
+        new ChainedDiagnosticConsumer(Diags.takeClient(), std::move(SC)));
+  } else {
+    Diags.setClient(
+        new ChainedDiagnosticConsumer(Diags.getClient(), std::move(SC)));
+  }
+  return true;
+}
+
 void CompilerInstance::createDiagnostics(DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
   Diagnostics = createDiagnostics(getVirtualFileSystem(), getDiagnosticOpts(),
@@ -402,6 +424,8 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
     Diags->setClient(new SARIFDiagnosticPrinter(llvm::errs(), Opts));
   } else
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
+
+  setupCacheStatsDiagnostics(*Diags);
 
   // Chain in -verify checker, if requested.
   if (Opts.VerifyDiagnostics)
@@ -2914,4 +2938,68 @@ bool CompileCacheASTReaderHelper::readIncludeTreeID(StringRef ID,
   // created with a different CAS.
   return checkCASID(Complain, ID, diag::err_cas_cannot_parse_include_tree_id,
                     diag::err_cas_missing_include_tree_id);
+}
+
+void CacheStatsDiagnosticConsumer::HandleDiagnostic(
+    DiagnosticsEngine::Level Level, const Diagnostic &Info) {
+  if (Level == DiagnosticsEngine::Remark) {
+    // StringRef remark =
+    // Info.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(Info.getID());
+    // "compile-job-cache-miss"
+
+    //SmallString<100> MsgBuf;
+    //Info.FormatDiagnostic(MsgBuf);
+    // std::string Message(MsgBuf);
+
+    double T = 0.0;
+    if (Info.getNumArgs() > 0 &&
+        Info.getArgKind(0) == DiagnosticsEngine::ak_std_string) {
+      llvm::StringRef S = StringRef(Info.getArgStdStr(0)).rtrim(" s\r\n\t");
+      llvm::to_float(S, T);
+    }
+
+    switch (Info.getID()) {
+    case diag::remark_compile_job_cache_hit:
+      Stats.inc(llvm::cas::Stats::Key::hit);
+      break;
+    case diag::remark_compile_job_cache_miss:
+      Stats.inc(llvm::cas::Stats::Key::miss);
+      break;
+    case diag::remark_compile_job_cache_miss_result_not_found:
+      Stats.inc(llvm::cas::Stats::Key::miss_result_not_found);
+      break;
+    case diag::remark_compile_job_cache_backend_output_not_found:
+      Stats.inc(llvm::cas::Stats::Key::backend_output_not_found);
+      break;
+    case diag::remark_compile_job_cache_skipped:
+      Stats.inc(llvm::cas::Stats::Key::skipped);
+      break;
+    
+    case diag::remark_compile_job_cache_timing_depscan:
+      Stats.inc(llvm::cas::Stats::Key::depscan_count);
+      Stats.inc_f(llvm::cas::Stats::Key::depscan_time, T);
+      break;
+    case diag::remark_compile_job_cache_timing_backend_key_query:
+      Stats.inc(llvm::cas::Stats::Key::backend_key_query_count);
+      Stats.inc_f(llvm::cas::Stats::Key::backend_key_query_time, T);
+      break;
+    case diag::remark_compile_job_cache_timing_backend_key_update:
+      Stats.inc(llvm::cas::Stats::Key::backend_key_update_count);
+      Stats.inc_f(llvm::cas::Stats::Key::backend_key_update_time, T);
+      break;
+    case diag::remark_compile_job_cache_timing_backend_load:
+      Stats.inc(llvm::cas::Stats::Key::backend_load_count);
+      Stats.inc_f(llvm::cas::Stats::Key::backend_load_time, T);
+      break;
+    case diag::remark_compile_job_cache_timing_backend_store:
+      Stats.inc(llvm::cas::Stats::Key::backend_store_count);
+      Stats.inc_f(llvm::cas::Stats::Key::backend_store_time, T);
+      break;
+
+    default:
+      break;
+    }
+  }
+
+  // DiagnosticConsumer::HandleDiagnostic(Level, Info);
 }

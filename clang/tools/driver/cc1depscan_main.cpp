@@ -736,6 +736,10 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
       std::make_unique<TextDiagnosticPrinter>(llvm::errs(), *DiagOpts, false);
   DiagnosticsEngine Diags(new DiagnosticIDs(), *DiagOpts);
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
+
+  if (!CompilerInstance::setupCacheStatsDiagnostics(Diags))
+    return 1;
+
   auto VFS = [] {
     auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     return llvm::vfs::getRealFileSystem();

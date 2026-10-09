@@ -18,6 +18,7 @@
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
+#include "llvm/CAS/Stats.h"
 #include "llvm/CAS/Utils.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -74,6 +75,8 @@ enum class CommandKind {
   ValidateObject,
   ValidateIfNeeded,
   Prune,
+  StatsShow,
+  StatsZero,
 };
 
 struct CommandOptions {
@@ -133,6 +136,10 @@ struct CommandOptions {
       return CommandKind::ValidateIfNeeded;
     case OPT_prune:
       return CommandKind::Prune;
+    case OPT_stats_show:
+      return CommandKind::StatsShow;
+    case OPT_stats_zero:
+      return CommandKind::StatsZero;
     }
     return CommandKind::Invalid;
   }
@@ -142,7 +149,8 @@ struct CommandOptions {
     return Kind != CommandKind::ValidateIfNeeded &&
            Kind != CommandKind::Validate && Kind != CommandKind::MakeBlob &&
            Kind != CommandKind::MakeNode && Kind != CommandKind::Dump &&
-           Kind != CommandKind::Prune && Kind != CommandKind::MergeTrees;
+           Kind != CommandKind::Prune && Kind != CommandKind::MergeTrees &&
+           Kind != CommandKind::StatsShow && Kind != CommandKind::StatsZero;
   }
 };
 } // namespace
@@ -175,6 +183,7 @@ static int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash);
 static int ingestCasIDFile(cas::ObjectStore &CAS, ArrayRef<std::string> CASIDs);
 static int validateIfNeeded(const CommandOptions &Opts, const char *Argv0);
 static int prune(cas::ObjectStore &CAS);
+static int stats(StringRef Path, bool Zero);
 
 static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
   BumpPtrAllocator Alloc;
@@ -260,6 +269,12 @@ int main(int Argc, char **Argv) {
     std::tie(CAS, AC) = ExitOnErr(createCASFromIdentifier(Opts.CASPath));
   }
   assert(CAS);
+
+  if (Opts.Command == CommandKind::StatsShow)
+    return stats(Opts.CASPath, false);
+
+  if (Opts.Command == CommandKind::StatsZero)
+    return stats(Opts.CASPath, true);
 
   if (Opts.Command == CommandKind::Dump)
     return dump(*CAS);
@@ -792,5 +807,69 @@ int validateIfNeeded(const CommandOptions &Opts, const char *Argv0) {
 static int prune(cas::ObjectStore &CAS) {
   ExitOnError ExitOnErr("llvm-cas: prune: ");
   ExitOnErr(CAS.pruneStorageData());
+  return 0;
+}
+
+int stats(StringRef Path, bool Zero) {
+  llvm::cas::Stats Stats;
+  ExitOnError ExitOnErr("llvm-cas: stats: ");
+  ExitOnErr(Stats.open(Path));
+
+  outs() << "llvm-cas: stats:\n";
+  outs() << "Cache hits:                      " << Stats.get(llvm::cas::Stats::Key::hit) << "\n";
+  outs() << "Cache misses:                    " << Stats.get(llvm::cas::Stats::Key::miss) << "\n";
+  outs() << "Cache misses (result_not_found): " << Stats.get(llvm::cas::Stats::Key::miss_result_not_found) << "\n";
+  outs() << "Cache backend output not found:  " << Stats.get(llvm::cas::Stats::Key::backend_output_not_found) << "\n";
+  outs() << "Cache skipped:                   " << Stats.get(llvm::cas::Stats::Key::skipped) << "\n";
+
+  uint64_t C = Stats.get(llvm::cas::Stats::Key::depscan_count);
+  double T = Stats.get_f(llvm::cas::Stats::Key::depscan_time);
+  T = (C > 0) ? T / C : 0.0;
+  outs() << "Average depscan:                 " << llvm::formatv("{0:f6} s ({1})\n", T, C);
+
+  C = Stats.get(llvm::cas::Stats::Key::backend_key_query_count);
+  T = Stats.get_f(llvm::cas::Stats::Key::backend_key_query_time);
+  T = (C > 0) ? T / C : 0.0;
+  outs() << "Average backend key query:       " << llvm::formatv("{0:f6} s ({1})\n", T, C);
+
+  C = Stats.get(llvm::cas::Stats::Key::backend_key_update_count);
+  T = Stats.get_f(llvm::cas::Stats::Key::backend_key_update_time);
+  T = (C > 0) ? T / C : 0.0;
+  outs() << "Average backend key update:      " << llvm::formatv("{0:f6} s ({1})\n", T, C);
+
+  C = Stats.get(llvm::cas::Stats::Key::backend_load_count);
+  T = Stats.get_f(llvm::cas::Stats::Key::backend_load_time);
+  T = (C > 0) ? T / C : 0.0;
+  outs() << "Average backend load:            " << llvm::formatv("{0:f6} s ({1})\n", T, C);
+
+  C = Stats.get(llvm::cas::Stats::Key::backend_store_count);
+  T = Stats.get_f(llvm::cas::Stats::Key::backend_store_time);
+  T = (C > 0) ? T / C : 0.0;
+  outs() << "Average backend store:           " << llvm::formatv("{0:f6} s ({1})\n", T, C);
+
+  outs() << "Cache location: " << Path << "\n";
+
+  if (Zero) {
+    outs() << "zero-stats: ";
+    Stats.set(llvm::cas::Stats::Key::hit, 0);
+    Stats.set(llvm::cas::Stats::Key::miss, 0);
+    Stats.set(llvm::cas::Stats::Key::miss_result_not_found, 0);
+    Stats.set(llvm::cas::Stats::Key::backend_output_not_found, 0);
+    Stats.set(llvm::cas::Stats::Key::skipped, 0);
+
+    Stats.set_f(llvm::cas::Stats::Key::depscan_time, 0.0);
+    Stats.set(llvm::cas::Stats::Key::depscan_count, 0);
+    Stats.set_f(llvm::cas::Stats::Key::backend_key_query_time, 0.0);
+    Stats.set(llvm::cas::Stats::Key::backend_key_query_count, 0);
+    Stats.set_f(llvm::cas::Stats::Key::backend_key_update_time, 0.0);
+    Stats.set(llvm::cas::Stats::Key::backend_key_update_count, 0);
+    Stats.set_f(llvm::cas::Stats::Key::backend_load_time, 0.0);
+    Stats.set(llvm::cas::Stats::Key::backend_load_count, 0);
+    Stats.set_f(llvm::cas::Stats::Key::backend_store_time, 0.0);
+    Stats.set(llvm::cas::Stats::Key::backend_store_count, 0);
+
+    outs() << "successfull\n";
+  }
+
   return 0;
 }

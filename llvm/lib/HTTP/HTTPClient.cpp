@@ -235,6 +235,7 @@ void HTTPClient::setTimeout(std::chrono::milliseconds Timeout) {
   Session->TimeoutMs = static_cast<DWORD>(Timeout.count());
 }
 
+/*
 static Error VerifyTLSCertWinHTTP(HINTERNET RequestHandle,
                                   const std::string &PinnedFingerprint) {
   // Decode the expected fingerprint from hex into binary.
@@ -269,6 +270,7 @@ static Error VerifyTLSCertWinHTTP(HINTERNET RequestHandle,
 
   return Error::success();
 }
+*/
 
 static Error VerifyTLSCertWinHTTP(HINTERNET RequestHandle,
                                   const std::string &PinnedFingerprint) {
@@ -364,7 +366,7 @@ Error HTTPClient::perform(const HTTPRequest &Request,
       return createStringError(errc::io_error,
                                "Failed to set secure protocols");
   }
-
+/*
   // Disallow redirects in general or HTTPS to HTTP only.
   DWORD RedirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP;
   if (!Request.FollowRedirects)
@@ -372,7 +374,7 @@ Error HTTPClient::perform(const HTTPRequest &Request,
   if (!WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_REDIRECT_POLICY,
                         &RedirectPolicy, sizeof(RedirectPolicy)))
     return createStringError(errc::io_error, "Failed to set redirect policy");
-
+*/
   // Disallow redirects in general or HTTPS to HTTP only.
   DWORD RedirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP;
   if (!Request.FollowRedirects)

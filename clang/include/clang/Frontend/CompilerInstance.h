@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASOutputBackend.h"
+#include "llvm/CAS/Stats.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/PrefixMapper.h"
@@ -1085,6 +1086,22 @@ public:
 
   void setCASDatabases(std::shared_ptr<llvm::cas::ObjectStore> CAS,
                        std::shared_ptr<llvm::cas::ActionCache> Cache);
+
+  static bool setupCacheStatsDiagnostics(DiagnosticsEngine &Diags);
+};
+
+class CacheStatsDiagnosticConsumer : public DiagnosticConsumer {
+public:
+  CacheStatsDiagnosticConsumer() = default;
+  CacheStatsDiagnosticConsumer(CacheStatsDiagnosticConsumer &&Other)
+      : Stats(std::move(Other.Stats)) {};
+  CacheStatsDiagnosticConsumer(llvm::cas::Stats &Stats)
+      : Stats(std::move(Stats)) {};
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override;
+
+private:
+  llvm::cas::Stats Stats;
 };
 
 } // end namespace clang
