@@ -866,6 +866,15 @@ static perms perms_from_attrs(DWORD Attrs) {
   return (Attrs & FILE_ATTRIBUTE_READONLY) ? (all_read | all_exe) : all_all;
 }
 
+std::error_code file_size(file_t FileHandle, uint64_t &Result) {
+  LARGE_INTEGER FileSize = { 0 };
+  if (!::GetFileSizeEx(FileHandle, &FileSize)) {
+    return mapLastWindowsError();
+  }
+  Result = FileSize.QuadPart;
+  return std::error_code();
+}
+
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   SmallVector<wchar_t, MAX_PATH> ntPath;
   if (FileHandle == INVALID_HANDLE_VALUE)

@@ -18,24 +18,22 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
   BuiltinObjectHasher H;
   H.updateSize(0); // 0 refs
 
-  sys::fs::file_t FD;
-  if (Error E = sys::fs::openNativeFileForRead(FilePath).moveInto(FD))
+  sys::fs::file_t File;
+  if (Error E = sys::fs::openNativeFileForRead(FilePath).moveInto(File))
     return E;
 
-  sys::fs::file_status Status;
-  std::error_code EC = sys::fs::status(FD, Status);
+  uint64_t FileSize;
+  std::error_code EC = sys::fs::file_size(File, FileSize);
   if (EC)
     return createFileError(FilePath, EC);
-  // FIXME: Do we need to add a hash of the data size? If we remove that we can
-  // avoid needing to read the file size before reading the file contents.
-  H.updateSize(Status.getSize());
+  H.updateSize(FileSize);
 
   size_t ChunkSize = sys::fs::DefaultReadChunkSize;
   SmallVector<char, 0> Buffer;
   Buffer.resize_for_overwrite(ChunkSize);
   for (;;) {
     Expected<size_t> ReadBytes =
-        sys::fs::readNativeFile(FD, MutableArrayRef(Buffer.begin(), ChunkSize));
+        sys::fs::readNativeFile(File, MutableArrayRef(Buffer.begin(), ChunkSize));
     if (!ReadBytes)
       return ReadBytes.takeError();
     if (*ReadBytes == 0)
