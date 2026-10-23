@@ -13,6 +13,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -176,6 +177,21 @@ public:
   /// \returns true if API notes were successfully loaded, \c false otherwise.
   bool loadCurrentModuleAPINotesFromBuffer(ArrayRef<StringRef> Buffers);
 
+  /// Callback that provides the source API notes of an imported top-level
+  /// module.
+  ///
+  /// \returns the API notes buffers (possibly none), or \c std::nullopt if
+  /// the callback does not know the module.
+  using ImportedModuleAPINotesLoader =
+      llvm::unique_function<std::optional<llvm::SmallVector<StringRef, 2>>(
+          const Module &TopLevelModule)>;
+
+  /// Set the callback that provides the API notes of imported modules
+  /// from a CAS include-tree.
+  void setImportedModuleAPINotesLoader(ImportedModuleAPINotesLoader Loader) {
+    GetImportedModuleAPINotes = std::move(Loader);
+  }
+
   /// Retrieve the set of API notes readers for the current module.
   ArrayRef<APINotesReader *> getCurrentModuleReaders() const {
     bool HasPublic = CurrentModuleReaders[ReaderKind::Public];
@@ -197,6 +213,24 @@ public:
                                                          SourceLocation Loc);
 
   bool captureVersionIndependentSwift() { return VersionIndependentSwift; }
+
+private:
+  /// The callback that provides the API notes of imported modules, if any.
+  ImportedModuleAPINotesLoader GetImportedModuleAPINotes;
+
+  /// A mapping from imported top-level modules to their API notes readers,
+  /// or std::nullopt if the callback does not know the module.
+  llvm::DenseMap<const Module *,
+                 std::optional<llvm::SmallVector<APINotesReader *, 2>>>
+      ImportedModuleReaders;
+
+  /// Find the API notes readers for the given imported top-level module; the
+  /// counterpart of \c findAPINotes() for queries by module.
+  ///
+  /// \returns the readers, or \c std::nullopt if there is no loader or it
+  /// does not know the module.
+  std::optional<ArrayRef<APINotesReader *>>
+  findImportedModuleAPINotes(const Module &TopLevelModule);
 };
 
 } // end namespace api_notes
