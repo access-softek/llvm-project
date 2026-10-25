@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/BuiltinObjectHasher.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -18,12 +20,14 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
   BuiltinObjectHasher H;
   H.updateSize(0); // 0 refs
 
-  sys::fs::file_t FD;
-  if (Error E = sys::fs::openNativeFileForRead(FilePath).moveInto(FD))
+  sys::fs::file_t File;
+  if (Error E = sys::fs::openNativeFileForRead(FilePath).moveInto(File))
     return E;
 
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(File); });
+
   sys::fs::file_status Status;
-  std::error_code EC = sys::fs::status(FD, Status);
+  std::error_code EC = sys::fs::status(File, Status);
   if (EC)
     return createFileError(FilePath, EC);
   // FIXME: Do we need to add a hash of the data size? If we remove that we can
@@ -35,7 +39,7 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
   Buffer.resize_for_overwrite(ChunkSize);
   for (;;) {
     Expected<size_t> ReadBytes =
-        sys::fs::readNativeFile(FD, MutableArrayRef(Buffer.begin(), ChunkSize));
+        sys::fs::readNativeFile(File, MutableArrayRef(Buffer.begin(), ChunkSize));
     if (!ReadBytes)
       return ReadBytes.takeError();
     if (*ReadBytes == 0)
