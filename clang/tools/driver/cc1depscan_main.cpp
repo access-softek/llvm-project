@@ -706,7 +706,8 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
 }
 
 int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
-                    void *MainAddr) {
+                    void *MainAddr,
+                    llvm::StringMap<std::vector<std::string>> *DepscanCC1Args) {
   std::unique_ptr<DiagnosticOptions> DiagOpts;
   {
     auto FoundCC1Args =
@@ -774,6 +775,26 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
                                  Diags, Args, CASOpts, RootID))
     return Ret;
 
+  auto DumpTree = [&] {
+    if (!DumpDepscanTree)
+      return;
+    std::error_code EC;
+    llvm::raw_fd_ostream RootOS(*DumpDepscanTree, EC);
+    if (EC)
+      Diags.Report(diag::err_fe_unable_to_open_output)
+          << *DumpDepscanTree << EC.message();
+    RootOS << RootID << "\n";
+  };
+
+  if (DepscanCC1Args) {
+    auto Entry = DepscanCC1Args->find(OutputPath);
+    if (Entry != DepscanCC1Args->end()) {
+      DumpTree();
+      Entry->second.assign(NewArgs.begin(), NewArgs.end());
+      return 0;
+    }
+  }
+
   // FIXME: Use OutputBackend to OnDisk only now.
   auto OutputBackend =
       llvm::makeIntrusiveRefCnt<llvm::vfs::OnDiskOutputBackend>();
@@ -788,14 +809,7 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
     return 1;
   }
 
-  if (DumpDepscanTree) {
-    std::error_code EC;
-    llvm::raw_fd_ostream RootOS(*DumpDepscanTree, EC);
-    if (EC)
-      Diags.Report(diag::err_fe_unable_to_open_output)
-          << *DumpDepscanTree << EC.message();
-    RootOS << RootID << "\n";
-  }
+  DumpTree();
   writeResponseFile(*OutputFile, NewArgs);
 
   if (auto Err = OutputFile->keep()) {

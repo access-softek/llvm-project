@@ -97,8 +97,9 @@ extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
 extern int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
                             void *MainAddr);
 
-extern int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
-                           void *MainAddr);
+extern int
+cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr,
+                llvm::StringMap<std::vector<std::string>> *DepscanCC1Args);
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
                       void *MainAddr);
 extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
@@ -220,9 +221,30 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
-static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
-                          const llvm::ToolContext &ToolContext,
-                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+/// Replace each @<path> argument whose path is a key of \p DepscanCC1Args with
+/// the -cc1 arguments the depscan job stored there. They point into
+/// \p DepscanCC1Args, which outlives the cc1 invocation.
+static void substituteDepscanCC1Args(
+    SmallVectorImpl<const char *> &ArgV,
+    const llvm::StringMap<std::vector<std::string>> &DepscanCC1Args) {
+  SmallVector<const char *, 256> Substituted;
+  for (const char *Arg : ArgV) {
+    auto Entry = Arg && Arg[0] == '@' ? DepscanCC1Args.find(Arg + 1)
+                                      : DepscanCC1Args.end();
+    if (Entry == DepscanCC1Args.end()) {
+      Substituted.push_back(Arg);
+      continue;
+    }
+    for (const std::string &CC1Arg : Entry->second)
+      Substituted.push_back(CC1Arg.c_str());
+  }
+  ArgV.assign(Substituted.begin(), Substituted.end());
+}
+
+static int ExecuteCC1Tool(
+    SmallVectorImpl<const char *> &ArgV, const llvm::ToolContext &ToolContext,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    llvm::StringMap<std::vector<std::string>> *DepscanCC1Args = nullptr) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
@@ -230,6 +252,8 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   llvm::cl::ResetAllOptionOccurrences();
 
   llvm::BumpPtrAllocator A;
+  if (DepscanCC1Args && !DepscanCC1Args->empty())
+    substituteDepscanCC1Args(ArgV, *DepscanCC1Args);
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine,
                                   VFS.get());
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
@@ -257,7 +281,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
                             GetExecutablePathVP);
   if (Tool == "-cc1depscan")
     return cc1depscan_main(ArrayRef(ArgV).slice(2), ArgV[0],
-                           GetExecutablePathVP);
+                           GetExecutablePathVP, DepscanCC1Args);
   if (Tool == "-cc1as")
     return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
   if (Tool == "-cc1gen-reproducer")
@@ -418,9 +442,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!SetBackdoorDriverOutputsFromEnvVars(TheDriver))
     return 1;
 
-  auto ExecuteCC1WithContext = [&ToolContext,
-                                &VFS](SmallVectorImpl<const char *> &ArgV) {
-    return ExecuteCC1Tool(ArgV, ToolContext, VFS);
+  auto ExecuteCC1WithContext = [&ToolContext, &VFS, &TheDriver](
+                                   SmallVectorImpl<const char *> &ArgV) {
+    return ExecuteCC1Tool(ArgV, ToolContext, VFS, &TheDriver.DepscanCC1Args);
   };
   if (!UseNewCC1Process) {
     TheDriver.CC1Main = ExecuteCC1WithContext;

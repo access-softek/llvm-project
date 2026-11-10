@@ -5377,10 +5377,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     // follows it in -cc1-args, but it doesn't currently have access to that
     // filename. To fix this, we need to somehow route the final output type
     // into Depscan ConstructJob.
-    // FIXME: This intermediate output file will adds 3-4% of overhead comparing
-    // to passing all the cc1 args in the memory. The fix might be pin DepScan
-    // job in-process and pass cc1 args in memory instead of creating an actual
-    // file here.
+    // When this job and the -cc1depscan job both run in process, the
+    // arguments are passed in memory (Driver::DepscanCC1Args).
+    // FIXME: Otherwise it is a file on disk, which adds 3-4% of overhead
+    // comparing to passing all the cc1 args in the memory.
     if (Output.isFilename()) {
       CmdArgs.push_back("-o");
       // Fix up the output file if it is a relative path to

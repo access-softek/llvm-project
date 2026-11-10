@@ -5483,8 +5483,51 @@ static void markOffloadDeviceCC1JobsForParallelExecution(Compilation &C) {
     claimAndDiagnoseOffloadJobs(C.getDriver(), C.getArgs());
 }
 
+void Driver::writeDepscanCC1ArgsToFiles(Compilation &C) const {
+  const char *Suffix =
+      types::getTypeTempSuffix(types::TY_ResponseFile, IsCLMode());
+  llvm::StringMap<const char *> OnDiskPaths;
+  for (Command &J : C.getJobs()) {
+    if (!isa<DepscanJobAction>(J.getSource()) || J.getInputInfos().empty())
+      continue;
+    StringRef Name =
+        llvm::sys::path::filename(J.getInputInfos().front().getBaseInput());
+    // The depscan job names its response file twice: after -o and, as the
+    // output of the scanned job, inside -cc1-args. Both must become the same
+    // file on disk.
+    llvm::opt::ArgStringList Args = J.getArguments();
+    for (const char *&Arg : Args) {
+      if (!DepscanCC1Args.contains(Arg))
+        continue;
+      const char *&Path = OnDiskPaths[Arg];
+      if (!Path)
+        Path = CreateTempFile(C, Name.split('.').first, Suffix);
+      Arg = Path;
+    }
+    J.replaceArguments(std::move(Args));
+  }
+
+  for (Command &J : C.getJobs()) {
+    llvm::opt::ArgStringList Args = J.getArguments();
+    bool Changed = false;
+    for (const char *&Arg : Args) {
+      if (Arg[0] != '@')
+        continue;
+      if (const char *Path = OnDiskPaths.lookup(Arg + 1)) {
+        Arg = C.getArgs().MakeArgString(Twine("@") + Path);
+        Changed = true;
+      }
+    }
+    if (Changed)
+      J.replaceArguments(std::move(Args));
+  }
+  DepscanCC1Args.clear();
+}
+
 void Driver::BuildJobs(Compilation &C) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
+
+  DepscanCC1Args.clear();
 
   Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
 
@@ -5591,6 +5634,15 @@ void Driver::BuildJobs(Compilation &C) const {
     for (auto &J : C.getJobs())
       J.InProcess = false;
   }
+
+  // A depscan response file stays in memory only if both the depscan job and
+  // its -cc1 job run in process. Otherwise create it on disk, as a temporary
+  // file, and put its path on both command lines.
+  if (!DepscanCC1Args.empty() &&
+      !(ShouldInProcessDepScan &&
+        llvm::all_of(C.getJobs(),
+                     [](const Command &J) { return J.InProcess; })))
+    writeDepscanCC1ArgsToFiles(C);
 
   markOffloadDeviceCC1JobsForParallelExecution(C);
 
@@ -6670,6 +6722,25 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       (!AtTopLevel && isa<DepscanJobAction>(JA) &&
        JA.getType() == types::TY_ResponseFile && IsCLMode())) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
+    // The depscan job passes the -cc1 arguments in memory if it and the -cc1
+    // job both run in this process. Which jobs run in process is known only
+    // once all of them are built, so BuildJobs decides, and creates the
+    // response file on disk if they do not.
+    if (isa<DepscanJobAction>(JA)) {
+      // Only a name: no file is created here, and none exists while the
+      // arguments stay in memory. The path is the key of the entry in
+      // DepscanCC1Args and what both command lines show; it is in the
+      // temporary directory, like the file it stands for.
+      SmallString<128> Path;
+      llvm::sys::path::system_temp_directory(/*ErasedOnReboot=*/true, Path);
+      llvm::sys::path::append(
+          Path, Twine(Name.split('.').first) + "-in-memory-" +
+                    Twine(DepscanCC1Args.size()) + "." +
+                    types::getTypeTempSuffix(JA.getType(), IsCLMode()));
+      const char *Placeholder = C.getArgs().MakeArgString(Path);
+      DepscanCC1Args.try_emplace(Placeholder);
+      return Placeholder;
+    }
     return CreateTempOutputPath(Name.split('.').first);
   }
 

@@ -288,6 +288,13 @@ public:
       llvm::function_ref<int(SmallVectorImpl<const char *> &ArgV)>;
   CC1ToolFunc CC1Main = nullptr;
 
+  /// The -cc1 arguments each depscan job computes, keyed by the path of the
+  /// response file named on both command lines (-o <path> of the depscan
+  /// job, @<path> of the -cc1 job). When both jobs run in this process
+  /// through CC1Main the arguments are passed here and the file is never
+  /// created; otherwise writeDepscanCC1ArgsToFiles creates it.
+  mutable llvm::StringMap<std::vector<std::string>> DepscanCC1Args;
+
 private:
   /// Raw target triple.
   std::string TargetTriple;
@@ -758,6 +765,10 @@ private:
   /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
   /// option.
   void setDriverMode(StringRef DriverModeValue);
+
+  /// Create a temporary response file for each key of DepscanCC1Args and put
+  /// its path on the command lines of the jobs in \p C instead of the key.
+  void writeDepscanCC1ArgsToFiles(Compilation &C) const;
 
 public: // for Swift.
   /// Retrieves a ToolChain for a particular \p Target triple.
