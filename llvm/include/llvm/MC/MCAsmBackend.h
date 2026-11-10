@@ -11,8 +11,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/MC/MCCASObjectWriter.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCMachOCASWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"

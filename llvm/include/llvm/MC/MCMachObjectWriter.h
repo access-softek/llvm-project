@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/MC/MCCASObjectWriter.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
@@ -86,7 +87,7 @@ public:
   /// @}
 };
 
-class LLVM_ABI MachObjectWriter : public MCObjectWriter {
+class LLVM_ABI MachObjectWriter : public MCCASObjectWriter {
 public:
   struct DataRegionData {
     MachO::DataRegionType Kind;
@@ -127,21 +128,6 @@ private:
 
   /// The target specific Mach-O writer instance.
   std::unique_ptr<MCMachObjectTargetWriter> TargetObjectWriter;
-
-public:
-  /// \name Relocation Data
-  /// @{
-
-  struct RelAndSymbol {
-    const MCSymbol *Sym;
-    const MCFragment *F; // MCCAS
-    MachO::any_relocation_info MRE;
-    RelAndSymbol(const MCSymbol *Sym,
-                 const MCFragment *F, // MCCAS
-                 const MachO::any_relocation_info &MRE)
-        : Sym(Sym), F(F), // MCCAS
-          MRE(MRE) {}
-  };
 
 private:
   DenseMap<const MCSection *, std::vector<RelAndSymbol>> Relocations;
@@ -186,7 +172,23 @@ private:
   void writeWithPadding(StringRef Str, uint64_t Size);
 
   // BEGIN MCCAS
-  // Private data.
+protected:
+  // Internal data.
+  Triple Target;
+  cas::ObjectStore *CAS;
+  CASBackendMode Mode;
+  std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack;
+
+  raw_pwrite_stream *OS;
+  raw_pwrite_stream *CasIDOS;
+
+  SmallString<512> InternalBuffer;
+  raw_svector_ostream InternalOS;
+
+  uint64_t OSOffset = 0;
+
+  std::unique_ptr<mccasformats::MCCASSchema> Schema;
+
   uint64_t LOHRawSize = 0;
   uint64_t LOHSize = 0;
   unsigned NumSymbols = 0;
@@ -199,6 +201,7 @@ public:
       : TargetObjectWriter(std::move(MOTW)),
         StringTable(TargetObjectWriter->is64Bit() ? StringTableBuilder::MachO64
                                                   : StringTableBuilder::MachO),
+        InternalOS(InternalBuffer),
         W(OS,
           IsLittleEndian ? llvm::endianness::little : llvm::endianness::big) {}
 
@@ -229,7 +232,8 @@ public:
   uint64_t getFragmentAddress(const MCAssembler &Asm,
                               const MCFragment *Fragment) const;
 
-  uint64_t getPaddingSize(const MCAssembler &Asm, const MCSection *SD) const;
+  uint64_t getPaddingSize(const MCAssembler &Asm,
+                          const MCSection *SD) const override;
 
   const MCSymbol *getAtom(const MCSymbol &S) const;
 
@@ -329,9 +333,22 @@ public:
   void writeLinkerOptionsLoadCommand(const std::vector<std::string> &Options);
 
   // BEGIN MCCAS
-  DenseMap<const MCSection *, std::vector<RelAndSymbol>> &getRelocations() {
+  uint8_t getAddressSize() override { return Target.isArch32Bit() ? 4 : 8; }
+
+  StringRef getContent() const override {
+    return InternalBuffer.substr(OSOffset);
+  }
+
+  CASBackendMode getMode() const override { return Mode; }
+
+  DenseMap<const MCSection *, std::vector<RelAndSymbol>> &
+  getRelocations() override {
     return Relocations;
   }
+
+  Triple getTarget() const override { return Target; }
+
+  void resetBuffer() override { OSOffset = InternalOS.tell(); }
   // END MCCAS
 
   // FIXME: We really need to improve the relocation validation. Basically, we
@@ -391,12 +408,12 @@ public:
   // BEGIN MCCAS
   // FIXME: Break down writeObject into following stages for slicing the output.
   // This is a very rough slicing and need to be improved.
-  void prepareObject(MCAssembler &Asm);
-  void writeMachOHeader(MCAssembler &Asm);
-  void writeSectionData(MCAssembler &Asm);
-  void writeRelocations(MCAssembler &Asm);
-  void writeDataInCodeRegion(MCAssembler &Asm);
-  void writeSymbolTable(MCAssembler &Asm);
+  void prepareObject(MCAssembler &Asm) override;
+  void writeMachOHeader(MCAssembler &Asm) override;
+  void writeSectionData(MCAssembler &Asm) override;
+  void writeRelocations(MCAssembler &Asm) override;
+  void writeDataInCodeRegion(MCAssembler &Asm) override;
+  void writeSymbolTable(MCAssembler &Asm) override;
   // END MCCAS
 
   uint64_t writeObject() override;

@@ -121,7 +121,7 @@ static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
     MutableArrayRef<char> CUData, endianness Endian,
     std::optional<uint32_t> NewOffset, uint8_t AddressSize);
 Expected<cas::ObjectProxy>
-MCSchema::createFromMCAssemblerImpl(MachOCASWriter &ObjectWriter,
+MCSchema::createFromMCAssemblerImpl(MCCASObjectWriter &ObjectWriter,
                                     MCAssembler &Asm,
                                     raw_ostream *DebugOS) const {
   return MCAssemblerRef::create(*this, ObjectWriter, Asm, DebugOS);
@@ -2000,8 +2000,9 @@ static Error writeAlignFragment(MCCASBuilder &Builder, const MCFragment &AF,
                                    Twine(Count) + " bytes");
     return Error::success();
   }
-  auto Endian = Builder.ObjectWriter.Target.isLittleEndian() ? endianness::little
-                                                             : endianness::big;
+  auto Endian = Builder.ObjectWriter.getTarget().isLittleEndian()
+                    ? endianness::little
+                    : endianness::big;
   for (uint64_t I = 0; I != Count; ++I) {
     switch (AF.getAlignFillLen()) {
     default:
@@ -3199,7 +3200,7 @@ Error MCCASBuilder::buildFragments() {
       }
       partitionFragment(Asm, Addends, FinalFragmentContents, RelocationBuffer,
                         F, RelocationBufferIndex,
-                        ObjectWriter.Target.isLittleEndian());
+                        ObjectWriter.getTarget().isLittleEndian());
       TotalFragmentWithoutAddendsSize += FinalFragmentContents.size();
       LLVM_DEBUG(dbgs() << "Size of all fragment data without addends: "
                         << TotalFragmentWithoutAddendsSize << "\n");
@@ -3234,7 +3235,7 @@ Error MCCASBuilder::buildFragments() {
 
 Error MCCASBuilder::buildRelocations() {
   ObjectWriter.resetBuffer();
-  if (ObjectWriter.Mode == CASBackendMode::Verify ||
+  if (ObjectWriter.getMode() == CASBackendMode::Verify ||
       RelocLocation == CompileUnit)
     ObjectWriter.writeRelocations(Asm);
 
@@ -3374,7 +3375,7 @@ void MCCASBuilder::addNode(cas::ObjectProxy Node) {
 }
 
 Expected<MCAssemblerRef> MCAssemblerRef::create(const MCSchema &Schema,
-                                                MachOCASWriter &ObjectWriter,
+                                                MCCASObjectWriter &ObjectWriter,
                                                 MCAssembler &Asm,
                                                 raw_ostream *DebugOS) {
   MCCASBuilder Builder(Schema, ObjectWriter, Asm, DebugOS);
@@ -3390,7 +3391,7 @@ Expected<MCAssemblerRef> MCAssemblerRef::create(const MCSchema &Schema,
 
   // Only need to do this for verify mode so we compare the output byte by
   // byte.
-  if (ObjectWriter.Mode == CASBackendMode::Verify) {
+  if (ObjectWriter.getMode() == CASBackendMode::Verify) {
     ObjectWriter.writeSectionData(Asm);
   }
 
@@ -3410,7 +3411,7 @@ Expected<MCAssemblerRef> MCAssemblerRef::create(const MCSchema &Schema,
   // Put Header, Relocations, SymbolTable, etc. in the front.
   B->Refs.append(Builder.Sections.begin(), Builder.Sections.end());
 
-  std::string NormalizedTriple = ObjectWriter.Target.normalize();
+  std::string NormalizedTriple = ObjectWriter.getTarget().normalize();
   writeVBR8(uint32_t(NormalizedTriple.size()), B->Data);
   B->Data.append(NormalizedTriple);
 

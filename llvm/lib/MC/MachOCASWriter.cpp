@@ -33,15 +33,20 @@ MachOCASWriter::MachOCASWriter(
     bool IsLittleEndian, std::unique_ptr<mccasformats::MCCASSchema> Schema,
     std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack,
     raw_pwrite_stream *CasIDOS)
-    : MachObjectWriter(std::move(MOTW), InternalOS, IsLittleEndian), Target(TT),
-      CAS(CAS), Mode(Mode), ResultCallBack(ResultCallBack), OS(OS),
-      CasIDOS(CasIDOS), InternalOS(InternalBuffer), Schema(std::move(Schema)) {
+    : MachObjectWriter(std::move(MOTW), InternalOS, IsLittleEndian) {
   assert(TT.isLittleEndian() == IsLittleEndian && "Endianess should match");
+  this->Target = TT;
+  this->CAS = &CAS;
+  this->Mode = Mode;
+  this->ResultCallBack = ResultCallBack;
+  this->OS = &OS;
+  this->CasIDOS = CasIDOS;
+  this->Schema = std::move(Schema);
 }
 
 uint64_t MachOCASWriter::writeObject() {
   auto &Asm = *this->Asm;
-  uint64_t StartOffset = OS.tell();
+  uint64_t StartOffset = OS->tell();
   auto CASObj = Schema->createFromMCAssembler(*this, Asm, nullptr);
   if (!CASObj)
     getContext().reportError(SMLoc(), toString(CASObj.takeError()));
@@ -57,7 +62,7 @@ uint64_t MachOCASWriter::writeObject() {
           inconvertibleErrorCode(),
           "CASBackend output round-trip verification error");
 
-    OS << ObjectBuffer;
+    *OS << ObjectBuffer;
     return Error::success();
   };
 
@@ -72,10 +77,10 @@ uint64_t MachOCASWriter::writeObject() {
 
   switch (Mode) {
   case CASBackendMode::CASID:
-    writeCASIDBuffer(CASObj->getID(), OS);
+    writeCASIDBuffer(CASObj->getID(), *OS);
     break;
   case CASBackendMode::Native: {
-    auto E = Schema->serializeObjectFile(*CASObj, OS);
+    auto E = Schema->serializeObjectFile(*CASObj, *OS);
     if (E)
       getContext().reportError(SMLoc(), toString(std::move(E)));
     break;
@@ -89,7 +94,7 @@ uint64_t MachOCASWriter::writeObject() {
   }
   }
 
-  return OS.tell() - StartOffset;
+  return OS->tell() - StartOffset;
 }
 
 std::unique_ptr<MCObjectWriter> llvm::createMachOCASWriter(
