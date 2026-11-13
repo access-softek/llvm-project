@@ -9,10 +9,10 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCCASObjectWriter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCMachOCASWriter.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -74,10 +74,10 @@ std::unique_ptr<MCObjectWriter> MCAsmBackend::createCASObjectWriter(
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
   case Triple::MachO:
-    return createMachOCASWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
-                                TT, CAS, Mode, OS, Endian == endianness::little,
-                                std::move(Schema), MCOpts.ResultCallBack,
-                                CasIDOS);
+    return createMCCASObjectWriter(
+        cast<MCMachObjectTargetWriter>(std::move(TW)), TT, CAS, Mode, OS,
+        Endian == endianness::little, std::move(Schema), MCOpts.ResultCallBack,
+        CasIDOS);
   default:
     llvm_unreachable("unexpected object format");
   }

@@ -26,12 +26,6 @@ namespace llvm {
 
 class MachOCASWriter : public MachObjectWriter {
 public:
-  /// ObjectStore
-  const Triple Target;
-  cas::ObjectStore &CAS;
-  CASBackendMode Mode;
-  std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack;
-
   MachOCASWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
                  const Triple &TT, cas::ObjectStore &CAS, CASBackendMode Mode,
                  raw_pwrite_stream &OS, bool IsLittleEndian,
@@ -39,24 +33,7 @@ public:
                  std::optional<MCTargetOptions::ResultCallBackTy> CallBack,
                  raw_pwrite_stream *CasIDOS = nullptr);
 
-  uint8_t getAddressSize() { return Target.isArch32Bit() ? 4 : 8; }
-
   uint64_t writeObject() override;
-
-  void resetBuffer() { OSOffset = InternalOS.tell(); }
-
-  StringRef getContent() const { return InternalBuffer.substr(OSOffset); }
-
-private:
-  raw_pwrite_stream &OS;
-  raw_pwrite_stream *CasIDOS;
-
-  SmallString<512> InternalBuffer;
-  raw_svector_ostream InternalOS;
-
-  uint64_t OSOffset = 0;
-
-  std::unique_ptr<mccasformats::MCCASSchema> Schema;
 };
 
 /// Construct a new Mach-O CAS writer instance.
