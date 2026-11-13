@@ -20,6 +20,8 @@
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
+#include <mutex>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -29,6 +31,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <winioctl.h>
+#include <winternl.h>
 
 #undef max
 
@@ -41,6 +44,36 @@ typedef int errno_t;
 #ifdef _MSC_VER
 #pragma comment(lib, "advapi32.lib") // This provides CryptAcquireContextW.
 #pragma comment(lib, "ole32.lib")    // This provides CoTaskMemFree
+#endif
+
+#ifndef __MINGW32__
+// The Windows SDK does not declare these types.
+// The WDK declares the types in `wdm.h` and `NtQueryVolumeInformationFile`
+// in `ntifs.h`.
+// MinGW-w64 declares all three in `winternl.h`.
+typedef enum _FSINFOCLASS { FileFsDeviceInformation = 4 } FS_INFORMATION_CLASS;
+
+typedef struct _FILE_FS_DEVICE_INFORMATION {
+  DEVICE_TYPE DeviceType;
+  ULONG Characteristics;
+} FILE_FS_DEVICE_INFORMATION;
+
+// Exported by `ntdll.dll`.
+extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryVolumeInformationFile(
+    HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FsInformation,
+    ULONG Length, FS_INFORMATION_CLASS FsInformationClass);
+#endif
+
+// Defined only in `wdm.h` in WDK and MinGW-w64.
+#ifndef FILE_REMOVABLE_MEDIA
+#define FILE_REMOVABLE_MEDIA 0x00000001
+#endif
+#ifndef FILE_REMOTE_DEVICE
+#define FILE_REMOTE_DEVICE 0x00000010
+#endif
+
+#ifndef FILE_SUPPORTS_OPEN_BY_FILE_ID
+#define FILE_SUPPORTS_OPEN_BY_FILE_ID 0x01000000
 #endif
 
 using namespace llvm;
@@ -866,6 +899,113 @@ static perms perms_from_attrs(DWORD Attrs) {
   return (Attrs & FILE_ATTRIBUTE_READONLY) ? (all_read | all_exe) : all_all;
 }
 
+namespace {
+// FILE_ID_INFO and FILE_STAT_BASIC_INFORMATION, which the _WIN32_WINNT of
+// WindowsSupport.h hides.
+struct FileIdInformation {
+  ULONGLONG VolumeSerialNumber;
+  BYTE FileId[16];
+};
+constexpr int FileIdInfoClass = 18;
+
+struct FileStatBasicInformation {
+  LARGE_INTEGER FileId;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER AllocationSize;
+  LARGE_INTEGER EndOfFile;
+  ULONG FileAttributes;
+  ULONG ReparseTag;
+  ULONG NumberOfLinks;
+  ULONG DeviceType;
+  ULONG DeviceCharacteristics;
+  ULONG Reserved;
+  LARGE_INTEGER VolumeSerialNumber;
+  BYTE FileId128[16];
+};
+constexpr int FileStatBasicByNameInfoClass = 3;
+using GetFileInformationByNameFn = BOOL(WINAPI *)(PCWSTR, int, PVOID, ULONG);
+
+// The volumes seen so far by their 64-bit serial number, and whether their
+// file ids are stable.
+class FileIdVolumes {
+public:
+  std::optional<bool> lookup(uint64_t Serial) {
+    std::lock_guard<std::mutex> Guard(Lock);
+    for (const auto &[Known, Stable] : Volumes)
+      if (Known == Serial)
+        return Stable;
+    return std::nullopt;
+  }
+
+  bool insert(uint64_t Serial, bool Stable) {
+    std::lock_guard<std::mutex> Guard(Lock);
+    Volumes.emplace_back(Serial, Stable);
+    return Stable;
+  }
+
+private:
+  std::mutex Lock;
+  SmallVector<std::pair<uint64_t, bool>, 4> Volumes;
+};
+} // namespace
+
+static FileIdVolumes &fileIdVolumes() {
+  static FileIdVolumes Volumes;
+  return Volumes;
+}
+
+static bool isDiskDevice(ULONG DeviceType, ULONG Characteristics) {
+  return (DeviceType == FILE_DEVICE_DISK ||
+          DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
+         !(Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE));
+}
+
+// Whether the file ids of the volume of Handle identify its files for as long
+// as they exist: a local fixed NTFS or ReFS volume. Elsewhere an id may be
+// missing, zero or change while the file is closed (FAT, network
+// redirectors), so a UniqueID there hashes the path instead.
+static bool volumeHasStableFileIds(HANDLE Handle) {
+  IO_STATUS_BLOCK IoStatus;
+  FILE_FS_DEVICE_INFORMATION Device;
+  if (::NtQueryVolumeInformationFile(Handle, &IoStatus, &Device, sizeof(Device),
+                                     FileFsDeviceInformation) < 0 ||
+      !isDiskDevice(Device.DeviceType, Device.Characteristics))
+    return false;
+  DWORD Flags;
+  wchar_t FileSystem[MAX_PATH + 1];
+  if (!::GetVolumeInformationByHandleW(Handle, nullptr, 0, nullptr, nullptr,
+                                       &Flags, FileSystem, MAX_PATH + 1))
+    return false;
+  return (Flags & FILE_SUPPORTS_OPEN_BY_FILE_ID) &&
+         (wcscmp(FileSystem, L"NTFS") == 0 || wcscmp(FileSystem, L"ReFS") == 0);
+}
+
+static bool hasStableFileIds(uint64_t VolumeSerial, HANDLE Handle) {
+  FileIdVolumes &Volumes = fileIdVolumes();
+  if (std::optional<bool> Stable = Volumes.lookup(VolumeSerial))
+    return *Stable;
+  return Volumes.insert(VolumeSerial, volumeHasStableFileIds(Handle));
+}
+
+static bool isZeroFileId(const BYTE (&FileId)[16]) {
+  return llvm::all_of(FileId, [](BYTE B) { return B == 0; });
+}
+
+static uint64_t fileIdHash(const BYTE (&FileId)[16]) {
+  return hash_combine_range(std::begin(FileId), std::end(FileId));
+}
+
+// Windows 11 24H2 and later: the status of a path without opening it.
+static GetFileInformationByNameFn getFileInformationByName() {
+  static GetFileInformationByNameFn Fn =
+      reinterpret_cast<GetFileInformationByNameFn>(::GetProcAddress(
+          ::GetModuleHandleW(L"kernel32.dll"), "GetFileInformationByName"));
+  return Fn;
+}
+
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   SmallVector<wchar_t, MAX_PATH> ntPath;
   if (FileHandle == INVALID_HANDLE_VALUE)
@@ -895,8 +1035,9 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (!::GetFileInformationByHandle(FileHandle, &Info))
     goto handle_status_error;
 
-  // File indices aren't necessarily stable after closing the file handle;
-  // instead hash a canonicalized path.
+  // On a volume with stable file ids, hash the 128-bit file id. Elsewhere file
+  // indices aren't necessarily stable after closing the file handle; instead
+  // hash a canonicalized path.
   //
   // For getting a canonical path to the file, call GetFinalPathNameByHandleW
   // with VOLUME_NAME_NT. We don't really care exactly what the path looks
@@ -906,8 +1047,15 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   // drivers, such as ImDisk. (See
   // https://github.com/rust-lang/rust/pull/86447.)
   uint64_t PathHash;
-  if (std::error_code EC =
-          realPathFromHandle(FileHandle, ntPath, VOLUME_NAME_NT)) {
+  FileIdInformation IdInfo;
+  if (::GetFileInformationByHandleEx(FileHandle,
+                                     FILE_INFO_BY_HANDLE_CLASS(FileIdInfoClass),
+                                     &IdInfo, sizeof(IdInfo)) &&
+      !isZeroFileId(IdInfo.FileId) &&
+      hasStableFileIds(IdInfo.VolumeSerialNumber, FileHandle)) {
+    PathHash = fileIdHash(IdInfo.FileId);
+  } else if (std::error_code EC =
+                 realPathFromHandle(FileHandle, ntPath, VOLUME_NAME_NT)) {
     // If realPathFromHandle failed, fall back on the fields
     // nFileIndex{High,Low} instead. They're not necessarily stable on all file
     // systems as they're only documented as being unique/stable as long as the
@@ -953,6 +1101,36 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
 
   if (std::error_code ec = widenPath(path8, path_utf16))
     return ec;
+
+  GetFileInformationByNameFn GetByName =
+      Follow ? getFileInformationByName() : nullptr;
+  if (GetByName) {
+    FileStatBasicInformation S;
+    if (GetByName(path_utf16.begin(), FileStatBasicByNameInfoClass, &S,
+                  sizeof(S))) {
+      // Reparse points, other devices and volumes whose file ids are not
+      // known to be stable take the handle path below: it follows links,
+      // reports the device type and checks the volume.
+      std::optional<bool> StableIds =
+          fileIdVolumes().lookup(S.VolumeSerialNumber.QuadPart);
+      if (!(S.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
+          isDiskDevice(S.DeviceType, S.DeviceCharacteristics) &&
+          StableIds.value_or(false) && !isZeroFileId(S.FileId128)) {
+        result = file_status(
+            file_type_from_attrs(S.FileAttributes),
+            perms_from_attrs(S.FileAttributes), S.NumberOfLinks,
+            uint32_t(S.LastAccessTime.HighPart), S.LastAccessTime.LowPart,
+            uint32_t(S.LastWriteTime.HighPart), S.LastWriteTime.LowPart,
+            S.VolumeSerialNumber.LowPart, uint32_t(S.EndOfFile.HighPart),
+            S.EndOfFile.LowPart, fileIdHash(S.FileId128));
+        return std::error_code();
+      }
+    } else {
+      DWORD Err = ::GetLastError();
+      if (Err == ERROR_FILE_NOT_FOUND || Err == ERROR_PATH_NOT_FOUND)
+        return getStatus(INVALID_HANDLE_VALUE, result);
+    }
+  }
 
   DWORD Flags = FILE_FLAG_BACKUP_SEMANTICS;
   if (!Follow) {
