@@ -84,7 +84,7 @@ struct FileId128 {
 };
 
 // FILE_ID_INFO
-struct FileIdInfo {
+struct FileIdInfoData {
   ULONGLONG VolumeSerialNumber;
   FileId128 FileId;
 };
@@ -1067,7 +1067,7 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   // drivers, such as ImDisk. (See
   // https://github.com/rust-lang/rust/pull/86447.)
   uint64_t PathHash;
-  FileIdInfo IdInfo;
+  FileIdInfoData IdInfo;
   if (::GetFileInformationByHandleEx(FileHandle,
                                      FILE_INFO_BY_HANDLE_CLASS(FileIdInfoClass),
                                      &IdInfo, sizeof(IdInfo)) &&
