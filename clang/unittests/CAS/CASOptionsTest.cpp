@@ -114,6 +114,51 @@ TEST(CASOptionsTest, createObjectStoreInvalid) {
   ASSERT_EQ(Contents, MemBuffer->getBuffer());
 }
 
+TEST(CASOptionsTest, keepDatabasesOpen) {
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
+                          new IgnoringDiagConsumer());
+
+  CASOptions Opts;
+  Opts.CASPath = "path";
+  {
+    auto [NoCAS, NoAC] = Opts.takeOpenedDatabases();
+    EXPECT_EQ(nullptr, NoCAS);
+    EXPECT_EQ(nullptr, NoAC);
+  }
+
+  auto [CAS, AC] = CASOptions().createDatabases(Diags);
+  ASSERT_TRUE(CAS);
+  ASSERT_TRUE(AC);
+
+  Opts.keepDatabasesOpen(CAS, AC);
+  CASOptions Other;
+  Other.CASPath = "other-path";
+  {
+    auto [NoCAS, NoAC] = Other.takeOpenedDatabases();
+    EXPECT_EQ(nullptr, NoCAS);
+    EXPECT_EQ(nullptr, NoAC);
+  }
+
+  CASOptions Same;
+  Same.CASPath = "path";
+  auto [TakenCAS, TakenAC] = Same.takeOpenedDatabases();
+  EXPECT_EQ(CAS, TakenCAS);
+  EXPECT_EQ(AC, TakenAC);
+  {
+    auto [NoCAS, NoAC] = Same.takeOpenedDatabases();
+    EXPECT_EQ(nullptr, NoCAS);
+    EXPECT_EQ(nullptr, NoAC);
+  }
+
+  auto [CAS2, AC2] = CASOptions().createDatabases(Diags);
+  Opts.keepDatabasesOpen(CAS, AC);
+  Opts.keepDatabasesOpen(CAS2, AC2);
+  auto [TakenCAS2, TakenAC2] = Same.takeOpenedDatabases();
+  EXPECT_EQ(CAS2, TakenCAS2);
+  EXPECT_EQ(AC2, TakenAC2);
+}
+
 TEST(CASOptionsTest, equal) {
   CASOptions Opt1, Opt2;
   ASSERT_TRUE(Opt1 == Opt2);

@@ -549,7 +549,14 @@ static int scanAndUpdateCC1Inline(
   }
   RootID = Root->toString();
 
-  return DiagsConsumer->getNumErrors() != 0;
+  if (DiagsConsumer->getNumErrors() != 0)
+    return 1;
+
+  // A later job in this process with the same CAS takes these databases
+  // instead of reopening the CAS; otherwise they are closed when the process
+  // exits.
+  CASOpts.keepDatabasesOpen(std::move(DB), std::move(Cache));
+  return 0;
 }
 
 //===----------------------------------------------------------------------===//

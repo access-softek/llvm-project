@@ -14,9 +14,49 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include <mutex>
 
 using namespace clang;
 using namespace llvm::cas;
+
+namespace {
+/// Databases one job of this process keeps open for the next one.
+struct OpenedDatabases {
+  std::mutex Lock;
+  CASConfiguration Config;
+  std::shared_ptr<ObjectStore> CAS;
+  std::shared_ptr<llvm::cas::ActionCache> ActionCache;
+};
+} // namespace
+
+static OpenedDatabases &getOpenedDatabases() {
+  static OpenedDatabases DBs;
+  return DBs;
+}
+
+void CASOptions::keepDatabasesOpen(
+    std::shared_ptr<ObjectStore> CAS,
+    std::shared_ptr<llvm::cas::ActionCache> ActionCache) const {
+  OpenedDatabases &DBs = getOpenedDatabases();
+  // Destroy the databases kept open before outside the lock: closing an
+  // on-disk CAS flushes it.
+  std::shared_ptr<ObjectStore> OldCAS;
+  std::shared_ptr<llvm::cas::ActionCache> OldActionCache;
+  std::lock_guard<std::mutex> Guard(DBs.Lock);
+  OldCAS = std::exchange(DBs.CAS, std::move(CAS));
+  OldActionCache = std::exchange(DBs.ActionCache, std::move(ActionCache));
+  DBs.Config = *this;
+}
+
+std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>
+CASOptions::takeOpenedDatabases() const {
+  OpenedDatabases &DBs = getOpenedDatabases();
+  std::lock_guard<std::mutex> Guard(DBs.Lock);
+  if (!DBs.CAS || !DBs.ActionCache ||
+      static_cast<const CASConfiguration &>(*this) != DBs.Config)
+    return {nullptr, nullptr};
+  return {std::move(DBs.CAS), std::move(DBs.ActionCache)};
+}
 
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
