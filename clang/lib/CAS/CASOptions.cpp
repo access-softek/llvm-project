@@ -38,14 +38,16 @@ void CASOptions::keepDatabasesOpen(
     std::shared_ptr<ObjectStore> CAS,
     std::shared_ptr<llvm::cas::ActionCache> ActionCache) const {
   OpenedDatabases &DBs = getOpenedDatabases();
-  // Destroy the databases kept open before outside the lock: closing an
-  // on-disk CAS flushes it.
-  std::shared_ptr<ObjectStore> OldCAS;
-  std::shared_ptr<llvm::cas::ActionCache> OldActionCache;
-  std::lock_guard<std::mutex> Guard(DBs.Lock);
-  OldCAS = std::exchange(DBs.CAS, std::move(CAS));
-  OldActionCache = std::exchange(DBs.ActionCache, std::move(ActionCache));
-  DBs.Config = *this;
+  // Previous databases will be closed outside the lock.
+  std::shared_ptr<ObjectStore> PreviousCASToBeClosed;
+  std::shared_ptr<llvm::cas::ActionCache> PreviousActionCacheToBeClosed;
+  {
+    std::lock_guard<std::mutex> Guard(DBs.Lock);
+    PreviousCASToBeClosed = std::exchange(DBs.CAS, std::move(CAS));
+    PreviousActionCacheToBeClosed =
+        std::exchange(DBs.ActionCache, std::move(ActionCache));
+    DBs.Config = *this;
+  }
 }
 
 std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>

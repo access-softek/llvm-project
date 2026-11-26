@@ -64,8 +64,8 @@ public:
                     std::shared_ptr<llvm::cas::ActionCache> ActionCache) const;
 
   /// If the databases kept open by \a keepDatabasesOpen() were created for the
-  /// same configuration, return them and stop keeping them, so the next call
-  /// returns {nullptr, nullptr}. Otherwise return {nullptr, nullptr}.
+  /// same configuration, give ownership to the caller.
+  /// Otherwise return {nullptr, nullptr}.
   std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
             std::shared_ptr<llvm::cas::ActionCache>>
   takeOpenedDatabases() const;

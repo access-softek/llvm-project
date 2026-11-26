@@ -146,6 +146,7 @@ TEST(CASOptionsTest, keepDatabasesOpen) {
   EXPECT_EQ(CAS, TakenCAS);
   EXPECT_EQ(AC, TakenAC);
   {
+    // Second take gets none, as the ownership was already taken.
     auto [NoCAS, NoAC] = Same.takeOpenedDatabases();
     EXPECT_EQ(nullptr, NoCAS);
     EXPECT_EQ(nullptr, NoAC);
