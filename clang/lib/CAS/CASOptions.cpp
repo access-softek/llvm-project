@@ -14,7 +14,6 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
-#include <mutex>
 
 using namespace clang;
 using namespace llvm::cas;
@@ -22,7 +21,6 @@ using namespace llvm::cas;
 namespace {
 /// Databases one job of this process keeps open for the next one.
 struct OpenedDatabases {
-  std::mutex Lock;
   CASConfiguration Config;
   std::shared_ptr<ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> ActionCache;
@@ -38,22 +36,14 @@ void CASOptions::keepDatabasesOpen(
     std::shared_ptr<ObjectStore> CAS,
     std::shared_ptr<llvm::cas::ActionCache> ActionCache) const {
   OpenedDatabases &DBs = getOpenedDatabases();
-  // Previous databases will be closed outside the lock.
-  std::shared_ptr<ObjectStore> PreviousCASToBeClosed;
-  std::shared_ptr<llvm::cas::ActionCache> PreviousActionCacheToBeClosed;
-  {
-    std::lock_guard<std::mutex> Guard(DBs.Lock);
-    PreviousCASToBeClosed = std::exchange(DBs.CAS, std::move(CAS));
-    PreviousActionCacheToBeClosed =
-        std::exchange(DBs.ActionCache, std::move(ActionCache));
-    DBs.Config = *this;
-  }
+  DBs.Config = *this;
+  DBs.CAS = std::move(CAS);
+  DBs.ActionCache = std::move(ActionCache);
 }
 
 std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>
 CASOptions::takeOpenedDatabases() const {
   OpenedDatabases &DBs = getOpenedDatabases();
-  std::lock_guard<std::mutex> Guard(DBs.Lock);
   if (!DBs.CAS || !DBs.ActionCache ||
       static_cast<const CASConfiguration &>(*this) != DBs.Config)
     return {nullptr, nullptr};

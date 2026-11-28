@@ -58,14 +58,14 @@ public:
 
   /// Keep \p CAS and \p ActionCache open for the next job in this process that
   /// uses the same configuration, see \a takeOpenedDatabases(). Replaces the
-  /// databases kept open before, if any.
+  /// databases kept open before, if any. Not thread-safe.
   void
   keepDatabasesOpen(std::shared_ptr<llvm::cas::ObjectStore> CAS,
                     std::shared_ptr<llvm::cas::ActionCache> ActionCache) const;
 
   /// If the databases kept open by \a keepDatabasesOpen() were created for the
   /// same configuration, give ownership to the caller.
-  /// Otherwise return {nullptr, nullptr}.
+  /// Otherwise return {nullptr, nullptr}. Not thread-safe.
   std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
             std::shared_ptr<llvm::cas::ActionCache>>
   takeOpenedDatabases() const;
