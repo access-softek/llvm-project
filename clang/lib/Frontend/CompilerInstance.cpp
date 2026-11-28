@@ -1020,6 +1020,11 @@ std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
 CompilerInstance::getOrCreateCASDatabases(DiagnosticsEngine *Diags) {
   if (CAS && ActionCache)
     return {CAS, ActionCache};
+  // An earlier job in this process may have left the CAS open: take it instead
+  // of opening it again.
+  std::tie(CAS, ActionCache) = getCASOpts().takeOpenedDatabases();
+  if (CAS && ActionCache)
+    return {CAS, ActionCache};
   if (!Diags)
     Diags = this->Diagnostics.get();
   // Create a new CAS databases from the CompilerInvocation. Future calls will

@@ -18,6 +18,38 @@
 using namespace clang;
 using namespace llvm::cas;
 
+namespace {
+/// Databases one job of this process keeps open for the next one.
+struct OpenedDatabases {
+  CASConfiguration Config;
+  std::shared_ptr<ObjectStore> CAS;
+  std::shared_ptr<llvm::cas::ActionCache> ActionCache;
+};
+} // namespace
+
+static OpenedDatabases &getOpenedDatabases() {
+  static OpenedDatabases DBs;
+  return DBs;
+}
+
+void CASOptions::keepDatabasesOpen(
+    std::shared_ptr<ObjectStore> CAS,
+    std::shared_ptr<llvm::cas::ActionCache> ActionCache) const {
+  OpenedDatabases &DBs = getOpenedDatabases();
+  DBs.Config = *this;
+  DBs.CAS = std::move(CAS);
+  DBs.ActionCache = std::move(ActionCache);
+}
+
+std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>
+CASOptions::takeOpenedDatabases() const {
+  OpenedDatabases &DBs = getOpenedDatabases();
+  if (!DBs.CAS || !DBs.ActionCache ||
+      static_cast<const CASConfiguration &>(*this) != DBs.Config)
+    return {nullptr, nullptr};
+  return {std::move(DBs.CAS), std::move(DBs.ActionCache)};
+}
+
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
 CASOptions::createDatabases(DiagnosticsEngine &Diags,
